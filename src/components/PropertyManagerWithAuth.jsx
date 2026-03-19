@@ -1850,7 +1850,7 @@ export default function PropertyManager() {
         <div style={styles.content}>
           {loading ? (
             <div style={styles.loading}>⏳ Ielāde...</div>
-          ) : activeTab === 'overview' ? (
+          ) : activeTab === "overview" ? (
             <div>
               <div style={styles.statsGrid}>
                 <div style={styles.stat}>
@@ -1933,7 +1933,7 @@ export default function PropertyManager() {
                 </div>
               </div>
             </div>
-          ) : activeTab === 'apartments' ? (
+          ) : activeTab === "apartments" ? (
             <div style={styles.twoCol}>
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>➕ Pievienot dzīvokli</h2>
@@ -2097,7 +2097,7 @@ export default function PropertyManager() {
                 </div>
               </div>
             </div>
-          ) : activeTab === 'users' ? (
+          ) : activeTab === "users" ? (
             <div style={styles.twoCol}>
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>➕ Pievienot lietotāju</h2>
@@ -2221,7 +2221,7 @@ export default function PropertyManager() {
                 </div>
               </div>
             </div>
-          ) : activeTab === 'tariffs' ? (
+          ) : activeTab === "tariffs" ? (
             <div style={styles.twoCol}>
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>➕ Pievienot tarifu</h2>
@@ -2425,7 +2425,7 @@ export default function PropertyManager() {
                 })}
               </div>
             </div>
-          ) : activeTab === 'water' ? (
+          ) : activeTab === "water" ? (
             <div style={styles.twoCol}>
               {/* Meters Settings */}
               <div style={styles.card}>
@@ -2860,7 +2860,7 @@ export default function PropertyManager() {
                 )}
               </div>
             </div>
-          ) : activeTab === 'settings' ? (
+          ) : activeTab === "settings" ? (
             <div>
               <h2 style={styles.h2}>Iestatījumi</h2>
               
