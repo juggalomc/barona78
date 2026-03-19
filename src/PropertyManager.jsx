@@ -460,60 +460,6 @@ export default function PropertyManager() {
       showToast('Kļūda: ' + error.message, 'error');
     }
   };
-        const waterConsumptionRecord = waterConsumption.find(w => w.apartment_id === apt.id && w.period === period);
-        const waterTariff = waterTariffs.find(w => w.period === period);
-
-        if (waterConsumptionRecord && waterTariff) {
-          const waterConsumptionM3 = parseFloat(waterConsumptionRecord.consumption_m3) || 0;
-          const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
-          const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
-          const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
-          const waterVatAmount = Math.round(waterAmountWithoutVat * waterVatRate / 100 * 100) / 100;
-
-          totalAmountWithoutVat += waterAmountWithoutVat;
-          totalVatAmount += waterVatAmount;
-
-          invoiceDetails.push({
-            tariff_id: waterTariff.id,
-            tariff_name: `Ūdens (${waterConsumptionM3} m³)`,
-            consumption_m3: waterConsumptionM3,
-            price_per_m3: waterPricePerM3,
-            amount_without_vat: waterAmountWithoutVat,
-            vat_rate: waterVatRate,
-            vat_amount: waterVatAmount,
-            type: 'water'
-          });
-        }
-
-        const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
-        const invoiceNumber = `${year}/${month}-${apt.number}`;
-        const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
-
-        invoicesToAdd.push({
-          apartment_id: apt.id,
-          tariff_id: periodTariffs[0].id,
-          invoice_number: invoiceNumber,
-          period: period,
-          amount: totalAmountWithVat,
-          amount_without_vat: totalAmountWithoutVat,
-          amount_with_vat: totalAmountWithVat,
-          vat_amount: totalVatAmount,
-          vat_rate: 0,
-          due_date: dueDate,
-          paid: false,
-          invoice_details: JSON.stringify(invoiceDetails)
-        });
-      }
-
-      const { error } = await supabase.from('invoices').insert(invoicesToAdd);
-      if (error) throw error;
-
-      fetchData();
-      showToast(`✓ Reģenerēti ${invoicesToAdd.length} rēķini`);
-    } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
-    }
-  };
 
   const generateInvoices = async (e) => {
     e.preventDefault();
@@ -609,37 +555,6 @@ export default function PropertyManager() {
       if (invoicesToAdd.length === 0) {
         showToast('Nav dzīvokļu ar tarifiem', 'error');
         return;
-      }
-
-      const { error } = await supabase.from('invoices').insert(invoicesToAdd);
-      if (error) throw error;
-
-      setInvoiceMonth('');
-      fetchData();
-      showToast(`✓ Ģenerēti ${invoicesToAdd.length} rēķini`);
-    } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
-    }
-  };
-
-        const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
-        const invoiceNumber = `${year}/${month}-${apt.number}`;
-        const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
-
-        invoicesToAdd.push({
-          apartment_id: apt.id,
-          tariff_id: periodTariffs[0].id, // Primārais tarifs (tiks glabāts attiecībās)
-          invoice_number: invoiceNumber,
-          period: invoiceMonth,
-          amount: totalAmountWithVat,
-          amount_without_vat: totalAmountWithoutVat,
-          amount_with_vat: totalAmountWithVat,
-          vat_amount: totalVatAmount,
-          vat_rate: 0, // Nav viena VAT, jo var būt dažādi
-          due_date: dueDate,
-          paid: false,
-          invoice_details: JSON.stringify(invoiceDetails) // Saglabāt detalizējumu
-        });
       }
 
       const { error } = await supabase.from('invoices').insert(invoicesToAdd);
