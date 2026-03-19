@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
@@ -7,10 +7,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Constants
 const BUILDING_NAME = "BIEDRĪBA \"BARONA 78\"";
-const BUILDING_CODE = "40008325768";
-const BUILDING_ADDRESS = "Kr. Barona iela 78-14, Rīga, LV-1001";
-const TOTAL_AREA = 1959;
-const IBAN = "LV62HABA0551064112797";
 
 export default function PropertyManager() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -23,14 +19,9 @@ export default function PropertyManager() {
   const [apartments, setApartments] = useState([]);
   const [tariffs, setTariffs] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [waterConsumption, setWaterConsumption] = useState([]);
   const [waterTariffs, setWaterTariffs] = useState([]);
   const [users, setUsers] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
-  const [apartmentForm, setApartmentForm] = useState({
-    number: '', area: '', kadaster: '', owner_name: '', owner_surname: '',
-    personal_code: '', phone: '', email: '', share: '', declared_persons: 1
-  });
 
   // User state
   const [userApartment, setUserApartment] = useState(null);
@@ -101,11 +92,10 @@ export default function PropertyManager() {
   // ADMIN FUNCTIONS
   const fetchAdminData = async () => {
     try {
-      const [aptRes, tarRes, invRes, wcRes, wtRes, usersRes, mrRes] = await Promise.all([
+      const [aptRes, tarRes, invRes, wtRes, usersRes, mrRes] = await Promise.all([
         supabase.from('apartments').select('*').order('number', { ascending: true }),
         supabase.from('tariffs').select('*').order('period', { ascending: false }),
         supabase.from('invoices').select('*').order('period', { ascending: false }),
-        supabase.from('water_consumption').select('*'),
         supabase.from('water_tariffs').select('*'),
         supabase.from('users').select('*'),
         supabase.from('meter_readings').select('*')
@@ -114,7 +104,6 @@ export default function PropertyManager() {
       setApartments(aptRes.data || []);
       setTariffs(tarRes.data || []);
       setInvoices(invRes.data || []);
-      setWaterConsumption(wcRes.data || []);
       setWaterTariffs(wtRes.data || []);
       setUsers(usersRes.data || []);
       setMeterReadings(mrRes.data || []);
