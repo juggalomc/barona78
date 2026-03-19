@@ -66,10 +66,18 @@ export default function PropertyManager() {
   const [invoices, setInvoices] = useState([]);
   const [waterConsumption, setWaterConsumption] = useState([]);
   const [waterTariffs, setWaterTariffs] = useState([]);
+  const [meterReadings, setMeterReadings] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState(null);
+  
+  // Enabled meters state
+  const [enabledMeters, setEnabledMeters] = useState({
+    electricity: true,
+    gas: true,
+    water: true
+  });
   
   // Users management state
   const [editingUser, setEditingUser] = useState(null);
@@ -220,13 +228,14 @@ export default function PropertyManager() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [aptRes, tarRes, invRes, wcRes, wtRes, usersRes] = await Promise.all([
+      const [aptRes, tarRes, invRes, wcRes, wtRes, usersRes, mrRes] = await Promise.all([
         supabase.from('apartments').select('*').order('number', { ascending: true }),
         supabase.from('tariffs').select('*').order('period', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('invoices').select('*').order('period', { ascending: false }),
         supabase.from('water_consumption').select('*').order('period', { ascending: false }),
         supabase.from('water_tariffs').select('*').order('period', { ascending: false }),
-        supabase.from('users').select('*').order('email', { ascending: true })
+        supabase.from('users').select('*').order('email', { ascending: true }),
+        supabase.from('meter_readings').select('*').order('reading_date', { ascending: false })
       ]);
 
       setApartments(aptRes.data || []);
@@ -235,6 +244,7 @@ export default function PropertyManager() {
       setWaterConsumption(wcRes.data || []);
       setWaterTariffs(wtRes.data || []);
       setUsers(usersRes.data || []);
+      setMeterReadings(mrRes.data || []);
     } catch (error) {
       showToast('Kļūda ielādējot datus', 'error');
     } finally {
@@ -581,6 +591,63 @@ export default function PropertyManager() {
 
       fetchData();
       showToast('✓ Ūdens tarifs saglabāts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const saveWaterMeterReading = async (apartmentId, readingValue, period) => {
+    try {
+      const value = parseFloat(readingValue);
+      
+      if (readingValue === '' || readingValue === null) {
+        // Dzēst rādījumu ja ir tukšs
+        const existing = meterReadings.find(mr => mr.apartment_id === apartmentId && mr.meter_type === 'water' && mr.period === period);
+        if (existing) {
+          await supabase.from('meter_readings').delete().eq('id', existing.id);
+          fetchData();
+        }
+        return;
+      }
+
+      // Validēt vērtību
+      if (isNaN(value) || value < 0) {
+        showToast('Nepareiza ūdens patēriņa vērtība', 'error');
+        return;
+      }
+
+      if (value > 9999.99) {
+        showToast('Patēriņš nevar būt lielāks par 9999.99 m³', 'error');
+        return;
+      }
+
+      // Meklēt esošo rādījumu
+      const existing = meterReadings.find(mr => mr.apartment_id === apartmentId && mr.meter_type === 'water' && mr.period === period);
+
+      if (existing) {
+        // Update
+        const { error } = await supabase
+          .from('meter_readings')
+          .update({ reading_value: value })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        // Insert
+        const today = new Date().toISOString().split('T')[0];
+        const { error } = await supabase
+          .from('meter_readings')
+          .insert([{
+            apartment_id: apartmentId,
+            meter_type: 'water',
+            reading_date: today,
+            reading_value: value,
+            period: period
+          }]);
+        if (error) throw error;
+      }
+
+      fetchData();
+      showToast('✓ Ūdens rādījums saglabāts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -1128,9 +1195,10 @@ export default function PropertyManager() {
                 onChange={(e) => setUserMeterForm({ ...userMeterForm, meter_type: e.target.value })}
                 style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
               >
-                <option value="electricity">⚡ Elektrība (kWh)</option>
-                <option value="gas">🔥 Gāze (m³)</option>
-                <option value="water">💧 Ūdens (m³)</option>
+                <option value="">-- Izvēlieties skaitītāju --</option>
+                {enabledMeters.electricity && <option value="electricity">⚡ Elektrība (kWh)</option>}
+                {enabledMeters.gas && <option value="gas">🔥 Gāze (m³)</option>}
+                {enabledMeters.water && <option value="water">💧 Ūdens (m³)</option>}
               </select>
               <input
                 type="month"
@@ -1724,6 +1792,40 @@ export default function PropertyManager() {
             </div>
           ) : activeTab === 'water' ? (
             <div style={styles.twoCol}>
+              {/* Meters Settings */}
+              <div style={styles.card}>
+                <h2 style={styles.cardTitle}>⚙️ Skaitītāju Iespējošana</h2>
+                <div style={styles.form}>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                    <label style={{fontWeight: '500', fontSize: '14px', cursor: 'pointer'}}>⚡ Elektrība</label>
+                    <input
+                      type="checkbox"
+                      checked={enabledMeters.electricity}
+                      onChange={(e) => setEnabledMeters({...enabledMeters, electricity: e.target.checked})}
+                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                    />
+                  </div>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                    <label style={{fontWeight: '500', fontSize: '14px', cursor: 'pointer'}}>🔥 Gāze</label>
+                    <input
+                      type="checkbox"
+                      checked={enabledMeters.gas}
+                      onChange={(e) => setEnabledMeters({...enabledMeters, gas: e.target.checked})}
+                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                    />
+                  </div>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                    <label style={{fontWeight: '500', fontSize: '14px', cursor: 'pointer'}}>💧 Ūdens</label>
+                    <input
+                      type="checkbox"
+                      checked={enabledMeters.water}
+                      onChange={(e) => setEnabledMeters({...enabledMeters, water: e.target.checked})}
+                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Water Tariff */}
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>💧 Ūdens Tarifs</h2>
@@ -1757,31 +1859,32 @@ export default function PropertyManager() {
                 </form>
               </div>
 
-              {/* Water Consumption */}
+              {/* Water Consumption - from Meter Readings */}
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>💧 Patēriņš - {new Date(tariffPeriod + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</h2>
                 <div style={styles.list}>
                   {apartments.map(apt => {
-                    const consumption = waterConsumption.find(w => w.apartment_id === apt.id && w.period === tariffPeriod);
+                    // Ņem ūdens rādījumu no meter_readings (nevis water_consumption)
+                    const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === tariffPeriod);
                     const waterTariff = waterTariffs.find(w => w.period === tariffPeriod);
-                    const consumptionValue = consumption?.consumption_m3 || '';
+                    const consumptionValue = waterReading?.reading_value || '';
                     const amount = consumptionValue ? parseFloat(consumptionValue) * parseFloat(waterTariff?.price_per_m3 || 0) : 0;
                     const vatAmount = amount * parseFloat(waterTariff?.vat_rate || 0) / 100;
                     const totalAmount = amount + vatAmount;
 
                     return (
-                      <div key={apt.id} style={{...styles.listItem, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px'}}>
-                        <div>
-                          <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
+                      <div key={apt.id} style={{...styles.listItem, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap'}}>
+                        <div style={{marginBottom: '8px', flex: '0 0 100%'}}>
+                          <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number} - {apt.owner_name}</div>
                           <div style={{fontSize: '12px', color: '#666'}}>€{totalAmount.toFixed(2)}</div>
                         </div>
-                        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                        <div style={{display: 'flex', gap: '8px', alignItems: 'center', flex: '1 1 auto'}}>
                           <input
                             type="number"
                             step="0.01"
                             placeholder="m³"
                             value={consumptionValue}
-                            onChange={(e) => saveWaterConsumption(apt.id, e.target.value)}
+                            onChange={(e) => saveWaterMeterReading(apt.id, e.target.value, tariffPeriod)}
                             style={{...styles.input, width: '80px', padding: '8px'}}
                           />
                           <span style={{fontSize: '12px', color: '#666', minWidth: '40px'}}>m³</span>
