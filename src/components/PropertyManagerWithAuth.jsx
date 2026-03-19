@@ -181,7 +181,6 @@ export default function PropertyManager() {
     setLoginPassword('');
     setUserApartment(null);
     setUserInvoices([]);
-    setUserMeterReadings([]);
     setActiveTab('overview');
     showToast('✓ Izrakstīts');
   };
@@ -197,7 +196,6 @@ export default function PropertyManager() {
 
       setUserApartment(aptRes.data);
       setUserInvoices(invRes.data || []);
-      setUserMeterReadings(mrRes.data || []);
     } catch (error) {
       showToast('Kļūda ielādējot datus', 'error');
     } finally {
