@@ -455,7 +455,7 @@ export default function PropertyManager() {
       }
 
       if (invoicesToAdd.length === 0) {
-        showToast('Nav dzīvokļu ar tarifiem', 'error');
+        showToast('Nav dzīvokļu ar atzīmētajiem tarifiem šajā periodā', 'error');
         return;
       }
 
@@ -485,12 +485,19 @@ export default function PropertyManager() {
 
     try {
       const invoicesToAdd = [];
+      let updatedCount = 0; // Skaits update operāciju
       const [year, month] = invoiceMonth.split('-');
       
-      // Aprēķināt periode datumi (1. - mēneša pēdējais diems)
-      const daysInMonth = new Date(year, month, 0).getDate();
-      const dateFrom = `${year}-${month}-01`;
-      const dateTo = `${year}-${month}-${daysInMonth}`;
+      // Izmantot manuālos datums vai aprēķināt default
+      let dateFrom = invoiceFromDate;
+      let dateTo = invoiceToDate;
+      
+      if (!dateFrom || !dateTo) {
+        // Default: mēneša 1. līdz pēdējais diems
+        const daysInMonth = new Date(year, month, 0).getDate();
+        dateFrom = dateFrom || `${year}-${month}-01`;
+        dateTo = dateTo || `${year}-${month}-${daysInMonth}`;
+      }
 
       for (const apt of apartments) {
         // UNIKĀLUMA PĀRBAUDE - pārbaudīt vai šis dzīvoklis jau ir rēķinā šajā mēnesī
@@ -547,6 +554,7 @@ export default function PropertyManager() {
             invoice_details: JSON.stringify(existingDetails)
           }).eq('id', existingInvoice.id);
           
+          updatedCount++; // Skaits update
           continue;
         }
         
@@ -624,8 +632,8 @@ export default function PropertyManager() {
         });
       }
 
-      if (invoicesToAdd.length === 0) {
-        showToast('Nav dzīvokļu ar tarifiem', 'error');
+      if (invoicesToAdd.length === 0 && updatedCount === 0) {
+        showToast('Nav dzīvokļu ar atzīmētajiem tarifiem šajā mēnesī', 'error');
         return;
       }
 
@@ -633,8 +641,11 @@ export default function PropertyManager() {
       if (error) throw error;
 
       setInvoiceMonth('');
+      setInvoiceFromDate('');
+      setInvoiceToDate('');
       fetchData();
-      showToast(`✓ Ģenerēti ${invoicesToAdd.length} rēķini`);
+      const message = `✓ Ģenerēti ${invoicesToAdd.length} jauni rēķini${updatedCount > 0 ? `, atjaunināti ${updatedCount}` : ''}`;
+      showToast(message);
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -983,6 +994,22 @@ export default function PropertyManager() {
     }
   };
 
+  // Aprēķināt rēķina statusu (Apmaksāts/Gaida/Parāds)
+  const getInvoiceStatus = (invoice) => {
+    if (invoice.paid) {
+      return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
+    }
+    
+    const dueDate = new Date(invoice.due_date);
+    const today = new Date();
+    
+    if (today > dueDate) {
+      return { status: 'Parāds', color: '#ef4444', emoji: '⚠️' };
+    } else {
+      return { status: 'Gaida atmaksu', color: '#f59e0b', emoji: '⏳' };
+    }
+  };
+
   const downloadPDF = (invoice) => {
     const apt = apartments.find(a => a.id === invoice.apartment_id);
     const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
@@ -1270,12 +1297,37 @@ export default function PropertyManager() {
                 userInvoices.map(inv => (
                   <div key={inv.id} style={{ padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontWeight: 'bold' }}>Rēķins {inv.invoice_number}</div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>{inv.period}</div>
+                      <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        Rēķins {inv.invoice_number}
+                        {(() => {
+                          const status = getInvoiceStatus(inv);
+                          return (
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: '500',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: status.color,
+                              color: 'white'
+                            }}>
+                              {status.emoji} {status.status}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                        {inv.period} • Termiņš: {new Date(inv.due_date).toLocaleDateString('lv-LV')}<br/>
+                        📅 {inv.date_from ? new Date(inv.date_from).toLocaleDateString('lv-LV') : '-'} — {inv.date_to ? new Date(inv.date_to).toLocaleDateString('lv-LV') : '-'}
+                      </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontWeight: 'bold', color: inv.paid ? '#10b981' : '#ef4444' }}>€{inv.amount.toFixed(2)}</div>
-                      <div style={{ fontSize: '11px', color: '#666' }}>{inv.paid ? '✓ Apmaksāts' : 'Neatmaksāts'}</div>
+                      <button
+                        onClick={() => downloadPDF(inv)}
+                        style={{ fontSize: '12px', marginTop: '8px', padding: '4px 8px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      >
+                        📥 PDF
+                      </button>
                     </div>
                   </div>
                 ))
@@ -1434,6 +1486,30 @@ export default function PropertyManager() {
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>Parāds</div>
                     <div style={{fontSize: '24px', fontWeight: 'bold', color: '#ff6b6b'}}>€{totalDebt.toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={styles.card}>
+                <h2 style={styles.cardTitle}>📊 Rēķinu statusi</h2>
+                <div style={styles.summaryGrid}>
+                  <div style={styles.summaryItem}>
+                    <div style={styles.summaryLabel}>✓ Apmaksāti</div>
+                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#10b981'}}>
+                      {invoices.filter(i => i.paid).length}
+                    </div>
+                  </div>
+                  <div style={styles.summaryItem}>
+                    <div style={styles.summaryLabel}>⏳ Gaida atmaksu</div>
+                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#f59e0b'}}>
+                      {invoices.filter(i => !i.paid && new Date(i.due_date) > new Date()).length}
+                    </div>
+                  </div>
+                  <div style={styles.summaryItem}>
+                    <div style={styles.summaryLabel}>⚠️ Parāds</div>
+                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#ef4444'}}>
+                      {invoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).length}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2014,19 +2090,41 @@ export default function PropertyManager() {
             <div>
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
-                <form onSubmit={generateInvoices} style={{display: 'flex', gap: '10px'}}>
-                  <select
-                    value={invoiceMonth}
-                    onChange={(e) => setInvoiceMonth(e.target.value)}
-                    style={{...styles.input, flex: 1}}
-                  >
-                    <option value="">-- Izvēlieties mēnesi --</option>
-                    {uniqueTariffPeriods.map(period => (
-                      <option key={period} value={period}>
-                        {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
-                      </option>
-                    ))}
-                  </select>
+                <form onSubmit={generateInvoices} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                    <select
+                      value={invoiceMonth}
+                      onChange={(e) => setInvoiceMonth(e.target.value)}
+                      style={styles.input}
+                    >
+                      <option value="">-- Izvēlieties mēnesi --</option>
+                      {uniqueTariffPeriods.map(period => (
+                        <option key={period} value={period}>
+                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                    <div>
+                      <label style={{fontSize: '12px', color: '#666', marginBottom: '4px', display: 'block'}}>No datuma</label>
+                      <input
+                        type="date"
+                        value={invoiceFromDate}
+                        onChange={(e) => setInvoiceFromDate(e.target.value)}
+                        style={styles.input}
+                      />
+                    </div>
+                    <div>
+                      <label style={{fontSize: '12px', color: '#666', marginBottom: '4px', display: 'block'}}>Līdz datumam</label>
+                      <input
+                        type="date"
+                        value={invoiceToDate}
+                        onChange={(e) => setInvoiceToDate(e.target.value)}
+                        style={styles.input}
+                      />
+                    </div>
+                  </div>
                   <button type="submit" style={styles.btn}>Ģenerēt</button>
                 </form>
               </div>
@@ -2095,8 +2193,23 @@ export default function PropertyManager() {
                                         style={{width: '18px', height: '18px', cursor: 'pointer'}}
                                       />
                                       <div style={{flex: 1}}>
-                                        <div style={{fontWeight: '600', fontSize: '13px'}}>
+                                        <div style={{fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px'}}>
                                           Dzīv. {apt?.number} • {tariff?.name}
+                                          {(() => {
+                                            const status = getInvoiceStatus(invoice);
+                                            return (
+                                              <span style={{
+                                                fontSize: '11px',
+                                                fontWeight: '500',
+                                                padding: '2px 8px',
+                                                borderRadius: '4px',
+                                                backgroundColor: status.color,
+                                                color: 'white'
+                                              }}>
+                                                {status.emoji} {status.status}
+                                              </span>
+                                            );
+                                          })()}
                                         </div>
                                         <div style={{fontSize: '12px', color: '#666'}}>
                                           {invoice.invoice_number} • Termiņš: {new Date(invoice.due_date).toLocaleDateString('lv-LV')}
