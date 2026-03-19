@@ -66,6 +66,19 @@ export default function PropertyManager() {
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState(null);
   
+  // Invoice settings state
+  const [invoiceSettings, setInvoiceSettings] = useState({
+    payment_term_days: 14,
+    payment_method: '',
+    payment_company: '',
+    payment_ref: '',
+    global_invoice_note: ''
+  });
+  
+  // Debt & Overpayment state
+  const [debtModal, setDebtModal] = useState(null); // { invoiceId, debtNote }
+  const [overpaymentModal, setOverpaymentModal] = useState(null); // { invoiceId, amount, month }
+  
   // Enabled meters state - tikai ūdens
   const [enabledMeters, setEnabledMeters] = useState({
     water: true
@@ -203,6 +216,24 @@ export default function PropertyManager() {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const { data } = await supabase
+        .from('invoice_settings')
+        .select('*');
+      
+      if (data && data.length > 0) {
+        const settingsObj = {};
+        data.forEach(row => {
+          settingsObj[row.setting_key] = row.setting_value;
+        });
+        setInvoiceSettings(prev => ({ ...prev, ...settingsObj }));
+      }
+    } catch (error) {
+      console.error('Kļūda ielādējot iestatījumus:', error);
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -239,6 +270,80 @@ export default function PropertyManager() {
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
+  };
+
+  // Aprēķināt parādu dzīvoklim
+  const calculateDebt = (apartmentId, beforeMonth) => {
+    const debtInvoices = invoices.filter(inv =>
+      inv.apartment_id === apartmentId &&
+      inv.period < beforeMonth &&
+      !inv.paid
+    );
+    
+    return {
+      total: debtInvoices.reduce((sum, inv) => sum + inv.amount, 0),
+      details: debtInvoices.map(inv => ({
+        invoice_number: inv.invoice_number,
+        amount: inv.amount,
+        debt_note: inv.debt_note || ''
+      }))
+    };
+  };
+
+  // Saglabāt parāda paskaidrojumu
+  const saveDebtNote = async (invoiceId, debtNote) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ debt_note: debtNote })
+        .eq('id', invoiceId);
+      
+      if (error) throw error;
+      fetchData();
+      setDebtModal(null);
+      showToast('✓ Parāda paskaidrojums saglabāts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  // Saglabāt pārmaksu
+  const saveOverpayment = async (invoiceId, amount, month) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          overpayment_amount: parseFloat(amount),
+          overpayment_month: month
+        })
+        .eq('id', invoiceId);
+      
+      if (error) throw error;
+      fetchData();
+      setOverpaymentModal(null);
+      showToast('✓ Pārmaksa saglabāta');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  // Saglabāt iestatījumus
+  const saveSettings = async () => {
+    try {
+      for (const [key, value] of Object.entries(invoiceSettings)) {
+        const { error } = await supabase
+          .from('invoice_settings')
+          .upsert({
+            setting_key: key,
+            setting_value: value
+          }, { onConflict: 'setting_key' });
+        
+        if (error) throw error;
+      }
+      showToast('✓ Iestatījumi saglabāti');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
   };
 
   const addApartment = async (e) => {
@@ -628,21 +733,40 @@ export default function PropertyManager() {
         
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
 
+        // ===== PARĀDA APRĒĶINS =====
+        const debtInfo = calculateDebt(apt.id, invoiceMonth);
+        const totalDebt = debtInfo.total;
+
+        // ===== PĀRMAKSAS APRĒĶINS =====
+        // Meklēt iepriekšējā mēneša pārmaksu (ja norādīta šim mēnesim)
+        const previousInvoices = invoices.filter(inv =>
+          inv.apartment_id === apt.id &&
+          inv.overpayment_amount > 0 &&
+          inv.overpayment_month === invoiceMonth
+        );
+        const overpaymentAmount = previousInvoices.reduce((sum, inv) => sum + inv.overpayment_amount, 0);
+
+        // ===== KOPĒJAIS APRĒĶINS =====
+        const finalAmount = totalAmountWithVat + totalDebt - overpaymentAmount;
+
         invoicesToAdd.push({
           apartment_id: apt.id,
           tariff_id: periodTariffs[0].id,
           invoice_number: invoiceNumber,
           period: invoiceMonth,
-          amount: totalAmountWithVat,
-          amount_without_vat: totalAmountWithoutVat,
-          amount_with_vat: totalAmountWithVat,
+          amount: finalAmount,
+          amount_without_vat: totalAmountWithoutVat + totalDebt,
+          amount_with_vat: finalAmount,
           vat_amount: totalVatAmount,
           vat_rate: 0,
           due_date: dueDate,
           date_from: dateFrom,
           date_to: dateTo,
           paid: false,
-          invoice_details: JSON.stringify(invoiceDetails)
+          invoice_details: JSON.stringify(invoiceDetails),
+          debt_note: null,
+          overpayment_amount: overpaymentAmount,
+          overpayment_month: null
         });
       }
 
@@ -1340,6 +1464,54 @@ export default function PropertyManager() {
                 <div style="font-weight: bold;">Rēķins ${invoice.invoice_number}</div>
               </div>
             </div>
+            
+            ${(() => {
+              let extraHtml = '';
+              
+              // PARĀDS NO IEPRIEKŠĒJIEM MĒNEŠIEM
+              const debtInfo = calculateDebt(invoice.apartment_id, invoice.period);
+              if (debtInfo.total > 0) {
+                extraHtml += `
+                  <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #e2e8f0;">
+                    <div style="font-weight: bold; color: #ef4444; font-size: 13px; margin-bottom: 10px;">
+                      PARĀDS NO IEPRIEKŠĒJIEM MĒNEŠIEM: €${debtInfo.total.toFixed(2)}
+                    </div>
+                `;
+                
+                for (const debt of debtInfo.details) {
+                  extraHtml += `
+                    <div style="margin-bottom: 8px; font-size: 11px;">
+                      <div>${debt.invoice_number}: €${debt.amount.toFixed(2)}</div>
+                      ${debt.debt_note ? `<div style="font-weight: bold; color: #666; margin-left: 10px;">${debt.debt_note}</div>` : ''}
+                    </div>
+                  `;
+                }
+                
+                extraHtml += `</div>`;
+              }
+              
+              // PĀRMAKSA
+              if (invoice.overpayment_amount > 0) {
+                extraHtml += `
+                  <div style="margin-top: 15px; padding-top: 10px; color: #10b981; font-weight: bold; font-size: 12px;">
+                    PĀRMAKSA NO IEPRIEKŠĒJĀ MĒNEŠA: -€${invoice.overpayment_amount.toFixed(2)}
+                  </div>
+                `;
+              }
+              
+              // GLOBĀLĀ PIEZĪME
+              if (invoiceSettings.global_invoice_note) {
+                extraHtml += `
+                  <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #666;">
+                    <strong>ℹ️ NOZĪME:</strong><br/>
+                    ${invoiceSettings.global_invoice_note}
+                  </div>
+                `;
+              }
+              
+              return extraHtml;
+            })()}
+            
             <div style="margin-top: 15px; font-size: 11px;">
               Maksājuma termiņš: ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}
             </div>
@@ -1457,6 +1629,26 @@ export default function PropertyManager() {
                       <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
                         {inv.period} • Termiņš: {new Date(inv.due_date).toLocaleDateString('lv-LV')}<br/>
                         📅 {inv.date_from ? new Date(inv.date_from).toLocaleDateString('lv-LV') : '-'} — {inv.date_to ? new Date(inv.date_to).toLocaleDateString('lv-LV') : '-'}
+                        {(() => {
+                          const debtInfo = calculateDebt(inv.apartment_id, inv.period);
+                          if (debtInfo.total > 0 || inv.overpayment_amount > 0) {
+                            return (
+                              <div style={{ marginTop: '6px', fontSize: '11px' }}>
+                                {debtInfo.total > 0 && (
+                                  <div style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                                    💔 Parāds: €{debtInfo.total.toFixed(2)}
+                                  </div>
+                                )}
+                                {inv.overpayment_amount > 0 && (
+                                  <div style={{ color: '#10b981', fontWeight: 'bold' }}>
+                                    ✓ Pārmaksa: -€{inv.overpayment_amount.toFixed(2)}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -1491,6 +1683,136 @@ export default function PropertyManager() {
         }
       `}</style>
 
+      {/* PARĀDA PASKAIDROJUMA DIALOGS */}
+      {debtModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white', padding: '30px', borderRadius: '8px',
+            maxWidth: '500px', width: '90%', boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}>
+            <h3>📝 Parāda paskaidrojums</h3>
+            <div style={{ marginBottom: '15px', padding: '10px', background: '#f0f9ff', borderRadius: '4px', color: '#333' }}>
+              <strong>Rēķis:</strong> {debtModal.invoiceNumber}
+            </div>
+            
+            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+              Paskaidrojums (parādīsies BOLD):
+            </label>
+            <textarea
+              value={debtModal.debtNote}
+              onChange={(e) => setDebtModal({...debtModal, debtNote: e.target.value})}
+              placeholder="piem. Rēķins nav apmaksāts pēc termiņa. 5% sods."
+              style={{
+                width: '100%', height: '100px', padding: '10px',
+                border: '1px solid #e2e8f0', borderRadius: '4px',
+                marginBottom: '15px', fontFamily: 'Arial', resize: 'vertical'
+              }}
+            />
+            
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDebtModal(null)}
+                style={{
+                  padding: '10px 20px', background: '#e2e8f0', color: '#333',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer'
+                }}
+              >
+                Atcelt
+              </button>
+              <button
+                onClick={() => saveDebtNote(debtModal.invoiceId, debtModal.debtNote)}
+                style={{
+                  padding: '10px 20px', background: '#10b981', color: 'white',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'
+                }}
+              >
+                ✓ Saglabāt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PĀRMAKSAS IEVADĪŠANAS DIALOGS */}
+      {overpaymentModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white', padding: '30px', borderRadius: '8px',
+            maxWidth: '500px', width: '90%', boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}>
+            <h3>💰 Pārmaksa</h3>
+            <div style={{ marginBottom: '15px', padding: '10px', background: '#f0f9ff', borderRadius: '4px', color: '#333' }}>
+              <strong>Rēķis:</strong> {overpaymentModal.invoiceNumber}
+            </div>
+            
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+                Pārmaksas summa (€):
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={overpaymentModal.amount}
+                onChange={(e) => setOverpaymentModal({...overpaymentModal, amount: e.target.value})}
+                placeholder="25.00"
+                style={{
+                  width: '100%', padding: '10px',
+                  border: '1px solid #e2e8f0', borderRadius: '4px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+                Atskaites mēnesis (kad atņemt):
+              </label>
+              <select
+                value={overpaymentModal.month}
+                onChange={(e) => setOverpaymentModal({...overpaymentModal, month: e.target.value})}
+                style={{
+                  width: '100%', padding: '10px',
+                  border: '1px solid #e2e8f0', borderRadius: '4px'
+                }}
+              >
+                <option value="">Izvēlēties mēnesi...</option>
+                {['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'].map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setOverpaymentModal(null)}
+                style={{
+                  padding: '10px 20px', background: '#e2e8f0', color: '#333',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer'
+                }}
+              >
+                Atcelt
+              </button>
+              <button
+                onClick={() => saveOverpayment(overpaymentModal.invoiceId, overpaymentModal.amount, overpaymentModal.month)}
+                style={{
+                  padding: '10px 20px', background: '#10b981', color: 'white',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'
+                }}
+              >
+                ✓ Saglabāt pārmaksu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div style={styles.sidebar}>
@@ -1502,7 +1824,8 @@ export default function PropertyManager() {
             { id: 'users', label: '👥 Lietotāji' },
             { id: 'tariffs', label: '💰 Tarifi' },
             { id: 'water', label: '💧 Ūdens' },
-            { id: 'invoices', label: '📄 Rēķini' }
+            { id: 'invoices', label: '📄 Rēķini' },
+            { id: 'settings', label: '⚙️ Iestatījumi' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -2489,6 +2812,29 @@ export default function PropertyManager() {
                                       📥
                                     </button>
                                     <button
+                                      onClick={() => setDebtModal({
+                                        invoiceId: invoice.id,
+                                        invoiceNumber: invoice.invoice_number,
+                                        debtNote: invoice.debt_note || ''
+                                      })}
+                                      style={{...styles.btnSmall, padding: '6px 12px', fontSize: '12px', background: '#f59e0b'}}
+                                      title="Parāda paskaidrojums"
+                                    >
+                                      📝 Parāds
+                                    </button>
+                                    <button
+                                      onClick={() => setOverpaymentModal({
+                                        invoiceId: invoice.id,
+                                        invoiceNumber: invoice.invoice_number,
+                                        amount: invoice.overpayment_amount || 0,
+                                        month: invoice.overpayment_month || ''
+                                      })}
+                                      style={{...styles.btnSmall, padding: '6px 12px', fontSize: '12px', background: '#06b6d4'}}
+                                      title="Pārmaksa"
+                                    >
+                                      💰 Pārmaksa
+                                    </button>
+                                    <button
                                       onClick={() => regenerateInvoices(month, invoice.tariff_id)}
                                       style={{...styles.btnSmall, padding: '6px 12px', fontSize: '14px'}}
                                       title="Reģenerēt šo rēķinu"
@@ -2514,12 +2860,107 @@ export default function PropertyManager() {
                 )}
               </div>
             </div>
+          ) : activeTab === 'settings' ? (
+            <div>
+              <h2 style={styles.h2}>⚙️ Iestatījumi</h2>
+              
+              {/* MAKSĀJUMA INFORMĀCIJA */}
+              <div style={{...styles.card, marginBottom: '20px'}}>
+                <h3 style={styles.cardTitle}>💰 Maksājuma informācija</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Maksājuma termiņš (dienas):</label>
+                    <input
+                      type="number"
+                      value={invoiceSettings.payment_term_days || 14}
+                      onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_term_days: e.target.value})}
+                      style={{...styles.input, width: '100%'}}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Maksājuma metode (IBAN):</label>
+                    <input
+                      type="text"
+                      value={invoiceSettings.payment_method || ''}
+                      onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_method: e.target.value})}
+                      placeholder="LV62HABA0551064112797"
+                      style={{...styles.input, width: '100%'}}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Uzņēmuma nosaukums:</label>
+                    <input
+                      type="text"
+                      value={invoiceSettings.payment_company || ''}
+                      onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_company: e.target.value})}
+                      placeholder='BIEDRĪBA "BARONA 78"'
+                      style={{...styles.input, width: '100%'}}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Atsauces teksts:</label>
+                    <input
+                      type="text"
+                      value={invoiceSettings.payment_ref || ''}
+                      onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_ref: e.target.value})}
+                      placeholder="Rēķina numurs"
+                      style={{...styles.input, width: '100%'}}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* GLOBĀLĀ PIEZĪME */}
+              <div style={{...styles.card, marginBottom: '20px'}}>
+                <h3 style={styles.cardTitle}>📝 Globālā piezīme (redzama VISOS rēķinos)</h3>
+                <textarea
+                  value={invoiceSettings.global_invoice_note || ''}
+                  onChange={(e) => setInvoiceSettings({...invoiceSettings, global_invoice_note: e.target.value})}
+                  placeholder="Piezīme, kas parādīsies visu rēķinu apakšā..."
+                  style={{
+                    width: '100%',
+                    height: '120px',
+                    padding: '10px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontFamily: 'Arial',
+                    resize: 'vertical',
+                    marginBottom: '10px'
+                  }}
+                />
+                <p style={{ fontSize: '12px', color: '#666' }}>
+                  ℹ️ Šī piezīme automātiski parādīsies visos ģenerētajos rēķinos
+                </p>
+              </div>
+
+              {/* SAGLABĀT POGU */}
+              <button
+                onClick={saveSettings}
+                style={{
+                  padding: '12px 24px',
+                  background: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '14px'
+                }}
+              >
+                ✓ Saglabāt iestatījumus
+              </button>
+            </div>
           )}
         </div>
       </div>
     </div>
   );
 }
+
 
 const styles = {
   app: {
