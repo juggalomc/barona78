@@ -645,27 +645,50 @@ export default function PropertyManager() {
       }
     }).join('');
 
-    const vatRows = (() => {
-      // Grupēt PVN pēc procentiem
-      const vatByRate = {};
-      invoiceDetails.forEach(detail => {
-        if (detail.vat_rate > 0) {
-          const rate = detail.vat_rate;
-          if (!vatByRate[rate]) {
-            vatByRate[rate] = 0;
-          }
-          vatByRate[rate] += detail.vat_amount;
-        }
-      });
+    // Sadalīt rindas - bez PVN un ar PVN
+    const rowsWithoutVat = invoiceDetails.filter(d => d.vat_rate === 0 || d.vat_rate === undefined).map(detail => {
+      if (detail.type === 'water') {
+        return `
+          <tr>
+            <td>${detail.tariff_name}</td>
+            <td style="text-align: center;">${detail.consumption_m3} m³</td>
+            <td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td>
+            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
+          </tr>
+        `;
+      } else {
+        return `
+          <tr>
+            <td>${detail.tariff_name}</td>
+            <td style="text-align: center;">${apt.area} m²</td>
+            <td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td>
+            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
+          </tr>
+        `;
+      }
+    }).join('');
 
-      // Ģenerēt rindas - viena per PVN%
-      return Object.entries(vatByRate).map(([rate, totalVat]) => `
-        <tr style="background: #f9fafb;">
-          <td colspan="3" style="text-align: right; font-size: 11px;">PVN (${rate}%):</td>
-          <td style="text-align: right; font-size: 11px;">€${totalVat.toFixed(2)}</td>
-        </tr>
-      `).join('');
-    })();
+    const rowsWithVat = invoiceDetails.filter(d => d.vat_rate > 0).map(detail => {
+      if (detail.type === 'water') {
+        return `
+          <tr>
+            <td>${detail.tariff_name}</td>
+            <td style="text-align: center;">${detail.consumption_m3} m³</td>
+            <td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td>
+            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
+          </tr>
+        `;
+      } else {
+        return `
+          <tr>
+            <td>${detail.tariff_name}</td>
+            <td style="text-align: center;">${apt.area} m²</td>
+            <td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td>
+            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
+          </tr>
+        `;
+      }
+    }).join('');
 
     const htmlContent = `
       <html>
@@ -724,9 +747,45 @@ export default function PropertyManager() {
               <th style="text-align: right;">CENA</th>
               <th style="text-align: right;">SUMMA</th>
             </tr>
-            ${tableRows}
-            ${vatRows}
+            ${rowsWithoutVat}
+            ${invoiceDetails.filter(d => d.vat_rate === 0 || d.vat_rate === undefined).length > 0 && invoiceDetails.filter(d => d.vat_rate > 0).length > 0 ? `
+              <tr style="background: #f9fafb; height: 15px;"></tr>
+              <tr style="background: #f9fafb;">
+                <td colspan="4" style="text-align: right; font-size: 11px; padding: 8px;">
+                  Summa bez PVN: <strong>€${invoiceDetails.filter(d => d.vat_rate === 0 || d.vat_rate === undefined).reduce((sum, d) => sum + d.amount_without_vat, 0).toFixed(2)}</strong>
+                </td>
+              </tr>
+            ` : ''}
           </table>
+
+          ${rowsWithVat ? `
+            <div style="margin-top: 20px; font-weight: bold; color: #003399; padding-bottom: 10px;">Pakalpojumi ar PVN</div>
+            <table>
+              <tr>
+                <th>PAKALPOJUMS</th>
+                <th style="text-align: center;">DAUDZ.</th>
+                <th style="text-align: right;">CENA</th>
+                <th style="text-align: right;">SUMMA</th>
+              </tr>
+              ${rowsWithVat}
+              ${(() => {
+                const vatByRate = {};
+                invoiceDetails.filter(d => d.vat_rate > 0).forEach(detail => {
+                  const rate = detail.vat_rate;
+                  if (!vatByRate[rate]) {
+                    vatByRate[rate] = 0;
+                  }
+                  vatByRate[rate] += detail.vat_amount;
+                });
+                return Object.entries(vatByRate).map(([rate, totalVat]) => `
+                  <tr style="background: #f9fafb;">
+                    <td colspan="3" style="text-align: right; font-size: 11px;">PVN (${rate}%):</td>
+                    <td style="text-align: right; font-size: 11px;">€${totalVat.toFixed(2)}</td>
+                  </tr>
+                `).join('');
+              })()}
+            </table>
+          ` : ''}
 
           <div style="text-align: right; margin: 20px 0; border-top: 2px solid #000; padding-top: 15px;">
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px;">
