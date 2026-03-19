@@ -56,7 +56,8 @@ export default function PropertyManager() {
   const [userMeterForm, setUserMeterForm] = useState({
     meter_type: 'electricity',
     reading_value: '',
-    reading_date: new Date().toISOString().split('T')[0]
+    reading_date: new Date().toISOString().split('T')[0],
+    period: new Date().toISOString().split('T')[0].substring(0, 7) // YYYY-MM
   });
   
   // ===== ADMIN STATE (PropertyManager) =====
@@ -191,15 +192,24 @@ export default function PropertyManager() {
     if (!currentUser || !userApartment || !userMeterForm.reading_value) return;
 
     try {
+      // Ņem period no formas (YYYY-MM)
+      const period = userMeterForm.period || new Date().toISOString().split('T')[0].substring(0, 7);
+      
       const { error } = await supabase.from('meter_readings').insert([{
         apartment_id: currentUser.apartment_id,
         meter_type: userMeterForm.meter_type,
         reading_date: userMeterForm.reading_date,
-        reading_value: parseFloat(userMeterForm.reading_value)
+        reading_value: parseFloat(userMeterForm.reading_value),
+        period: period
       }]);
 
       if (error) throw error;
-      setUserMeterForm({ meter_type: 'electricity', reading_value: '', reading_date: new Date().toISOString().split('T')[0] });
+      setUserMeterForm({ 
+        meter_type: 'electricity', 
+        reading_value: '', 
+        reading_date: new Date().toISOString().split('T')[0],
+        period: new Date().toISOString().split('T')[0].substring(0, 7)
+      });
       fetchUserData(currentUser.apartment_id);
       showToast('✓ Rādījums saglabāts');
     } catch (error) {
@@ -1122,6 +1132,12 @@ export default function PropertyManager() {
                 <option value="gas">🔥 Gāze (m³)</option>
                 <option value="water">💧 Ūdens (m³)</option>
               </select>
+              <input
+                type="month"
+                value={userMeterForm.period}
+                onChange={(e) => setUserMeterForm({ ...userMeterForm, period: e.target.value })}
+                style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
+              />
               <input
                 type="date"
                 value={userMeterForm.reading_date}
