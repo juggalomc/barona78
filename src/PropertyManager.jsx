@@ -62,7 +62,8 @@ export default function PropertyManager() {
     personal_code: '',
     phone: '',
     email: '',
-    share: ''
+    share: '',
+    declared_persons: 1
   });
 
   const [tariffPeriod, setTariffPeriod] = useState('2026-01');
@@ -129,7 +130,8 @@ export default function PropertyManager() {
         personal_code: apartmentForm.personal_code || null,
         phone: apartmentForm.phone || null,
         email: apartmentForm.email || null,
-        share: apartmentForm.share ? parseFloat(apartmentForm.share) : null
+        share: apartmentForm.share ? parseFloat(apartmentForm.share) : null,
+        declared_persons: parseInt(apartmentForm.declared_persons) || 1
       };
 
       const { error } = await supabase.from('apartments').insert([dataToInsert]);
@@ -144,7 +146,8 @@ export default function PropertyManager() {
         personal_code: '',
         phone: '',
         email: '',
-        share: ''
+        share: '',
+        declared_persons: 1
       });
       fetchData();
       showToast('✓ Dzīvoklis pievienots');
@@ -217,6 +220,7 @@ export default function PropertyManager() {
       const invoicesToAdd = [];
       const [year, month] = period.split('-');
       const periodTariffs = tariffs.filter(t => t.period === period);
+      const waterTariff = waterTariffs.find(w => w.period === period);
 
       for (const apt of apartments) {
         let totalAmountWithoutVat = 0;
@@ -262,7 +266,8 @@ export default function PropertyManager() {
             price_per_m3: waterPricePerM3,
             amount_without_vat: waterAmountWithoutVat,
             vat_rate: waterVatRate,
-            vat_amount: waterVatAmount
+            vat_amount: waterVatAmount,
+            type: 'water'
           });
         }
 
@@ -358,7 +363,8 @@ export default function PropertyManager() {
             price_per_m3: waterPricePerM3,
             amount_without_vat: waterAmountWithoutVat,
             vat_rate: waterVatRate,
-            vat_amount: waterVatAmount
+            vat_amount: waterVatAmount,
+            type: 'water'
           });
         }
 
@@ -870,6 +876,16 @@ export default function PropertyManager() {
                       style={styles.input}
                     />
                   </div>
+                  <div style={styles.formRow}>
+                    <input
+                      type="number"
+                      placeholder="Deklarēto personu skaits"
+                      min="1"
+                      value={apartmentForm.declared_persons}
+                      onChange={(e) => setApartmentForm({...apartmentForm, declared_persons: e.target.value})}
+                      style={styles.input}
+                    />
+                  </div>
                   <button type="submit" style={styles.btn}>Pievienot</button>
                 </form>
               </div>
@@ -881,7 +897,7 @@ export default function PropertyManager() {
                     <div key={apt.id} style={styles.listItem}>
                       <div>
                         <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
-                        <div style={{fontSize: '13px', color: '#666'}}>📐 {apt.area} m² • {apt.owner_name}</div>
+                        <div style={{fontSize: '13px', color: '#666'}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
                       </div>
                       <button onClick={() => deleteApartment(apt.id)} style={styles.btnSmall}>🗑️</button>
                     </div>
