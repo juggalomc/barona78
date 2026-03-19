@@ -347,6 +347,20 @@ export default function PropertyManager() {
   const saveWaterTariff = async (e) => {
     e.preventDefault();
     try {
+      const priceValue = parseFloat(document.getElementById('waterPrice')?.value || 0);
+      const vatValue = parseFloat(document.getElementById('waterVat')?.value || 0);
+
+      // Validēt vērtības
+      if (isNaN(priceValue) || priceValue < 0 || priceValue > 9999.99) {
+        showToast('Nepareiza cena par m³', 'error');
+        return;
+      }
+
+      if (isNaN(vatValue) || vatValue < 0 || vatValue > 100) {
+        showToast('PVN jābūt no 0 līdz 100%', 'error');
+        return;
+      }
+
       const { data: existing } = await supabase
         .from('water_tariffs')
         .select('*')
@@ -356,8 +370,8 @@ export default function PropertyManager() {
         const { error } = await supabase
           .from('water_tariffs')
           .update({
-            price_per_m3: parseFloat(document.getElementById('waterPrice')?.value || 0),
-            vat_rate: parseFloat(document.getElementById('waterVat')?.value || 0)
+            price_per_m3: priceValue,
+            vat_rate: vatValue
           })
           .eq('id', existing[0].id);
         if (error) throw error;
@@ -366,8 +380,8 @@ export default function PropertyManager() {
           .from('water_tariffs')
           .insert([{
             period: tariffPeriod,
-            price_per_m3: parseFloat(document.getElementById('waterPrice')?.value || 0),
-            vat_rate: parseFloat(document.getElementById('waterVat')?.value || 0)
+            price_per_m3: priceValue,
+            vat_rate: vatValue
           }]);
         if (error) throw error;
       }
@@ -381,6 +395,19 @@ export default function PropertyManager() {
 
   const saveWaterConsumption = async (apartmentId, consumption) => {
     try {
+      const consumptionValue = parseFloat(consumption);
+      
+      // Validēt vērtību
+      if (isNaN(consumptionValue) || consumptionValue < 0) {
+        showToast('Nepareiza ūdens patēriņa vērtība', 'error');
+        return;
+      }
+
+      if (consumptionValue > 9999.99) {
+        showToast('Patēriņš nevar būt lielāks par 9999.99 m³', 'error');
+        return;
+      }
+
       const { data: existing } = await supabase
         .from('water_consumption')
         .select('*')
@@ -390,7 +417,7 @@ export default function PropertyManager() {
       if (existing && existing.length > 0) {
         const { error } = await supabase
           .from('water_consumption')
-          .update({ consumption_m3: parseFloat(consumption) })
+          .update({ consumption_m3: consumptionValue })
           .eq('id', existing[0].id);
         if (error) throw error;
       } else {
@@ -399,7 +426,7 @@ export default function PropertyManager() {
           .insert([{
             apartment_id: apartmentId,
             period: tariffPeriod,
-            consumption_m3: parseFloat(consumption)
+            consumption_m3: consumptionValue
           }]);
         if (error) throw error;
       }
