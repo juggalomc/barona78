@@ -111,10 +111,13 @@ export default function PropertyManager() {
   const [tariffForm, setTariffForm] = useState({
     name: '',
     total_amount: '',
-    vat_rate: 0
+    vat_rate: 0,
+    include_in_invoice: true
   });
 
   const [invoiceMonth, setInvoiceMonth] = useState('');
+  const [invoiceFromDate, setInvoiceFromDate] = useState('');
+  const [invoiceToDate, setInvoiceToDate] = useState('');
   const [expandedMonth, setExpandedMonth] = useState(null);
   const [expandedInvoiceMonth, setExpandedInvoiceMonth] = useState(null);
   const [editingTariff, setEditingTariff] = useState(null);
@@ -316,13 +319,14 @@ export default function PropertyManager() {
         name: tariffForm.name.trim(),
         total_amount: parseFloat(tariffForm.total_amount),
         vat_rate: parseFloat(tariffForm.vat_rate) || 0,
-        period: tariffPeriod
+        period: tariffPeriod,
+        include_in_invoice: tariffForm.include_in_invoice
       };
 
       const { error } = await supabase.from('tariffs').insert([dataToInsert]);
       if (error) throw error;
       
-      setTariffForm({ name: '', total_amount: '', vat_rate: 0 });
+      setTariffForm({ name: '', total_amount: '', vat_rate: 0, include_in_invoice: true });
       fetchData();
       showToast('✓ Tarifs pievienots');
     } catch (error) {
@@ -367,7 +371,8 @@ export default function PropertyManager() {
 
       const invoicesToAdd = [];
       const [year, month] = period.split('-');
-      const periodTariffs = tariffs.filter(t => t.period === period);
+      // Filtrer tikai atzīmētus tarifus
+      const periodTariffs = tariffs.filter(t => t.period === period && t.include_in_invoice !== false);
       const waterTariff = waterTariffs.find(w => w.period === period);
 
       for (const apt of apartments) {
@@ -389,11 +394,72 @@ export default function PropertyManager() {
             tariff_name: tariff.name,
             amount_without_vat: amountWithoutVat,
             vat_rate: vatRate,
-            vat_amount: vatAmount
+            vat_amount: vatAmount,
+            type: 'tariff'
           });
         }
 
-        // Pievienot ūdens patēriņu
+        // Pievienot ūdens patēriņu no meter_readings
+        const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === period);
+
+        if (waterReading && waterTariff && enabledMeters.water) {
+          const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
+          const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
+          const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
+          const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
+          const waterVatAmount = Math.round(waterAmountWithoutVat * waterVatRate / 100 * 100) / 100;
+
+          totalAmountWithoutVat += waterAmountWithoutVat;
+          totalVatAmount += waterVatAmount;
+
+          invoiceDetails.push({
+            tariff_id: waterTariff.id,
+            tariff_name: `Ūdens (${waterConsumptionM3} m³)`,
+            consumption_m3: waterConsumptionM3,
+            price_per_m3: waterPricePerM3,
+            amount_without_vat: waterAmountWithoutVat,
+            vat_rate: waterVatRate,
+            vat_amount: waterVatAmount,
+            type: 'water'
+          });
+        }
+
+        if (invoiceDetails.length === 0) continue;
+
+        const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
+        const invoiceNumber = `${year}/${month}-${apt.number}`;
+        const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+
+        invoicesToAdd.push({
+          apartment_id: apt.id,
+          tariff_id: periodTariffs[0]?.id,
+          invoice_number: invoiceNumber,
+          period: period,
+          amount: totalAmountWithVat,
+          amount_without_vat: totalAmountWithoutVat,
+          amount_with_vat: totalAmountWithVat,
+          vat_amount: totalVatAmount,
+          vat_rate: 0,
+          due_date: dueDate,
+          paid: false,
+          invoice_details: JSON.stringify(invoiceDetails)
+        });
+      }
+
+      if (invoicesToAdd.length === 0) {
+        showToast('Nav dzīvokļu ar tarifiem', 'error');
+        return;
+      }
+
+      const { error } = await supabase.from('invoices').insert(invoicesToAdd);
+      if (error) throw error;
+
+      fetchData();
+      showToast(`✓ Reģenerēti ${invoicesToAdd.length} rēķini`);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
         const waterConsumptionRecord = waterConsumption.find(w => w.apartment_id === apt.id && w.period === period);
         const waterTariff = waterTariffs.find(w => w.period === period);
 
@@ -456,9 +522,10 @@ export default function PropertyManager() {
       return;
     }
 
-    const periodTariffs = tariffs.filter(t => t.period === invoiceMonth);
+    // Filtrer tarifus tikai ar include_in_invoice = true
+    const periodTariffs = tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice !== false);
     if (periodTariffs.length === 0) {
-      showToast(`Nav tarifū periodam ${invoiceMonth}`, 'error');
+      showToast(`Nav atzīmētu tarifū periodam ${invoiceMonth}`, 'error');
       return;
     }
 
@@ -486,16 +553,17 @@ export default function PropertyManager() {
             tariff_name: tariff.name,
             amount_without_vat: amountWithoutVat,
             vat_rate: vatRate,
-            vat_amount: vatAmount
+            vat_amount: vatAmount,
+            type: 'tariff'
           });
         }
 
-        // Pievienot ūdens patēriņu
-        const waterConsumptionRecord = waterConsumption.find(w => w.apartment_id === apt.id && w.period === invoiceMonth);
+        // Pievienot ūdens patēriņu no meter_readings
+        const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === invoiceMonth);
         const waterTariff = waterTariffs.find(w => w.period === invoiceMonth);
 
-        if (waterConsumptionRecord && waterTariff) {
-          const waterConsumptionM3 = parseFloat(waterConsumptionRecord.consumption_m3) || 0;
+        if (waterReading && waterTariff && enabledMeters.water) {
+          const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
           const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
           const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
           const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
@@ -515,6 +583,44 @@ export default function PropertyManager() {
             type: 'water'
           });
         }
+
+        if (invoiceDetails.length === 0) continue; // Neskop dzīvokļus bez tarifiem
+
+        const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
+        const invoiceNumber = `${year}/${month}-${apt.number}`;
+        const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+
+        invoicesToAdd.push({
+          apartment_id: apt.id,
+          tariff_id: periodTariffs[0].id,
+          invoice_number: invoiceNumber,
+          period: invoiceMonth,
+          amount: totalAmountWithVat,
+          amount_without_vat: totalAmountWithoutVat,
+          amount_with_vat: totalAmountWithVat,
+          vat_amount: totalVatAmount,
+          vat_rate: 0,
+          due_date: dueDate,
+          paid: false,
+          invoice_details: JSON.stringify(invoiceDetails)
+        });
+      }
+
+      if (invoicesToAdd.length === 0) {
+        showToast('Nav dzīvokļu ar tarifiem', 'error');
+        return;
+      }
+
+      const { error } = await supabase.from('invoices').insert(invoicesToAdd);
+      if (error) throw error;
+
+      setInvoiceMonth('');
+      fetchData();
+      showToast(`✓ Ģenerēti ${invoicesToAdd.length} rēķini`);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
 
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
         const invoiceNumber = `${year}/${month}-${apt.number}`;
@@ -772,7 +878,8 @@ export default function PropertyManager() {
     setEditForm({
       name: tariff.name,
       total_amount: tariff.total_amount,
-      vat_rate: tariff.vat_rate || 0
+      vat_rate: tariff.vat_rate || 0,
+      include_in_invoice: tariff.include_in_invoice !== false
     });
   };
 
@@ -783,7 +890,8 @@ export default function PropertyManager() {
         .update({
           name: editForm.name,
           total_amount: parseFloat(editForm.total_amount),
-          vat_rate: parseFloat(editForm.vat_rate) || 0
+          vat_rate: parseFloat(editForm.vat_rate) || 0,
+          include_in_invoice: editForm.include_in_invoice
         })
         .eq('id', id);
       
@@ -1656,6 +1764,15 @@ export default function PropertyManager() {
                       style={styles.input}
                     />
                   </div>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: '#f9fafb', borderRadius: '4px'}}>
+                    <input
+                      type="checkbox"
+                      checked={tariffForm.include_in_invoice}
+                      onChange={(e) => setTariffForm({...tariffForm, include_in_invoice: e.target.checked})}
+                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                    />
+                    <label style={{fontSize: '13px', color: '#333', cursor: 'pointer', margin: 0}}>Iekļaut rēķinā</label>
+                  </div>
                   <button type="submit" style={styles.btn}>Pievienot</button>
                 </form>
               </div>
@@ -1738,6 +1855,15 @@ export default function PropertyManager() {
                                     onChange={(e) => setEditForm({...editForm, vat_rate: e.target.value})}
                                     style={{...styles.input, fontSize: '12px'}}
                                   />
+                                </div>
+                                <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: '#f9fafb', borderRadius: '4px'}}>
+                                  <input
+                                    type="checkbox"
+                                    checked={editForm.include_in_invoice !== false}
+                                    onChange={(e) => setEditForm({...editForm, include_in_invoice: e.target.checked})}
+                                    style={{width: '16px', height: '16px', cursor: 'pointer'}}
+                                  />
+                                  <label style={{fontSize: '12px', color: '#333', cursor: 'pointer', margin: 0}}>Iekļaut rēķinā</label>
                                 </div>
                                 <div style={{display: 'flex', gap: '8px'}}>
                                   <button
