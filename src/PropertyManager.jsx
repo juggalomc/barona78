@@ -63,20 +63,23 @@ export default function PropertyManager() {
     share: ''
   });
 
+  const [tariffPeriod, setTariffPeriod] = useState('2026-01');
   const [tariffForm, setTariffForm] = useState({
     name: '',
-    total_amount: ''
+    total_amount: '',
+    vat_rate: 0
   });
 
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [expandedMonth, setExpandedMonth] = useState(null);
+  const [copiedFromMonth, setCopiedFromMonth] = useState(null);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [aptRes, tarRes, invRes] = await Promise.all([
         supabase.from('apartments').select('*').order('number', { ascending: true }),
-        supabase.from('tariffs').select('*').order('created_at', { ascending: false }),
+        supabase.from('tariffs').select('*').order('period', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('invoices').select('*').order('period', { ascending: false })
       ]);
 
@@ -150,13 +153,15 @@ export default function PropertyManager() {
     try {
       const dataToInsert = {
         name: tariffForm.name.trim(),
-        total_amount: parseFloat(tariffForm.total_amount)
+        total_amount: parseFloat(tariffForm.total_amount),
+        vat_rate: parseFloat(tariffForm.vat_rate) || 0,
+        period: tariffPeriod
       };
 
       const { error } = await supabase.from('tariffs').insert([dataToInsert]);
       if (error) throw error;
       
-      setTariffForm({ name: '', total_amount: '' });
+      setTariffForm({ name: '', total_amount: '', vat_rate: 0 });
       fetchData();
       showToast('✓ Tarifs pievienots');
     } catch (error) {
@@ -164,10 +169,43 @@ export default function PropertyManager() {
     }
   };
 
+  const copyTariffsFromPreviousMonth = async (fromPeriod, toPeriod) => {
+    try {
+      const previousTariffs = tariffs.filter(t => t.period === fromPeriod);
+      
+      if (previousTariffs.length === 0) {
+        showToast('Nav tarifū no šī mēneša', 'error');
+        return;
+      }
+
+      const newTariffs = previousTariffs.map(t => ({
+        name: t.name,
+        total_amount: t.total_amount,
+        vat_rate: t.vat_rate,
+        period: toPeriod
+      }));
+
+      const { error } = await supabase.from('tariffs').insert(newTariffs);
+      if (error) throw error;
+
+      fetchData();
+      showToast(`✓ Kopēti ${newTariffs.length} tarifi no ${fromPeriod}`);
+      setCopiedFromMonth(fromPeriod);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
   const generateInvoices = async (e) => {
     e.preventDefault();
-    if (!invoiceMonth || tariffs.length === 0) {
-      showToast('Izvēlieties mēnesi un pārliecinieties, ka ir tarifi', 'error');
+    if (!invoiceMonth) {
+      showToast('Izvēlieties mēnesi', 'error');
+      return;
+    }
+
+    const periodTariffs = tariffs.filter(t => t.period === invoiceMonth);
+    if (periodTariffs.length === 0) {
+      showToast(`Nav tarifū periodam ${invoiceMonth}`, 'error');
       return;
     }
 
@@ -176,9 +214,13 @@ export default function PropertyManager() {
       const [year, month] = invoiceMonth.split('-');
 
       for (const apt of apartments) {
-        for (const tariff of tariffs) {
+        for (const tariff of periodTariffs) {
           const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
-          const amount = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
+          const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
+          const vatRate = parseFloat(tariff.vat_rate) || 0;
+          const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
+          const amountWithVat = Math.round((amountWithoutVat + vatAmount) * 100) / 100;
+
           const invoiceNumber = `${year}/${month}-${apt.number}`;
           const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
 
@@ -187,7 +229,11 @@ export default function PropertyManager() {
             tariff_id: tariff.id,
             invoice_number: invoiceNumber,
             period: invoiceMonth,
-            amount: amount,
+            amount: amountWithVat,
+            amount_without_vat: amountWithoutVat,
+            amount_with_vat: amountWithVat,
+            vat_amount: vatAmount,
+            vat_rate: vatRate,
             due_date: dueDate,
             paid: false
           });
@@ -259,6 +305,10 @@ export default function PropertyManager() {
     const apt = apartments.find(a => a.id === invoice.apartment_id);
     const tariff = tariffs.find(t => t.id === invoice.tariff_id);
 
+    const amountWithoutVat = invoice.amount_without_vat || invoice.amount;
+    const vatAmount = invoice.vat_amount || 0;
+    const amountWithVat = invoice.amount_with_vat || invoice.amount;
+
     const htmlContent = `
       <html>
         <head>
@@ -266,18 +316,15 @@ export default function PropertyManager() {
           <style>
             body { font-family: Arial, sans-serif; margin: 0; padding: 40px; line-height: 1.6; }
             .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
-            .logo { font-size: 36px; font-weight: bold; }
-            .company-info { text-align: right; font-size: 12px; }
             .title { font-size: 24px; font-weight: bold; }
-            .info-section { margin-bottom: 20px; }
-            .info-title { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 5px; }
-            .info-value { font-size: 14px; }
+            .company-info { text-align: right; font-size: 12px; }
             .divider { border-top: 3px solid #000; margin: 30px 0; }
             .payment-info-box { background: #003399; color: white; padding: 20px; margin: 30px 0; font-size: 12px; }
             table { width: 100%; border-collapse: collapse; margin: 30px 0; }
             th { text-align: left; padding: 10px; border-bottom: 2px solid #000; font-size: 12px; font-weight: bold; }
-            td { padding: 15px 10px; border-bottom: 2px solid #000; }
+            td { padding: 12px 10px; }
             .amount-total { font-size: 32px; font-weight: bold; color: #003399; text-align: right; margin: 20px 0; }
+            .info-title { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 5px; }
           </style>
         </head>
         <body>
@@ -298,12 +345,12 @@ export default function PropertyManager() {
 
           <div class="divider"></div>
 
-          <div class="info-section">
+          <div style="margin-bottom: 20px;">
             <div class="info-title">Maksātājs</div>
-            <div class="info-value" style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">
               ${apt.owner_name} ${apt.owner_surname || ''}
             </div>
-            <div class="info-value" style="font-size: 12px;">Personas kods: ${apt.personal_code || '-'}</div>
+            <div style="font-size: 12px;">Personas kods: ${apt.personal_code || '-'}</div>
           </div>
 
           <div style="background: #f5f5f5; padding: 20px; margin: 20px 0;">
@@ -322,14 +369,24 @@ export default function PropertyManager() {
             <tr>
               <td>${tariff.name}</td>
               <td style="text-align: center;">${apt.area} m²</td>
-              <td style="text-align: right;">€${(invoice.amount / apt.area).toFixed(4)}</td>
-              <td style="text-align: right; font-weight: bold;">€${invoice.amount.toFixed(2)}</td>
+              <td style="text-align: right;">€${(amountWithoutVat / apt.area).toFixed(4)}</td>
+              <td style="text-align: right; font-weight: bold;">€${amountWithoutVat.toFixed(2)}</td>
             </tr>
           </table>
 
-          <div style="text-align: right;">
-            <div style="font-size: 12px; margin-bottom: 10px;">KOPĀ APMAKSAI (EUR):</div>
-            <div class="amount-total">€${invoice.amount.toFixed(2)}</div>
+          <div style="text-align: right; margin: 20px 0;">
+            ${tariff.vat_rate > 0 ? `
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px;">
+                <span>Summa bez PVN:</span>
+                <span>€${amountWithoutVat.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+                <span>PVN (${tariff.vat_rate}%):</span>
+                <span>€${vatAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            <div style="font-size: 12px; margin-bottom: 15px;">KOPĀ APMAKSAI (EUR):</div>
+            <div class="amount-total">€${amountWithVat.toFixed(2)}</div>
           </div>
 
           <div class="payment-info-box">
@@ -368,6 +425,7 @@ export default function PropertyManager() {
   });
 
   const sortedMonths = Object.keys(groupedInvoices).sort().reverse();
+  const uniqueTariffPeriods = [...new Set(tariffs.map(t => t.period))].sort().reverse();
 
   // Aprēķināt parādu
   const totalDebt = invoices
@@ -545,6 +603,15 @@ export default function PropertyManager() {
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>➕ Pievienot tarifu</h2>
                 <form onSubmit={addTariff} style={styles.form}>
+                  <div>
+                    <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
+                    <input
+                      type="month"
+                      value={tariffPeriod}
+                      onChange={(e) => setTariffPeriod(e.target.value)}
+                      style={styles.input}
+                    />
+                  </div>
                   <input
                     type="text"
                     placeholder="Nosaukums *"
@@ -560,29 +627,63 @@ export default function PropertyManager() {
                     onChange={(e) => setTariffForm({...tariffForm, total_amount: e.target.value})}
                     style={styles.input}
                   />
-                  <small style={{color: '#666', display: 'block', marginBottom: '15px'}}>
-                    Summa tiks dalīta ar {TOTAL_AREA} m² un reizināta ar dzīvokļa platību
-                  </small>
+                  <div>
+                    <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>PVN (%) - 0 ja bez PVN</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="PVN procentu likme"
+                      value={tariffForm.vat_rate}
+                      onChange={(e) => setTariffForm({...tariffForm, vat_rate: e.target.value})}
+                      style={styles.input}
+                    />
+                  </div>
                   <button type="submit" style={styles.btn}>Pievienot</button>
                 </form>
               </div>
 
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>💰 Tarifi ({tariffs.length})</h2>
-                <div style={styles.list}>
-                  {tariffs.map(tar => {
-                    const pricePerSqm = parseFloat(tar.total_amount) / TOTAL_AREA;
-                    return (
-                      <div key={tar.id} style={styles.listItem}>
-                        <div>
-                          <div style={{fontWeight: 'bold'}}>{tar.name}</div>
-                          <div style={{fontSize: '13px', color: '#666'}}>€{parseFloat(tar.total_amount).toFixed(2)} • €{pricePerSqm.toFixed(4)}/m²</div>
+                <h2 style={styles.cardTitle}>💰 Tarifi pa mēnešiem</h2>
+                {uniqueTariffPeriods.map(period => {
+                  const periodTariffs = tariffs.filter(t => t.period === period);
+                  const previousPeriod = new Date(period + '-01');
+                  previousPeriod.setMonth(previousPeriod.getMonth() - 1);
+                  const prevPeriodStr = previousPeriod.toISOString().split('T')[0].slice(0, 7);
+
+                  return (
+                    <div key={period} style={{marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #e2e8f0'}}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
+                        <div style={{fontWeight: 'bold', fontSize: '14px'}}>
+                          📅 {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
                         </div>
-                        <button onClick={() => deleteTariff(tar.id)} style={styles.btnSmall}>🗑️</button>
+                        {tariffs.some(t => t.period === prevPeriodStr) && !copiedFromMonth?.includes(period) && (
+                          <button
+                            onClick={() => copyTariffsFromPreviousMonth(prevPeriodStr, period)}
+                            style={{...styles.btnSmall, fontSize: '12px', padding: '4px 8px', background: '#e0e7ff', color: '#3730a3', borderRadius: '4px', fontWeight: '500'}}
+                            title="Kopēt no iepriekšējā mēneša"
+                          >
+                            📋 Kopēt
+                          </button>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
+                      {periodTariffs.map(tar => {
+                        const pricePerSqm = parseFloat(tar.total_amount) / TOTAL_AREA;
+                        return (
+                          <div key={tar.id} style={{...styles.listItem, marginBottom: '8px'}}>
+                            <div>
+                              <div style={{fontWeight: 'bold', fontSize: '13px'}}>{tar.name}</div>
+                              <div style={{fontSize: '12px', color: '#666'}}>
+                                €{parseFloat(tar.total_amount).toFixed(2)} • €{pricePerSqm.toFixed(4)}/m²
+                                {tar.vat_rate > 0 && ` • PVN: ${tar.vat_rate}%`}
+                              </div>
+                            </div>
+                            <button onClick={() => deleteTariff(tar.id)} style={styles.btnSmall}>🗑️</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
@@ -590,12 +691,18 @@ export default function PropertyManager() {
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
                 <form onSubmit={generateInvoices} style={{display: 'flex', gap: '10px'}}>
-                  <input
-                    type="month"
+                  <select
                     value={invoiceMonth}
                     onChange={(e) => setInvoiceMonth(e.target.value)}
                     style={{...styles.input, flex: 1}}
-                  />
+                  >
+                    <option value="">-- Izvēlieties mēnesi --</option>
+                    {uniqueTariffPeriods.map(period => (
+                      <option key={period} value={period}>
+                        {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
+                      </option>
+                    ))}
+                  </select>
                   <button type="submit" style={styles.btn}>Ģenerēt</button>
                 </form>
               </div>
@@ -662,14 +769,20 @@ export default function PropertyManager() {
                                         </div>
                                       </div>
                                     </div>
-                                    <div style={{
-                                      fontWeight: 'bold',
-                                      color: invoice.paid ? '#10b981' : '#ef4444',
-                                      minWidth: '80px',
-                                      textAlign: 'right',
-                                      marginRight: '10px'
-                                    }}>
-                                      €{invoice.amount.toFixed(2)}
+                                    <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '10px'}}>
+                                      {invoice.vat_rate > 0 && (
+                                        <div style={{fontSize: '11px', color: '#999', marginBottom: '2px'}}>
+                                          €{invoice.amount_without_vat?.toFixed(2) || '0.00'} + €{invoice.vat_amount?.toFixed(2) || '0.00'}
+                                        </div>
+                                      )}
+                                      <div style={{
+                                        fontWeight: 'bold',
+                                        color: invoice.paid ? '#10b981' : '#ef4444',
+                                        minWidth: '80px',
+                                        textAlign: 'right'
+                                      }}>
+                                        €{invoice.amount.toFixed(2)}
+                                      </div>
                                     </div>
                                     <button
                                       onClick={() => downloadPDF(invoice)}
