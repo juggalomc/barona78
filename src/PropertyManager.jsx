@@ -65,9 +65,25 @@ export default function PropertyManager() {
   const [invoices, setInvoices] = useState([]);
   const [waterConsumption, setWaterConsumption] = useState([]);
   const [waterTariffs, setWaterTariffs] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState(null);
+  
+  // Users management state
+  const [editingUser, setEditingUser] = useState(null);
+  const [editUserForm, setEditUserForm] = useState({
+    email: '',
+    password: '',
+    apartment_id: '',
+    role: 'user'
+  });
+  const [newUserForm, setNewUserForm] = useState({
+    email: '',
+    password: '',
+    apartment_id: '',
+    role: 'user'
+  });
   
   const [apartmentForm, setApartmentForm] = useState({
     number: '',
@@ -194,12 +210,13 @@ export default function PropertyManager() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [aptRes, tarRes, invRes, wcRes, wtRes] = await Promise.all([
+      const [aptRes, tarRes, invRes, wcRes, wtRes, usersRes] = await Promise.all([
         supabase.from('apartments').select('*').order('number', { ascending: true }),
         supabase.from('tariffs').select('*').order('period', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('invoices').select('*').order('period', { ascending: false }),
         supabase.from('water_consumption').select('*').order('period', { ascending: false }),
-        supabase.from('water_tariffs').select('*').order('period', { ascending: false })
+        supabase.from('water_tariffs').select('*').order('period', { ascending: false }),
+        supabase.from('users').select('*').order('email', { ascending: true })
       ]);
 
       setApartments(aptRes.data || []);
@@ -207,6 +224,7 @@ export default function PropertyManager() {
       setInvoices(invRes.data || []);
       setWaterConsumption(wcRes.data || []);
       setWaterTariffs(wtRes.data || []);
+      setUsers(usersRes.data || []);
     } catch (error) {
       showToast('Kļūda ielādējot datus', 'error');
     } finally {
@@ -724,6 +742,75 @@ export default function PropertyManager() {
     }
   };
 
+  // ===== USERS MANAGEMENT =====
+  const addUser = async (e) => {
+    e.preventDefault();
+    if (!newUserForm.email || !newUserForm.password || !newUserForm.apartment_id) {
+      showToast('Aizpildiet visus laukus', 'error');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('users').insert([{
+        email: newUserForm.email.trim(),
+        password: newUserForm.password,
+        apartment_id: newUserForm.apartment_id,
+        role: newUserForm.role
+      }]);
+
+      if (error) throw error;
+      setNewUserForm({ email: '', password: '', apartment_id: '', role: 'user' });
+      fetchData();
+      showToast('✓ Lietotājs pievienots');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const startEditUser = (user) => {
+    setEditingUser(user.id);
+    setEditUserForm({
+      email: user.email,
+      password: user.password,
+      apartment_id: user.apartment_id,
+      role: user.role
+    });
+  };
+
+  const saveEditUser = async (id) => {
+    if (!editUserForm.email || !editUserForm.password) {
+      showToast('Email un parole ir obligāti', 'error');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('users').update({
+        email: editUserForm.email.trim(),
+        password: editUserForm.password,
+        apartment_id: editUserForm.apartment_id,
+        role: editUserForm.role
+      }).eq('id', id);
+
+      if (error) throw error;
+      setEditingUser(null);
+      fetchData();
+      showToast('✓ Lietotājs atjaunināts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const deleteUser = async (id) => {
+    if (!window.confirm('Izdzēst lietotāju?')) return;
+    try {
+      await supabase.from('users').delete().eq('id', id);
+      fetchData();
+      showToast('✓ Izdzēsts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
   const downloadPDF = (invoice) => {
     const apt = apartments.find(a => a.id === invoice.apartment_id);
     const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
@@ -1101,6 +1188,7 @@ export default function PropertyManager() {
           {[
             { id: 'overview', label: '📊 Pārskats' },
             { id: 'apartments', label: '🏠 Dzīvokļi' },
+            { id: 'users', label: '👥 Lietotāji' },
             { id: 'tariffs', label: '💰 Tarifi' },
             { id: 'water', label: '💧 Ūdens' },
             { id: 'invoices', label: '📄 Rēķini' }
@@ -1317,6 +1405,130 @@ export default function PropertyManager() {
                       )}
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'users' ? (
+            <div style={styles.twoCol}>
+              <div style={styles.card}>
+                <h2 style={styles.cardTitle}>➕ Pievienot lietotāju</h2>
+                <form onSubmit={addUser} style={styles.form}>
+                  <input
+                    type="email"
+                    placeholder="E-pasts *"
+                    value={newUserForm.email}
+                    onChange={(e) => setNewUserForm({...newUserForm, email: e.target.value})}
+                    style={styles.input}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Parole *"
+                    value={newUserForm.password}
+                    onChange={(e) => setNewUserForm({...newUserForm, password: e.target.value})}
+                    style={styles.input}
+                  />
+                  <select
+                    value={newUserForm.apartment_id}
+                    onChange={(e) => setNewUserForm({...newUserForm, apartment_id: e.target.value})}
+                    style={styles.input}
+                  >
+                    <option value="">-- Izvēlieties dzīvokli --</option>
+                    {apartments.map(apt => (
+                      <option key={apt.id} value={apt.id}>
+                        Dzīv. {apt.number} - {apt.owner_name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={newUserForm.role}
+                    onChange={(e) => setNewUserForm({...newUserForm, role: e.target.value})}
+                    style={styles.input}
+                  >
+                    <option value="user">Lietotājs</option>
+                    <option value="admin">Administrators</option>
+                  </select>
+                  <button type="submit" style={styles.btn}>Pievienot</button>
+                </form>
+              </div>
+
+              <div style={styles.card}>
+                <h2 style={styles.cardTitle}>👥 Lietotāji ({users.length})</h2>
+                <div style={styles.list}>
+                  {users.map(user => {
+                    const apt = apartments.find(a => a.id === user.apartment_id);
+                    const isEditing = editingUser === user.id;
+
+                    return (
+                      <div key={user.id} style={styles.listItem}>
+                        {isEditing ? (
+                          <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                            <input
+                              type="email"
+                              placeholder="E-pasts"
+                              value={editUserForm.email}
+                              onChange={(e) => setEditUserForm({...editUserForm, email: e.target.value})}
+                              style={{...styles.input, fontSize: '12px'}}
+                            />
+                            <input
+                              type="password"
+                              placeholder="Parole"
+                              value={editUserForm.password}
+                              onChange={(e) => setEditUserForm({...editUserForm, password: e.target.value})}
+                              style={{...styles.input, fontSize: '12px'}}
+                            />
+                            <select
+                              value={editUserForm.apartment_id || ''}
+                              onChange={(e) => setEditUserForm({...editUserForm, apartment_id: e.target.value})}
+                              style={{...styles.input, fontSize: '12px'}}
+                            >
+                              <option value="">-- Dzīvoklis --</option>
+                              {apartments.map(apt => (
+                                <option key={apt.id} value={apt.id}>
+                                  Dzīv. {apt.number} - {apt.owner_name}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              value={editUserForm.role}
+                              onChange={(e) => setEditUserForm({...editUserForm, role: e.target.value})}
+                              style={{...styles.input, fontSize: '12px'}}
+                            >
+                              <option value="user">Lietotājs</option>
+                              <option value="admin">Administrators</option>
+                            </select>
+                            <div style={{display: 'flex', gap: '8px'}}>
+                              <button
+                                onClick={() => saveEditUser(user.id)}
+                                style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}
+                              >
+                                ✓ Saglabāt
+                              </button>
+                              <button
+                                onClick={() => setEditingUser(null)}
+                                style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}
+                              >
+                                Atcelt
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div>
+                              <div style={{fontWeight: 'bold'}}>📧 {user.email}</div>
+                              <div style={{fontSize: '13px', color: '#666'}}>
+                                {apt ? `Dzīv. ${apt.number}` : 'Nav dzīvokļa'} • 
+                                {user.role === 'admin' ? ' 👤 Administrators' : ' Lietotājs'}
+                              </div>
+                            </div>
+                            <div style={{display: 'flex', gap: '4px'}}>
+                              <button onClick={() => startEditUser(user)} style={{...styles.btnSmall, padding: '4px 8px'}} title="Rediģēt">✏️</button>
+                              <button onClick={() => deleteUser(user.id)} style={styles.btnSmall}>🗑️</button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
