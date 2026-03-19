@@ -1,8 +1,12 @@
-// CHANGE FROM:
-import PropertyManager from './PropertyManager';
-
-// OR FROM:
-import PropertyManager from './components/PropertyManager';
-
-// TO:
+import React from 'react';
 import PropertyManagerWithAuth from './components/PropertyManagerWithAuth';
+
+function App() {
+  return (
+    <div>
+      <PropertyManagerWithAuth />
+    </div>
+  );
+}
+
+export default App;
