@@ -39,7 +39,6 @@ export default function PropertyManager() {
     calculation_type: 'per_sqm' // per_sqm vai flat
   });
 
-  const [selectedApartment, setSelectedApartment] = useState(null);
   const [invoiceMonth, setInvoiceMonth] = useState('');
 
   // Fetch data
@@ -303,7 +302,7 @@ export default function PropertyManager() {
 
       {/* Header */}
       <div style={styles.header}>
-        <h1 style={styles.title}>ߏ BARONA 78 - Rēķinu vadības sistēma</h1>
+        <h1 style={styles.title}>🏢 BARONA 78 - Rēķinu vadības sistēma</h1>
         <p style={styles.subtitle}>Inteligenta apsaimniekošanas un tarifēšanas platforma</p>
       </div>
 
@@ -315,9 +314,9 @@ export default function PropertyManager() {
             onClick={() => setActiveTab(tab)}
             style={{...styles.tab, ...(activeTab === tab ? styles.tabActive : {})}}
           >
-            {tab === 'apartments' && 'ߏ Dzīvokļi'}
-            {tab === 'tariffs' && 'ߒ Tarifi'}
-            {tab === 'invoices' && 'ߓ Rēķini'}
+            {tab === 'apartments' && '🏠 Dzīvokļi'}
+            {tab === 'tariffs' && '💰 Tarifi'}
+            {tab === 'invoices' && '📄 Rēķini'}
           </button>
         ))}
       </div>
@@ -443,7 +442,7 @@ export default function PropertyManager() {
 
             {/* Apartments List */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>ߓ Dzīvokļu saraksts ({apartments.length})</h2>
+              <h2 style={styles.cardTitle}>📋 Dzīvokļu saraksts ({apartments.length})</h2>
               <div style={styles.list}>
                 {apartments.length === 0 ? (
                   <div style={styles.empty}>Nav dzīvokļu</div>
@@ -453,12 +452,12 @@ export default function PropertyManager() {
                       <div>
                         <strong style={styles.itemTitle}>Dzīv. {apt.number}</strong>
                         <div style={styles.itemMeta}>
-                          ߓ {apt.area} m² | {apt.owner_name} {apt.owner_surname}
+                          📐 {apt.area} m² | {apt.owner_name} {apt.owner_surname}
                           {apt.personal_code && ` | ${apt.personal_code}`}
                         </div>
-                        {apt.email && <div style={styles.itemMeta}>ߓ {apt.email}</div>}
+                        {apt.email && <div style={styles.itemMeta}>📧 {apt.email}</div>}
                       </div>
-                      <button onClick={() => deleteApartment(apt.id)} style={styles.btnDelete}>ߗ️</button>
+                      <button onClick={() => deleteApartment(apt.id)} style={styles.btnDelete}>🗑️</button>
                     </div>
                   ))
                 )}
@@ -503,7 +502,7 @@ export default function PropertyManager() {
 
             {/* Tariffs List */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>ߓ Tarifи ({tariffs.length})</h2>
+              <h2 style={styles.cardTitle}>📊 Tarifи ({tariffs.length})</h2>
               <div style={styles.list}>
                 {tariffs.length === 0 ? (
                   <div style={styles.empty}>Nav tarifūu</div>
@@ -515,13 +514,13 @@ export default function PropertyManager() {
                         <div>
                           <strong style={styles.itemTitle}>{tar.name}</strong>
                           <div style={styles.itemMeta}>
-                            ߒ Kopējā summa: €{parseFloat(tar.total_amount).toFixed(2)}
+                            💰 Kopējā summa: €{parseFloat(tar.total_amount).toFixed(2)}
                           </div>
                           <div style={styles.itemMeta}>
-                            ߓ Par m²: €{pricePerSqm.toFixed(4)}
+                            📐 Par m²: €{pricePerSqm.toFixed(4)}
                           </div>
                         </div>
-                        <button onClick={() => deleteTariff(tar.id)} style={styles.btnDelete}>ߗ️</button>
+                        <button onClick={() => deleteTariff(tar.id)} style={styles.btnDelete}>🗑️</button>
                       </div>
                     );
                   })
@@ -533,7 +532,7 @@ export default function PropertyManager() {
           <div style={styles.singleColumn}>
             {/* Generate Invoices */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>ߓ Ģenerēt rēķinus</h2>
+              <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
               <form onSubmit={generateInvoices} style={styles.form}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Mēnesis *</label>
@@ -550,7 +549,7 @@ export default function PropertyManager() {
 
             {/* Invoices List */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>ߓ Rēķini ({invoices.length})</h2>
+              <h2 style={styles.cardTitle}>📋 Rēķini ({invoices.length})</h2>
               <div style={styles.invoicesList}>
                 {invoices.length === 0 ? (
                   <div style={styles.empty}>Nav rēķinu</div>
@@ -575,7 +574,7 @@ export default function PropertyManager() {
                           onClick={() => generatePDF(invoice.id)}
                           style={{...styles.button, padding: '8px 15px', fontSize: '0.9em', marginRight: '10px'}}
                         >
-                          ߓ PDF
+                          📥 PDF
                         </button>
                       </div>
                     );
