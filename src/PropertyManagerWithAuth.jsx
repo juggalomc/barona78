@@ -501,9 +501,14 @@ export default function PropertyManager() {
     }
 
     // Filtrer tarifus tikai ar include_in_invoice = true
-    const periodTariffs = tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice !== false);
+    const periodTariffs = tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice === true);
+    
+    // DEBUG
+    console.log(`Tarifi periodam ${invoiceMonth}:`, tariffs.filter(t => t.period === invoiceMonth).length);
+    console.log(`Atzīmēti (include_in_invoice=true):`, periodTariffs.length);
+    
     if (periodTariffs.length === 0) {
-      showToast(`Nav atzīmētu tarifū periodam ${invoiceMonth}`, 'error');
+      showToast(`Nav atzīmētu tarifū periodam ${invoiceMonth}. Pārbaudiet vai tarifi ir checked "Include in invoice"`, 'error');
       return;
     }
 
@@ -608,7 +613,9 @@ export default function PropertyManager() {
       }
 
       if (invoicesToAdd.length === 0 && updatedCount === 0) {
-        showToast('Nav jaunu rēķinu vai atjauninājumu. Iespējams visi dzīvokļi jau ir atjaunināti šajā mēnesī.', 'error');
+        console.log('DEBUG: invoicesToAdd skaits:', invoicesToAdd.length, 'updatedCount:', updatedCount);
+        console.log('DEBUG: apartments skaits:', apartments.length, 'periodTariffs skaits:', periodTariffs.length);
+        showToast('⚠️ Nav ko ģenerēt. Pārbaudiet:\n1. Vai ir dzīvokļi?\n2. Vai tarifiem ir checked "Include in invoice"?\n3. Vai tarifiem ir pareizs periods?', 'error');
         return;
       }
 
