@@ -436,7 +436,7 @@ export default function PropertyManager() {
         // Pievienot ūdens patēriņu no meter_readings
         const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === period);
 
-        if (waterReading && waterTariff && enabledMeters.water) {
+        if (waterReading && waterTariff && enabledMeters.water && waterTariff.include_in_invoice !== false) {
           const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
           const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
           const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
@@ -460,7 +460,7 @@ export default function PropertyManager() {
 
         // Pievienot Atkritumu izvešanu - dalīta uz declared_persons
         const wasteTariff = wasteTariffs.find(w => w.period === period);
-        if (wasteTariff) {
+        if (wasteTariff && wasteTariff.include_in_invoice !== false) {
           // Aprēķināt kopējo declared_persons visos dzīvokļos
           const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
           
@@ -599,7 +599,7 @@ export default function PropertyManager() {
         const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === invoiceMonth);
         const waterTariff = waterTariffs.find(w => w.period === invoiceMonth);
 
-        if (waterReading && waterTariff && enabledMeters.water) {
+        if (waterReading && waterTariff && enabledMeters.water && waterTariff.include_in_invoice !== false) {
           const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
           const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
           const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
@@ -623,7 +623,7 @@ export default function PropertyManager() {
 
         // Pievienot Atkritumu izvešanu - dalīta uz declared_persons
         const wasteTariff = wasteTariffs.find(w => w.period === invoiceMonth);
-        if (wasteTariff) {
+        if (wasteTariff && wasteTariff.include_in_invoice !== false) {
           // Aprēķināt kopējo declared_persons visos dzīvokļos
           const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
           
@@ -705,6 +705,7 @@ export default function PropertyManager() {
     try {
       const priceValue = parseFloat(document.getElementById('waterPrice')?.value || 0);
       const vatValue = parseFloat(document.getElementById('waterVat')?.value || 0);
+      const includeInvoice = document.getElementById('waterInclude')?.checked || true;
 
       // Validēt vērtības
       if (isNaN(priceValue) || priceValue < 0 || priceValue > 9999.99) {
@@ -727,7 +728,8 @@ export default function PropertyManager() {
           .from('water_tariffs')
           .update({
             price_per_m3: priceValue,
-            vat_rate: vatValue
+            vat_rate: vatValue,
+            include_in_invoice: includeInvoice
           })
           .eq('id', existing[0].id);
         if (error) throw error;
@@ -737,7 +739,8 @@ export default function PropertyManager() {
           .insert([{
             period: tariffPeriod,
             price_per_m3: priceValue,
-            vat_rate: vatValue
+            vat_rate: vatValue,
+            include_in_invoice: includeInvoice
           }]);
         if (error) throw error;
       }
@@ -755,6 +758,7 @@ export default function PropertyManager() {
       const totalAmount = parseFloat(wasteTariffForm.total_amount || 0);
       const vatRate = parseFloat(wasteTariffForm.vat_rate || 0);
       const period = wasteTariffForm.period;
+      const includeInvoice = document.getElementById('wasteInclude')?.checked || true;
 
       if (isNaN(totalAmount) || totalAmount <= 0) {
         showToast('Summa jābūt lielāka par 0', 'error');
@@ -778,7 +782,8 @@ export default function PropertyManager() {
           .from('waste_tariffs')
           .update({
             total_amount: totalAmount,
-            vat_rate: vatRate
+            vat_rate: vatRate,
+            include_in_invoice: includeInvoice
           })
           .eq('id', existing[0].id);
         if (error) throw error;
@@ -789,7 +794,8 @@ export default function PropertyManager() {
           .insert([{
             period: period,
             total_amount: totalAmount,
-            vat_rate: vatRate
+            vat_rate: vatRate,
+            include_in_invoice: includeInvoice
           }]);
         if (error) throw error;
       }
@@ -2237,6 +2243,17 @@ export default function PropertyManager() {
                     defaultValue={waterTariffs.find(w => w.period === tariffPeriod)?.vat_rate || 0}
                     style={styles.input}
                   />
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: '#f9fafb', borderRadius: '6px'}}>
+                    <input
+                      type="checkbox"
+                      id="waterInclude"
+                      defaultChecked={waterTariffs.find(w => w.period === tariffPeriod)?.include_in_invoice !== false}
+                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                    />
+                    <label htmlFor="waterInclude" style={{fontSize: '13px', cursor: 'pointer', margin: 0}}>
+                      ✓ Iekļaut mēneša rēķinā
+                    </label>
+                  </div>
                   <button type="submit" style={styles.btn}>Saglabāt Tarifu</button>
                 </form>
               </div>
@@ -2275,6 +2292,17 @@ export default function PropertyManager() {
                     onChange={(e) => setWasteTariffForm({...wasteTariffForm, vat_rate: e.target.value})}
                     style={styles.input}
                   />
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: '#f9fafb', borderRadius: '6px'}}>
+                    <input
+                      type="checkbox"
+                      id="wasteInclude"
+                      defaultChecked={wasteTariffs.find(w => w.period === wasteTariffForm.period)?.include_in_invoice !== false}
+                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                    />
+                    <label htmlFor="wasteInclude" style={{fontSize: '13px', cursor: 'pointer', margin: 0}}>
+                      ✓ Iekļaut mēneša rēķinā
+                    </label>
+                  </div>
                   <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '10px', fontSize: '12px', color: '#0369a1', marginBottom: '12px'}}>
                     ℹ️ Summa automātiski tiks dalīta uz visu dzīvokļu deklarēto personu skaitu.
                   </div>
