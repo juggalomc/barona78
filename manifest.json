@@ -1,0 +1,9 @@
+{
+  "short_name": "Property Mgr",
+  "name": "Mājas Apsaimniekošana",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff"
+}
