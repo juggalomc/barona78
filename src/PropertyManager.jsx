@@ -214,7 +214,6 @@ export default function PropertyManager() {
       // Dzēst esošos rēķinus
       await supabase.from('invoices').delete().eq('period', period);
 
-      // Ģenerēt jaunus
       const invoicesToAdd = [];
       const [year, month] = period.split('-');
       const periodTariffs = tariffs.filter(t => t.period === period);
@@ -239,6 +238,31 @@ export default function PropertyManager() {
             amount_without_vat: amountWithoutVat,
             vat_rate: vatRate,
             vat_amount: vatAmount
+          });
+        }
+
+        // Pievienot ūdens patēriņu
+        const waterConsumptionRecord = waterConsumption.find(w => w.apartment_id === apt.id && w.period === period);
+        const waterTariff = waterTariffs.find(w => w.period === period);
+
+        if (waterConsumptionRecord && waterTariff) {
+          const waterConsumptionM3 = parseFloat(waterConsumptionRecord.consumption_m3) || 0;
+          const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
+          const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
+          const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
+          const waterVatAmount = Math.round(waterAmountWithoutVat * waterVatRate / 100 * 100) / 100;
+
+          totalAmountWithoutVat += waterAmountWithoutVat;
+          totalVatAmount += waterVatAmount;
+
+          invoiceDetails.push({
+            tariff_id: waterTariff.id,
+            tariff_name: `Ūdens (${waterConsumptionM3} m³)`,
+            consumption_m3: waterConsumptionM3,
+            price_per_m3: waterPricePerM3,
+            amount_without_vat: waterAmountWithoutVat,
+            vat_rate: waterVatRate,
+            vat_amount: waterVatAmount
           });
         }
 
