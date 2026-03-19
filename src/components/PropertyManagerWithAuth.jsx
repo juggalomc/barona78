@@ -19,23 +19,23 @@ function Toast({ message, type = 'success', onClose }) {
   }, [onClose]);
 
   const bgColor = {
-    success: '#10b981',
-    error: '#ef4444',
-    info: '#3b82f6'
+    success: "#10b981",
+    error: "#ef4444",
+    info: "#3b82f6"
   }[type];
 
   return (
     <div style={{
-      position: 'fixed',
-      bottom: '20px',
-      right: '20px',
+      position: "fixed",
+      bottom: "20px",
+      right: "20px",
       background: bgColor,
-      color: 'white',
-      padding: '16px 24px',
-      borderRadius: '12px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      color: "white",
+      padding: "16px 24px",
+      borderRadius: "12px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
       zIndex: 9999,
-      animation: 'slideIn 0.3s ease-out',
+      animation: "slideIn 0.3s ease-out",
       fontWeight: 500
     }}>
       {message}
@@ -69,10 +69,10 @@ export default function PropertyManager() {
   // Invoice settings state
   const [invoiceSettings, setInvoiceSettings] = useState({
     payment_term_days: 14,
-    payment_method: '',
-    payment_company: '',
-    payment_ref: '',
-    global_invoice_note: ''
+    payment_method: "",
+    payment_company: "",
+    payment_ref: "",
+    global_invoice_note: ""
   });
   
   // Debt & Overpayment state
@@ -87,49 +87,49 @@ export default function PropertyManager() {
   // Users management state
   const [editingUser, setEditingUser] = useState(null);
   const [editUserForm, setEditUserForm] = useState({
-    email: '',
-    password: '',
-    apartment_id: '',
-    role: 'user'
+    email: "",
+    password: "",
+    apartment_id: "",
+    role: "user"
   });
   const [newUserForm, setNewUserForm] = useState({
-    email: '',
-    password: '',
-    apartment_id: '',
-    role: 'user'
+    email: "",
+    password: "",
+    apartment_id: "",
+    role: "user"
   });
   
   const [apartmentForm, setApartmentForm] = useState({
-    number: '',
-    area: '',
-    kadaster: '',
-    owner_name: '',
-    owner_surname: '',
-    personal_code: '',
-    phone: '',
-    email: '',
-    share: '',
+    number: "",
+    area: "",
+    kadaster: "",
+    owner_name: "",
+    owner_surname: "",
+    personal_code: "",
+    phone: "",
+    email: "",
+    share: "",
     declared_persons: 1
   });
 
   const [tariffPeriod, setTariffPeriod] = useState('2026-01');
   const [tariffForm, setTariffForm] = useState({
-    name: '',
-    total_amount: '',
+    name: "",
+    total_amount: "",
     vat_rate: 0,
     include_in_invoice: true
   });
 
   const [wasteTariffForm, setWasteTariffForm] = useState({
-    period: '2026-01',
-    total_amount: '',
+    period: "2026-01",
+    total_amount: "",
     vat_rate: 21,
     include_in_invoice: true
   });
 
   const [waterTariffForm, setWaterTariffForm] = useState({
-    period: '2026-01',
-    price_per_m3: '',
+    period: "2026-01",
+    price_per_m3: "",
     vat_rate: 0,
     include_in_invoice: true
   });
@@ -184,7 +184,7 @@ export default function PropertyManager() {
       
       showToast('✓ Pierakstīts!');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -303,7 +303,7 @@ export default function PropertyManager() {
       setDebtModal(null);
       showToast('✓ Parāda paskaidrojums saglabāts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -323,7 +323,7 @@ export default function PropertyManager() {
       setOverpaymentModal(null);
       showToast('✓ Pārmaksa saglabāta');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -336,13 +336,13 @@ export default function PropertyManager() {
           .upsert({
             setting_key: key,
             setting_value: value
-          }, { onConflict: 'setting_key' });
+          }, { onConflict: "setting_key" });
         
         if (error) throw error;
       }
       showToast('✓ Iestatījumi saglabāti');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -371,21 +371,21 @@ export default function PropertyManager() {
       if (error) throw error;
       
       setApartmentForm({
-        number: '',
-        area: '',
-        kadaster: '',
-        owner_name: '',
-        owner_surname: '',
-        personal_code: '',
-        phone: '',
-        email: '',
-        share: '',
+        number: "",
+        area: "",
+        kadaster: "",
+        owner_name: "",
+        owner_surname: "",
+        personal_code: "",
+        phone: "",
+        email: "",
+        share: "",
         declared_persons: 1
       });
       fetchData();
       showToast('✓ Dzīvoklis pievienots');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -408,11 +408,11 @@ export default function PropertyManager() {
       const { error } = await supabase.from('tariffs').insert([dataToInsert]);
       if (error) throw error;
       
-      setTariffForm({ name: '', total_amount: '', vat_rate: 0, include_in_invoice: true });
+      setTariffForm({ name: "", total_amount: "", vat_rate: 0, include_in_invoice: true });
       fetchData();
       showToast('✓ Tarifs pievienots');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -440,7 +440,7 @@ export default function PropertyManager() {
       fetchData();
       showToast(`✓ Kopēti ${newTariffs.length} tarifi`);
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -501,7 +501,7 @@ export default function PropertyManager() {
             amount_without_vat: amountWithoutVat,
             vat_rate: vatRate,
             vat_amount: vatAmount,
-            type: 'tariff'
+            type: "tariff"
           });
         }
 
@@ -526,7 +526,7 @@ export default function PropertyManager() {
             amount_without_vat: waterAmountWithoutVat,
             vat_rate: waterVatRate,
             vat_amount: waterVatAmount,
-            type: 'water'
+            type: "water"
           });
         }
 
@@ -553,7 +553,7 @@ export default function PropertyManager() {
               amount_without_vat: wasteAmountWithoutVat,
               vat_rate: wasteVatRate,
               vat_amount: wasteVatAmount,
-              type: 'waste'
+              type: "waste"
             });
           }
         }
@@ -601,7 +601,7 @@ export default function PropertyManager() {
       fetchData();
       showToast(`✓ Reģenerēti ${invoicesToAdd.length} rēķini`);
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -663,7 +663,7 @@ export default function PropertyManager() {
             amount_without_vat: amountWithoutVat,
             vat_rate: vatRate,
             vat_amount: vatAmount,
-            type: 'tariff'
+            type: "tariff"
           });
         }
 
@@ -689,7 +689,7 @@ export default function PropertyManager() {
             amount_without_vat: waterAmountWithoutVat,
             vat_rate: waterVatRate,
             vat_amount: waterVatAmount,
-            type: 'water'
+            type: "water"
           });
         }
 
@@ -716,7 +716,7 @@ export default function PropertyManager() {
               amount_without_vat: wasteAmountWithoutVat,
               vat_rate: wasteVatRate,
               vat_amount: wasteVatAmount,
-              type: 'waste'
+              type: "waste"
             });
           }
         }
@@ -784,10 +784,10 @@ export default function PropertyManager() {
       setInvoiceFromDate('');
       setInvoiceToDate('');
       fetchData();
-      const message = `✓ Ģenerēti ${invoicesToAdd.length} jauni rēķini${updatedCount > 0 ? `, atjaunināti ${updatedCount}` : ''}`;
+      const message = `✓ Ģenerēti ${invoicesToAdd.length} jauni rēķini${updatedCount > 0 ? `, atjaunināti ${updatedCount}` : ""}`;
       showToast(message);
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -840,7 +840,7 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Ūdens tarifs saglabāts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -895,7 +895,7 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Atkritumu izvešanas tarifs saglabāts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -941,7 +941,7 @@ export default function PropertyManager() {
           .from('meter_readings')
           .insert([{
             apartment_id: apartmentId,
-            meter_type: 'water',
+            meter_type: "water",
             reading_date: today,
             reading_value: value,
             period: period
@@ -952,7 +952,7 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Ūdens rādījums saglabāts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -996,7 +996,7 @@ export default function PropertyManager() {
 
       fetchData();
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -1009,9 +1009,9 @@ export default function PropertyManager() {
       
       if (error) throw error;
       fetchData();
-      showToast(!currentStatus ? '✓ Apmaksāts' : '✓ Neapmaksāts');
+      showToast(!currentStatus ? '✓ Apmaksāts' : "✓ Neapmaksāts");
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -1054,7 +1054,7 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Dzīvoklis atjaunināts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -1066,7 +1066,7 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Izdzēsts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -1097,7 +1097,7 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Tarifs atjaunināts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -1109,7 +1109,7 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Izdzēsts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -1120,7 +1120,7 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Izdzēsts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -1141,11 +1141,11 @@ export default function PropertyManager() {
       }]);
 
       if (error) throw error;
-      setNewUserForm({ email: '', password: '', apartment_id: '', role: 'user' });
+      setNewUserForm({ email: "", password: "", apartment_id: "", role: "user" });
       fetchData();
       showToast('✓ Lietotājs pievienots');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -1178,7 +1178,7 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Lietotājs atjaunināts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
@@ -1189,23 +1189,23 @@ export default function PropertyManager() {
       fetchData();
       showToast('✓ Izdzēsts');
     } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
+      showToast('Kļūda: " + error.message, "error');
     }
   };
 
   // Aprēķināt rēķina statusu (Apmaksāts/Gaida/Parāds)
   const getInvoiceStatus = (invoice) => {
     if (invoice.paid) {
-      return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
+      return { status: "Apmaksāts", color: "#10b981", emoji: "✓" };
     }
     
     const dueDate = new Date(invoice.due_date);
     const today = new Date();
     
     if (today > dueDate) {
-      return { status: 'Parāds', color: '#ef4444', emoji: '⚠️' };
+      return { status: "Parāds", color: "#ef4444", emoji: "⚠️" };
     } else {
-      return { status: 'Gaida atmaksu', color: '#f59e0b', emoji: '⏳' };
+      return { status: "Gaida atmaksu", color: "#f59e0b", emoji: "⏳" };
     }
   };
 
@@ -1224,7 +1224,7 @@ export default function PropertyManager() {
         inv.amount.toFixed(2),
         new Date(inv.due_date).toLocaleDateString('lv-LV'),
         status.status,
-        inv.paid ? 'Jā' : 'Nē'
+        inv.paid ? 'Jā' : "Nē"
       ];
     });
 
@@ -1369,8 +1369,8 @@ export default function PropertyManager() {
           <div style="font-size: 12px;">
             <p><strong>Nr:</strong> ${invoice.invoice_number}</p>
             <p><strong>PERIODS:</strong> ${invoice.period}</p>
-            <p><strong>NO DATUMA:</strong> ${invoice.date_from ? new Date(invoice.date_from).toLocaleDateString('lv-LV') : '-'}</p>
-            <p><strong>LĪDZ DATUMAM:</strong> ${invoice.date_to ? new Date(invoice.date_to).toLocaleDateString('lv-LV') : '-'}</p>
+            <p><strong>NO DATUMA:</strong> ${invoice.date_from ? new Date(invoice.date_from).toLocaleDateString('lv-LV') : "-"}</p>
+            <p><strong>LĪDZ DATUMAM:</strong> ${invoice.date_to ? new Date(invoice.date_to).toLocaleDateString('lv-LV') : "-"}</p>
             <p><strong>IZRAKSTĪTS:</strong> ${new Date().toLocaleDateString('lv-LV')}</p>
           </div>
 
@@ -1405,7 +1405,7 @@ export default function PropertyManager() {
                   Summa bez PVN: <strong>€${invoiceDetails.filter(d => d.vat_rate === 0 || d.vat_rate === undefined).reduce((sum, d) => sum + d.amount_without_vat, 0).toFixed(2)}</strong>
                 </td>
               </tr>
-            ` : ''}
+            ` : ""}
           </table>
 
           ${rowsWithVat ? `
@@ -1435,7 +1435,7 @@ export default function PropertyManager() {
                 `).join('');
               })()}
             </table>
-          ` : ''}
+          ` : ""}
 
           <div style="text-align: right; margin: 20px 0; border-top: 2px solid #000; padding-top: 15px;">
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px;">
@@ -1447,7 +1447,7 @@ export default function PropertyManager() {
                 <span>PVN kopā:</span>
                 <span>€${vatAmount.toFixed(2)}</span>
               </div>
-            ` : ''}
+            ` : ""}
             <div style="font-size: 12px; margin-bottom: 15px;">KOPĀ APMAKSAI (EUR):</div>
             <div class="amount-total">€${amountWithVat.toFixed(2)}</div>
           </div>
@@ -1482,7 +1482,7 @@ export default function PropertyManager() {
                   extraHtml += `
                     <div style="margin-bottom: 8px; font-size: 11px;">
                       <div>${debt.invoice_number}: €${debt.amount.toFixed(2)}</div>
-                      ${debt.debt_note ? `<div style="font-weight: bold; color: #666; margin-left: 10px;">${debt.debt_note}</div>` : ''}
+                      ${debt.debt_note ? `<div style="font-weight: bold; color: #666; margin-left: 10px;">${debt.debt_note}</div>` : ""}
                     </div>
                   `;
                 }
@@ -1548,25 +1548,25 @@ export default function PropertyManager() {
   // ===== LOGIN SCREEN =====
   if (!currentUser) {
     return (
-      <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-        <div style={{ background: 'white', padding: '30px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <h1 style={{ textAlign: 'center', color: '#003399', marginBottom: '30px', fontSize: '28px' }}>🏢 BARONA 78</h1>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ maxWidth: "400px", margin: "100px auto", padding: "20px", fontFamily: "Arial, sans-serif" }}>
+        <div style={{ background: "white", padding: "30px", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <h1 style={{ textAlign: "center", color: "#003399", marginBottom: "30px", fontSize: "28px" }}>🏢 BARONA 78</h1>
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <input
               type="email"
               placeholder="E-pasts"
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
-              style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
+              style={{ padding: "10px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "13px" }}
             />
             <input
               type="password"
               placeholder="Parole"
               value={loginPassword}
               onChange={(e) => setLoginPassword(e.target.value)}
-              style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
+              style={{ padding: "10px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "13px" }}
             />
-            <button type="submit" style={{ padding: '12px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+            <button type="submit" style={{ padding: "12px", background: "#003399", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", fontSize: "14px" }}>
               Pierakstīties
             </button>
           </form>
@@ -1579,68 +1579,68 @@ export default function PropertyManager() {
   // ===== USER PORTAL =====
   if (currentUser && currentUser.role === 'user') {
     return (
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', background: '#f8fafc' }}>
-        <div style={{ background: '#003399', color: 'white', padding: '30px', borderRadius: '8px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px", fontFamily: "Arial, sans-serif", minHeight: "100vh", background: "#f8fafc" }}>
+        <div style={{ background: "#003399", color: "white", padding: "30px", borderRadius: "8px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0 }}>🏠 Dzīvoklis {userApartment?.number}</h1>
-            <p style={{ margin: '5px 0 0 0', color: '#ddd', fontSize: '14px' }}>{userApartment?.owner_name}</p>
+            <h1 style={{ fontSize: "28px", fontWeight: "bold", margin: 0 }}>🏠 Dzīvoklis {userApartment?.number}</h1>
+            <p style={{ margin: "5px 0 0 0", color: "#ddd", fontSize: "14px" }}>{userApartment?.owner_name}</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '12px', color: '#ccc', marginBottom: '4px' }}>Kopā apmaksāt:</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4ade80' }}>€{userInvoices.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
-              <div style={{ fontSize: '11px', color: '#ccc', marginTop: '4px' }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "30px" }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "12px", color: "#ccc", marginBottom: "4px" }}>Kopā apmaksāt:</div>
+              <div style={{ fontSize: "24px", fontWeight: "bold", color: "#4ade80" }}>€{userInvoices.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
+              <div style={{ fontSize: "11px", color: "#ccc", marginTop: "4px" }}>
                 Parāds: €{userInvoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
               </div>
             </div>
-            <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Izrakstīties</button>
+            <button onClick={handleLogout} style={{ padding: "10px 20px", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>Izrakstīties</button>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
           {/* RĒĶINU VĒSTURE */}
-          <div style={{ background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <div style={{ background: "white", padding: "20px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
             <h2>📄 Rēķinu vēsture</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {userInvoices.length === 0 ? (
-                <p style={{ color: '#999' }}>Nav rēķinu</p>
+                <p style={{ color: "#999" }}>Nav rēķinu</p>
               ) : (
                 userInvoices.map(inv => (
-                  <div key={inv.id} style={{ padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div key={inv.id} style={{ padding: "12px", background: "#f9fafb", borderRadius: "6px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontWeight: "bold", display: "flex", alignItems: "center", gap: "8px" }}>
                         Rēķins {inv.invoice_number}
                         {(() => {
                           const status = getInvoiceStatus(inv);
                           return (
                             <span style={{
-                              fontSize: '11px',
-                              fontWeight: '500',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
+                              fontSize: "11px",
+                              fontWeight: "500",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
                               backgroundColor: status.color,
-                              color: 'white'
+                              color: "white"
                             }}>
                               {status.emoji} {status.status}
                             </span>
                           );
                         })()}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
                         {inv.period} • Termiņš: {new Date(inv.due_date).toLocaleDateString('lv-LV')}<br/>
-                        📅 {inv.date_from ? new Date(inv.date_from).toLocaleDateString('lv-LV') : '-'} — {inv.date_to ? new Date(inv.date_to).toLocaleDateString('lv-LV') : '-'}
+                        📅 {inv.date_from ? new Date(inv.date_from).toLocaleDateString('lv-LV') : "-"} — {inv.date_to ? new Date(inv.date_to).toLocaleDateString('lv-LV') : "-"}
                         {(() => {
                           const debtInfo = calculateDebt(inv.apartment_id, inv.period);
                           if (debtInfo.total > 0 || inv.overpayment_amount > 0) {
                             return (
-                              <div style={{ marginTop: '6px', fontSize: '11px' }}>
+                              <div style={{ marginTop: "6px", fontSize: "11px" }}>
                                 {debtInfo.total > 0 && (
-                                  <div style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                                  <div style={{ color: "#ef4444", fontWeight: "bold" }}>
                                     💔 Parāds: €{debtInfo.total.toFixed(2)}
                                   </div>
                                 )}
                                 {inv.overpayment_amount > 0 && (
-                                  <div style={{ color: '#10b981', fontWeight: 'bold' }}>
+                                  <div style={{ color: "#10b981", fontWeight: "bold" }}>
                                     ✓ Pārmaksa: -€{inv.overpayment_amount.toFixed(2)}
                                   </div>
                                 )}
@@ -1651,11 +1651,11 @@ export default function PropertyManager() {
                         })()}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 'bold', color: inv.paid ? '#10b981' : '#ef4444' }}>€{inv.amount.toFixed(2)}</div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontWeight: "bold", color: inv.paid ? '#10b981' : "#ef4444" }}>€{inv.amount.toFixed(2)}</div>
                       <button
                         onClick={() => downloadPDF(inv)}
-                        style={{ fontSize: '12px', marginTop: '8px', padding: '4px 8px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        style={{ fontSize: "12px", marginTop: "8px", padding: "4px 8px", background: "#003399", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
                       >
                         📥 PDF
                       </button>
@@ -1686,20 +1686,20 @@ export default function PropertyManager() {
       {/* PARĀDA PASKAIDROJUMA DIALOGS */}
       {debtModal && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center",
           zIndex: 1000
         }}>
           <div style={{
-            background: 'white', padding: '30px', borderRadius: '8px',
-            maxWidth: '500px', width: '90%', boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+            background: "white", padding: "30px", borderRadius: "8px",
+            maxWidth: "500px", width: "90%", boxShadow: "0 10px 40px rgba(0,0,0,0.2)"
           }}>
             <h3>📝 Parāda paskaidrojums</h3>
-            <div style={{ marginBottom: '15px', padding: '10px', background: '#f0f9ff', borderRadius: '4px', color: '#333' }}>
+            <div style={{ marginBottom: "15px", padding: "10px", background: "#f0f9ff", borderRadius: "4px", color: "#333" }}>
               <strong>Rēķis:</strong> {debtModal.invoiceNumber}
             </div>
             
-            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+            <label style={{ display: "block", marginBottom: "10px", fontWeight: "bold" }}>
               Paskaidrojums (parādīsies BOLD):
             </label>
             <textarea
@@ -1707,18 +1707,18 @@ export default function PropertyManager() {
               onChange={(e) => setDebtModal({...debtModal, debtNote: e.target.value})}
               placeholder="piem. Rēķins nav apmaksāts pēc termiņa. 5% sods."
               style={{
-                width: '100%', height: '100px', padding: '10px',
-                border: '1px solid #e2e8f0', borderRadius: '4px',
-                marginBottom: '15px', fontFamily: 'Arial', resize: 'vertical'
+                width: "100%", height: "100px", padding: "10px",
+                border: "1px solid #e2e8f0", borderRadius: "4px",
+                marginBottom: "15px", fontFamily: "Arial", resize: "vertical"
               }}
             />
             
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
               <button
                 onClick={() => setDebtModal(null)}
                 style={{
-                  padding: '10px 20px', background: '#e2e8f0', color: '#333',
-                  border: 'none', borderRadius: '4px', cursor: 'pointer'
+                  padding: "10px 20px", background: "#e2e8f0", color: "#333",
+                  border: "none", borderRadius: "4px", cursor: "pointer"
                 }}
               >
                 Atcelt
@@ -1726,8 +1726,8 @@ export default function PropertyManager() {
               <button
                 onClick={() => saveDebtNote(debtModal.invoiceId, debtModal.debtNote)}
                 style={{
-                  padding: '10px 20px', background: '#10b981', color: 'white',
-                  border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'
+                  padding: "10px 20px", background: "#10b981", color: "white",
+                  border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold"
                 }}
               >
                 ✓ Saglabāt
@@ -1740,21 +1740,21 @@ export default function PropertyManager() {
       {/* PĀRMAKSAS IEVADĪŠANAS DIALOGS */}
       {overpaymentModal && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center",
           zIndex: 1000
         }}>
           <div style={{
-            background: 'white', padding: '30px', borderRadius: '8px',
-            maxWidth: '500px', width: '90%', boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+            background: "white", padding: "30px", borderRadius: "8px",
+            maxWidth: "500px", width: "90%", boxShadow: "0 10px 40px rgba(0,0,0,0.2)"
           }}>
             <h3>💰 Pārmaksa</h3>
-            <div style={{ marginBottom: '15px', padding: '10px', background: '#f0f9ff', borderRadius: '4px', color: '#333' }}>
+            <div style={{ marginBottom: "15px", padding: "10px", background: "#f0f9ff", borderRadius: "4px", color: "#333" }}>
               <strong>Rēķis:</strong> {overpaymentModal.invoiceNumber}
             </div>
             
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "10px", fontWeight: "bold" }}>
                 Pārmaksas summa (€):
               </label>
               <input
@@ -1764,22 +1764,22 @@ export default function PropertyManager() {
                 onChange={(e) => setOverpaymentModal({...overpaymentModal, amount: e.target.value})}
                 placeholder="25.00"
                 style={{
-                  width: '100%', padding: '10px',
-                  border: '1px solid #e2e8f0', borderRadius: '4px'
+                  width: "100%", padding: "10px",
+                  border: "1px solid #e2e8f0", borderRadius: "4px"
                 }}
               />
             </div>
 
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "10px", fontWeight: "bold" }}>
                 Atskaites mēnesis (kad atņemt):
               </label>
               <select
                 value={overpaymentModal.month}
                 onChange={(e) => setOverpaymentModal({...overpaymentModal, month: e.target.value})}
                 style={{
-                  width: '100%', padding: '10px',
-                  border: '1px solid #e2e8f0', borderRadius: '4px'
+                  width: "100%", padding: "10px",
+                  border: "1px solid #e2e8f0", borderRadius: "4px"
                 }}
               >
                 <option value="">Izvēlēties mēnesi...</option>
@@ -1789,12 +1789,12 @@ export default function PropertyManager() {
               </select>
             </div>
             
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
               <button
                 onClick={() => setOverpaymentModal(null)}
                 style={{
-                  padding: '10px 20px', background: '#e2e8f0', color: '#333',
-                  border: 'none', borderRadius: '4px', cursor: 'pointer'
+                  padding: "10px 20px", background: "#e2e8f0", color: "#333",
+                  border: "none", borderRadius: "4px", cursor: "pointer"
                 }}
               >
                 Atcelt
@@ -1802,8 +1802,8 @@ export default function PropertyManager() {
               <button
                 onClick={() => saveOverpayment(overpaymentModal.invoiceId, overpaymentModal.amount, overpaymentModal.month)}
                 style={{
-                  padding: '10px 20px', background: '#10b981', color: 'white',
-                  border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'
+                  padding: "10px 20px", background: "#10b981", color: "white",
+                  border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold"
                 }}
               >
                 ✓ Saglabāt pārmaksu
@@ -1819,13 +1819,13 @@ export default function PropertyManager() {
         <div style={styles.logo}>🏢 BARONA 78</div>
         <nav style={styles.nav}>
           {[
-            { id: 'overview', label: '📊 Pārskats' },
-            { id: 'apartments', label: '🏠 Dzīvokļi' },
-            { id: 'users', label: '👥 Lietotāji' },
-            { id: 'tariffs', label: '💰 Tarifi' },
-            { id: 'water', label: '💧 Ūdens' },
-            { id: 'invoices', label: '📄 Rēķini' },
-            { id: 'settings', label: '⚙️ Iestatījumi' }
+            { id: "overview", label: "📊 Pārskats" },
+            { id: "apartments", label: "🏠 Dzīvokļi" },
+            { id: "users", label: "👥 Lietotāji" },
+            { id: "tariffs", label: "💰 Tarifi" },
+            { id: "water", label: "💧 Ūdens" },
+            { id: "invoices", label: "📄 Rēķini" },
+            { id: "settings", label: "⚙️ Iestatījumi" }
           ].map(tab => (
             <button
               key={tab.id}
@@ -1844,7 +1844,7 @@ export default function PropertyManager() {
             <h1 style={styles.h1}>Rēķinu Vadības Sistēma</h1>
             <p style={styles.subtitle}>Inteligenta mājas apsaimniekošana</p>
           </div>
-          <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Izrakstīties</button>
+          <button onClick={handleLogout} style={{ padding: "10px 20px", background: "#ef4444", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>Izrakstīties</button>
         </header>
 
         <div style={styles.content}>
@@ -1865,7 +1865,7 @@ export default function PropertyManager() {
                   <div style={styles.statValue}>{invoices.length}</div>
                   <div style={styles.statLabel}>Rēķini</div>
                 </div>
-                <div style={{...styles.stat, background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)'}}>
+                <div style={{...styles.stat, background: "linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)"}}>
                   <div style={styles.statValue}>€{totalDebt.toFixed(2)}</div>
                   <div style={styles.statLabel}>Parāds</div>
                 </div>
@@ -1876,15 +1876,15 @@ export default function PropertyManager() {
                 
                 {totalDebt > 0 && (
                   <div style={{
-                    background: '#fee2e2',
-                    border: '1px solid #fca5a5',
-                    borderRadius: '8px',
-                    padding: '15px',
-                    marginBottom: '15px',
-                    color: '#991b1b'
+                    background: "#fee2e2",
+                    border: "1px solid #fca5a5",
+                    borderRadius: "8px",
+                    padding: "15px",
+                    marginBottom: "15px",
+                    color: "#991b1b"
                   }}>
-                    <div style={{fontWeight: 'bold', marginBottom: '8px'}}>⚠️ SVARĪGI - Ir parāds!</div>
-                    <div style={{fontSize: '13px'}}>
+                    <div style={{fontWeight: "bold", marginBottom: "8px"}}>⚠️ SVARĪGI - Ir parāds!</div>
+                    <div style={{fontSize: "13px"}}>
                       Kopā parāds: <strong>€{totalDebt.toFixed(2)}</strong><br/>
                       Dzīvokļu skaits ar parādu: <strong>{invoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).map(i => i.apartment_id).filter((v, i, a) => a.indexOf(v) === i).length}</strong>
                     </div>
@@ -1894,17 +1894,17 @@ export default function PropertyManager() {
                 <div style={styles.summaryGrid}>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>Kopā apmaksāt</div>
-                    <div style={{fontSize: '24px', fontWeight: 'bold', color: '#0066cc'}}>€{totalAmount.toFixed(2)}</div>
+                    <div style={{fontSize: "24px", fontWeight: "bold", color: "#0066cc"}}>€{totalAmount.toFixed(2)}</div>
                   </div>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>Apmaksāts</div>
-                    <div style={{fontSize: '24px', fontWeight: 'bold', color: '#10b981'}}>
+                    <div style={{fontSize: "24px", fontWeight: "bold", color: "#10b981"}}>
                       €{(totalAmount - totalDebt).toFixed(2)}
                     </div>
                   </div>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>Parāds</div>
-                    <div style={{fontSize: '24px', fontWeight: 'bold', color: '#ff6b6b'}}>€{totalDebt.toFixed(2)}</div>
+                    <div style={{fontSize: "24px", fontWeight: "bold", color: "#ff6b6b"}}>€{totalDebt.toFixed(2)}</div>
                   </div>
                 </div>
               </div>
@@ -1914,19 +1914,19 @@ export default function PropertyManager() {
                 <div style={styles.summaryGrid}>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>✓ Apmaksāti</div>
-                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#10b981'}}>
+                    <div style={{fontSize: "20px", fontWeight: "bold", color: "#10b981"}}>
                       {invoices.filter(i => i.paid).length}
                     </div>
                   </div>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>⏳ Gaida atmaksu</div>
-                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#f59e0b'}}>
+                    <div style={{fontSize: "20px", fontWeight: "bold", color: "#f59e0b"}}>
                       {invoices.filter(i => !i.paid && new Date(i.due_date) > new Date()).length}
                     </div>
                   </div>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>⚠️ Parāds</div>
-                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#ef4444'}}>
+                    <div style={{fontSize: "20px", fontWeight: "bold", color: "#ef4444"}}>
                       {invoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).length}
                     </div>
                   </div>
@@ -2014,13 +2014,13 @@ export default function PropertyManager() {
                   {apartments.map(apt => (
                     <div key={apt.id} style={styles.listItem}>
                       {editingApartment === apt.id ? (
-                        <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                        <div style={{flex: 1, display: "flex", flexDirection: "column", gap: "8px"}}>
                           <input
                             type="number"
                             placeholder="Dzīvokļa numurs"
                             value={editApartmentForm.number}
                             onChange={(e) => setEditApartmentForm({...editApartmentForm, number: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
+                            style={{...styles.input, fontSize: "12px"}}
                           />
                           <input
                             type="number"
@@ -2028,21 +2028,21 @@ export default function PropertyManager() {
                             placeholder="Platība (m²)"
                             value={editApartmentForm.area}
                             onChange={(e) => setEditApartmentForm({...editApartmentForm, area: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
+                            style={{...styles.input, fontSize: "12px"}}
                           />
                           <input
                             type="text"
                             placeholder="Īpašnieka vārds"
                             value={editApartmentForm.owner_name}
                             onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_name: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
+                            style={{...styles.input, fontSize: "12px"}}
                           />
                           <input
                             type="text"
                             placeholder="Uzvārds"
                             value={editApartmentForm.owner_surname}
                             onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_surname: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
+                            style={{...styles.input, fontSize: "12px"}}
                           />
                           <input
                             type="number"
@@ -2050,18 +2050,18 @@ export default function PropertyManager() {
                             min="1"
                             value={editApartmentForm.declared_persons}
                             onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
+                            style={{...styles.input, fontSize: "12px"}}
                           />
-                          <div style={{display: 'flex', gap: '8px'}}>
+                          <div style={{display: "flex", gap: "8px"}}>
                             <button
                               onClick={() => saveEditApartment(apt.id)}
-                              style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}
+                              style={{...styles.btn, fontSize: "11px", padding: "6px 12px", flex: 1}}
                             >
                               ✓ Saglabāt
                             </button>
                             <button
                               onClick={() => setEditingApartment(null)}
-                              style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}
+                              style={{background: "#e5e7eb", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "11px", flex: 1}}
                             >
                               Atcelt
                             </button>
@@ -2070,15 +2070,15 @@ export default function PropertyManager() {
                       ) : (
                         <>
                           <div style={{flex: 1}}>
-                            <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
-                            <div style={{fontSize: '13px', color: '#666'}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
+                            <div style={{fontWeight: "bold"}}>Dzīv. {apt.number}</div>
+                            <div style={{fontSize: "13px", color: "#666"}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
                             {(() => {
                               const apartmentDebt = invoices
                                 .filter(inv => inv.apartment_id === apt.id && !inv.paid && new Date(inv.due_date) <= new Date())
                                 .reduce((sum, inv) => sum + inv.amount, 0);
                               if (apartmentDebt > 0) {
                                 return (
-                                  <div style={{fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: '500'}}>
+                                  <div style={{fontSize: "12px", color: "#ef4444", marginTop: "4px", fontWeight: "500"}}>
                                     ⚠️ Parāds: €{apartmentDebt.toFixed(2)}
                                   </div>
                                 );
@@ -2086,8 +2086,8 @@ export default function PropertyManager() {
                               return null;
                             })()}
                           </div>
-                          <div style={{display: 'flex', gap: '4px'}}>
-                            <button onClick={() => startEditApartment(apt)} style={{...styles.btnSmall, padding: '4px 8px'}} title="Rediģēt">✏️</button>
+                          <div style={{display: "flex", gap: "4px"}}>
+                            <button onClick={() => startEditApartment(apt)} style={{...styles.btnSmall, padding: "4px 8px"}} title="Rediģēt">✏️</button>
                             <button onClick={() => deleteApartment(apt.id)} style={styles.btnSmall}>🗑️</button>
                           </div>
                         </>
@@ -2150,25 +2150,25 @@ export default function PropertyManager() {
                     return (
                       <div key={user.id} style={styles.listItem}>
                         {isEditing ? (
-                          <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                          <div style={{flex: 1, display: "flex", flexDirection: "column", gap: "8px"}}>
                             <input
                               type="email"
                               placeholder="E-pasts"
                               value={editUserForm.email}
                               onChange={(e) => setEditUserForm({...editUserForm, email: e.target.value})}
-                              style={{...styles.input, fontSize: '12px'}}
+                              style={{...styles.input, fontSize: "12px"}}
                             />
                             <input
                               type="password"
                               placeholder="Parole"
                               value={editUserForm.password}
                               onChange={(e) => setEditUserForm({...editUserForm, password: e.target.value})}
-                              style={{...styles.input, fontSize: '12px'}}
+                              style={{...styles.input, fontSize: "12px"}}
                             />
                             <select
                               value={editUserForm.apartment_id || ''}
                               onChange={(e) => setEditUserForm({...editUserForm, apartment_id: e.target.value})}
-                              style={{...styles.input, fontSize: '12px'}}
+                              style={{...styles.input, fontSize: "12px"}}
                             >
                               <option value="">-- Dzīvoklis --</option>
                               {apartments.map(apt => (
@@ -2180,21 +2180,21 @@ export default function PropertyManager() {
                             <select
                               value={editUserForm.role}
                               onChange={(e) => setEditUserForm({...editUserForm, role: e.target.value})}
-                              style={{...styles.input, fontSize: '12px'}}
+                              style={{...styles.input, fontSize: "12px"}}
                             >
                               <option value="user">Lietotājs</option>
                               <option value="admin">Administrators</option>
                             </select>
-                            <div style={{display: 'flex', gap: '8px'}}>
+                            <div style={{display: "flex", gap: "8px"}}>
                               <button
                                 onClick={() => saveEditUser(user.id)}
-                                style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}
+                                style={{...styles.btn, fontSize: "11px", padding: "6px 12px", flex: 1}}
                               >
                                 ✓ Saglabāt
                               </button>
                               <button
                                 onClick={() => setEditingUser(null)}
-                                style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}
+                                style={{background: "#e5e7eb", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "11px", flex: 1}}
                               >
                                 Atcelt
                               </button>
@@ -2203,14 +2203,14 @@ export default function PropertyManager() {
                         ) : (
                           <>
                             <div>
-                              <div style={{fontWeight: 'bold'}}>📧 {user.email}</div>
-                              <div style={{fontSize: '13px', color: '#666'}}>
-                                {apt ? `Dzīv. ${apt.number}` : 'Nav dzīvokļa'} • 
-                                {user.role === 'admin' ? ' 👤 Administrators' : ' Lietotājs'}
+                              <div style={{fontWeight: "bold"}}>📧 {user.email}</div>
+                              <div style={{fontSize: "13px", color: "#666"}}>
+                                {apt ? `Dzīv. ${apt.number}` : "Nav dzīvokļa"} • 
+                                {user.role === 'admin' ? ' 👤 Administrators' : " Lietotājs"}
                               </div>
                             </div>
-                            <div style={{display: 'flex', gap: '4px'}}>
-                              <button onClick={() => startEditUser(user)} style={{...styles.btnSmall, padding: '4px 8px'}} title="Rediģēt">✏️</button>
+                            <div style={{display: "flex", gap: "4px"}}>
+                              <button onClick={() => startEditUser(user)} style={{...styles.btnSmall, padding: "4px 8px"}} title="Rediģēt">✏️</button>
                               <button onClick={() => deleteUser(user.id)} style={styles.btnSmall}>🗑️</button>
                             </div>
                           </>
@@ -2227,7 +2227,7 @@ export default function PropertyManager() {
                 <h2 style={styles.cardTitle}>➕ Pievienot tarifu</h2>
                 <form onSubmit={addTariff} style={styles.form}>
                   <div>
-                    <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
+                    <label style={{fontSize: "12px", color: "#666", fontWeight: "500"}}>Periods</label>
                     <input
                       type="month"
                       value={tariffPeriod}
@@ -2251,7 +2251,7 @@ export default function PropertyManager() {
                     style={styles.input}
                   />
                   <div>
-                    <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>PVN (%) - 0 ja bez PVN</label>
+                    <label style={{fontSize: "12px", color: "#666", fontWeight: "500"}}>PVN (%) - 0 ja bez PVN</label>
                     <input
                       type="number"
                       step="0.01"
@@ -2261,14 +2261,14 @@ export default function PropertyManager() {
                       style={styles.input}
                     />
                   </div>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: '#f9fafb', borderRadius: '4px'}}>
+                  <div style={{display: "flex", alignItems: "center", gap: "8px", padding: "10px", background: "#f9fafb", borderRadius: "4px"}}>
                     <input
                       type="checkbox"
                       checked={tariffForm.include_in_invoice}
                       onChange={(e) => setTariffForm({...tariffForm, include_in_invoice: e.target.checked})}
-                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                      style={{width: "18px", height: "18px", cursor: "pointer"}}
                     />
-                    <label style={{fontSize: '13px', color: '#333', cursor: 'pointer', margin: 0}}>Iekļaut rēķinā</label>
+                    <label style={{fontSize: "13px", color: "#333", cursor: "pointer", margin: 0}}>Iekļaut rēķinā</label>
                   </div>
                   <button type="submit" style={styles.btn}>Pievienot</button>
                 </form>
@@ -2278,17 +2278,17 @@ export default function PropertyManager() {
                 <h2 style={styles.cardTitle}>💰 Tarifi pa mēnešiem</h2>
                 
                 {copySourceMonth && (
-                  <div style={{background: '#fef3c7', padding: '12px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px'}}>
-                    <div style={{marginBottom: '10px'}}>📋 Kopēšanas režīms - atlasiet tarifus no <strong>{new Date(copySourceMonth + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</strong></div>
+                  <div style={{background: "#fef3c7", padding: "12px", borderRadius: "8px", marginBottom: "15px", fontSize: "13px"}}>
+                    <div style={{marginBottom: "10px"}}>📋 Kopēšanas režīms - atlasiet tarifus no <strong>{new Date(copySourceMonth + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}</strong></div>
                     <button
                       onClick={() => copySelectedTariffs(copySourceMonth, tariffPeriod)}
-                      style={{...styles.btn, fontSize: '12px', padding: '8px 12px', marginRight: '8px'}}
+                      style={{...styles.btn, fontSize: "12px", padding: "8px 12px", marginRight: "8px"}}
                     >
                       ✓ Kopēt atlasītos
                     </button>
                     <button
                       onClick={() => {setCopySourceMonth(null); setSelectedTariffsToCopy({});}}
-                      style={{background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px'}}
+                      style={{background: "#ef4444", color: "white", border: "none", padding: "8px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "12px"}}
                     >
                       ✕ Atcelt
                     </button>
@@ -2299,17 +2299,17 @@ export default function PropertyManager() {
                   const periodTariffs = tariffs.filter(t => t.period === period);
 
                   return (
-                    <div key={period} style={{marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #e2e8f0'}}>
-                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
-                        <div style={{fontWeight: 'bold', fontSize: '14px'}}>
-                          📅 {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
+                    <div key={period} style={{marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e2e8f0"}}>
+                      <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px"}}>
+                        <div style={{fontWeight: "bold", fontSize: "14px"}}>
+                          📅 {new Date(period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
                         </div>
                         <button
                           onClick={() => setCopySourceMonth(copySourceMonth === period ? null : period)}
-                          style={{...styles.btnSmall, fontSize: '12px', padding: '4px 8px', background: '#e0e7ff', color: '#3730a3', borderRadius: '4px', fontWeight: '500'}}
+                          style={{...styles.btnSmall, fontSize: "12px", padding: "4px 8px", background: "#e0e7ff", color: "#3730a3", borderRadius: "4px", fontWeight: "500"}}
                           title="Kopēt tarifus"
                         >
-                          📋 {copySourceMonth === period ? 'Atcelt' : 'Kopēt'}
+                          📋 {copySourceMonth === period ? 'Atcelt' : "Kopēt"}
                         </button>
                       </div>
                       
@@ -2318,31 +2318,31 @@ export default function PropertyManager() {
                         const isEditing = editingTariff === tar.id;
 
                         return (
-                          <div key={tar.id} style={{...styles.listItem, marginBottom: '8px', display: 'flex', gap: '8px'}}>
+                          <div key={tar.id} style={{...styles.listItem, marginBottom: "8px", display: "flex", gap: "8px"}}>
                             {copySourceMonth === period && (
                               <input
                                 type="checkbox"
                                 checked={selectedTariffsToCopy[tar.id] || false}
                                 onChange={(e) => setSelectedTariffsToCopy({...selectedTariffsToCopy, [tar.id]: e.target.checked})}
-                                style={{width: '18px', height: '18px', cursor: 'pointer', minWidth: '18px'}}
+                                style={{width: "18px", height: "18px", cursor: "pointer", minWidth: "18px"}}
                               />
                             )}
                             
                             {isEditing ? (
-                              <div style={{flex: 1, display: 'flex', gap: '8px', flexDirection: 'column'}}>
+                              <div style={{flex: 1, display: "flex", gap: "8px", flexDirection: "column"}}>
                                 <input
                                   type="text"
                                   value={editForm.name}
                                   onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                                  style={{...styles.input, fontSize: '12px'}}
+                                  style={{...styles.input, fontSize: "12px"}}
                                 />
-                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
+                                <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px"}}>
                                   <input
                                     type="number"
                                     step="0.01"
                                     value={editForm.total_amount}
                                     onChange={(e) => setEditForm({...editForm, total_amount: e.target.value})}
-                                    style={{...styles.input, fontSize: '12px'}}
+                                    style={{...styles.input, fontSize: "12px"}}
                                   />
                                   <input
                                     type="number"
@@ -2350,28 +2350,28 @@ export default function PropertyManager() {
                                     placeholder="PVN %"
                                     value={editForm.vat_rate}
                                     onChange={(e) => setEditForm({...editForm, vat_rate: e.target.value})}
-                                    style={{...styles.input, fontSize: '12px'}}
+                                    style={{...styles.input, fontSize: "12px"}}
                                   />
                                 </div>
-                                <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: '#f9fafb', borderRadius: '4px'}}>
+                                <div style={{display: "flex", alignItems: "center", gap: "8px", padding: "8px", background: "#f9fafb", borderRadius: "4px"}}>
                                   <input
                                     type="checkbox"
                                     checked={editForm.include_in_invoice !== false}
                                     onChange={(e) => setEditForm({...editForm, include_in_invoice: e.target.checked})}
-                                    style={{width: '16px', height: '16px', cursor: 'pointer'}}
+                                    style={{width: "16px", height: "16px", cursor: "pointer"}}
                                   />
-                                  <label style={{fontSize: '12px', color: '#333', cursor: 'pointer', margin: 0}}>Iekļaut rēķinā</label>
+                                  <label style={{fontSize: "12px", color: "#333", cursor: "pointer", margin: 0}}>Iekļaut rēķinā</label>
                                 </div>
-                                <div style={{display: 'flex', gap: '8px'}}>
+                                <div style={{display: "flex", gap: "8px"}}>
                                   <button
                                     onClick={() => saveEditTariff(tar.id)}
-                                    style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}
+                                    style={{...styles.btn, fontSize: "11px", padding: "6px 12px", flex: 1}}
                                   >
                                     ✓ Saglabāt
                                   </button>
                                   <button
                                     onClick={() => setEditingTariff(null)}
-                                    style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}
+                                    style={{background: "#e5e7eb", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "11px", flex: 1}}
                                   >
                                     Atcelt
                                   </button>
@@ -2379,20 +2379,20 @@ export default function PropertyManager() {
                               </div>
                             ) : (
                               <div style={{flex: 1}}>
-                                <div style={{fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                <div style={{fontWeight: "bold", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px"}}>
                                   {tar.name}
                                   <span style={{
-                                    fontSize: '10px',
-                                    padding: '2px 6px',
-                                    borderRadius: '3px',
-                                    backgroundColor: tar.include_in_invoice !== false ? '#dcfce7' : '#fee2e2',
-                                    color: tar.include_in_invoice !== false ? '#166534' : '#991b1b',
-                                    fontWeight: '500'
+                                    fontSize: "10px",
+                                    padding: "2px 6px",
+                                    borderRadius: "3px",
+                                    backgroundColor: tar.include_in_invoice !== false ? '#dcfce7' : "#fee2e2",
+                                    color: tar.include_in_invoice !== false ? '#166534' : "#991b1b",
+                                    fontWeight: "500"
                                   }}>
-                                    {tar.include_in_invoice !== false ? '✓ Iekļaut' : '✕ Neiekļaut'}
+                                    {tar.include_in_invoice !== false ? '✓ Iekļaut' : "✕ Neiekļaut"}
                                   </span>
                                 </div>
-                                <div style={{fontSize: '12px', color: '#666'}}>
+                                <div style={{fontSize: "12px", color: "#666"}}>
                                   €{parseFloat(tar.total_amount).toFixed(2)} • €{pricePerSqm.toFixed(4)}/m²
                                   {tar.vat_rate > 0 && ` • PVN: ${tar.vat_rate}%`}
                                 </div>
@@ -2400,17 +2400,17 @@ export default function PropertyManager() {
                             )}
                             
                             {!isEditing && (
-                              <div style={{display: 'flex', gap: '4px'}}>
+                              <div style={{display: "flex", gap: "4px"}}>
                                 <button
                                   onClick={() => startEditTariff(tar)}
-                                  style={{...styles.btnSmall, padding: '4px 8px'}}
+                                  style={{...styles.btnSmall, padding: "4px 8px"}}
                                   title="Rediģēt"
                                 >
                                   ✏️
                                 </button>
                                 <button
                                   onClick={() => deleteTariff(tar.id)}
-                                  style={{...styles.btnSmall, padding: '4px 8px'}}
+                                  style={{...styles.btnSmall, padding: "4px 8px"}}
                                   title="Dzēst"
                                 >
                                   🗑️
@@ -2431,13 +2431,13 @@ export default function PropertyManager() {
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>⚙️ Skaitītāju Iespējošana</h2>
                 <div style={styles.form}>
-                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
-                    <label style={{fontWeight: '500', fontSize: '14px', cursor: 'pointer'}}>💧 Ūdens</label>
+                  <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", background: "#f9fafb", borderRadius: "6px", border: "1px solid #e2e8f0"}}>
+                    <label style={{fontWeight: "500", fontSize: "14px", cursor: "pointer"}}>💧 Ūdens</label>
                     <input
                       type="checkbox"
                       checked={enabledMeters.water}
                       onChange={(e) => setEnabledMeters({...enabledMeters, water: e.target.checked})}
-                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                      style={{width: "18px", height: "18px", cursor: "pointer"}}
                     />
                   </div>
                 </div>
@@ -2448,7 +2448,7 @@ export default function PropertyManager() {
                 <h2 style={styles.cardTitle}>💧 Ūdens Tarifs</h2>
                 <form onSubmit={saveWaterTariff} style={styles.form}>
                   <div>
-                    <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
+                    <label style={{fontSize: "12px", color: "#666", fontWeight: "500"}}>Periods</label>
                     <select
                       value={waterTariffForm.period}
                       onChange={(e) => {
@@ -2467,7 +2467,7 @@ export default function PropertyManager() {
                     >
                       {uniqueTariffPeriods.map(period => (
                         <option key={period} value={period}>
-                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
+                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
                         </option>
                       ))}
                     </select>
@@ -2488,14 +2488,14 @@ export default function PropertyManager() {
                     onChange={(e) => setWaterTariffForm({...waterTariffForm, vat_rate: e.target.value})}
                     style={styles.input}
                   />
-                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                  <div style={{display: "flex", alignItems: "center", gap: "8px", padding: "12px", background: "#f9fafb", borderRadius: "6px", border: "1px solid #e2e8f0"}}>
                     <input
                       type="checkbox"
                       checked={waterTariffForm.include_in_invoice}
                       onChange={(e) => setWaterTariffForm({...waterTariffForm, include_in_invoice: e.target.checked})}
-                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                      style={{width: "18px", height: "18px", cursor: "pointer"}}
                     />
-                    <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>
+                    <label style={{fontSize: "13px", cursor: "pointer", margin: 0, flex: 1}}>
                       ✓ Iekļaut mēneša rēķinā
                     </label>
                   </div>
@@ -2508,7 +2508,7 @@ export default function PropertyManager() {
                 <h2 style={styles.cardTitle}>♻️ Atkritumu Izvešanas Tarifs</h2>
                 <form onSubmit={saveWasteTariff} style={styles.form}>
                   <div>
-                    <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
+                    <label style={{fontSize: "12px", color: "#666", fontWeight: "500"}}>Periods</label>
                     <select
                       value={wasteTariffForm.period}
                       onChange={(e) => {
@@ -2527,7 +2527,7 @@ export default function PropertyManager() {
                     >
                       {uniqueTariffPeriods.map(period => (
                         <option key={period} value={period}>
-                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
+                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
                         </option>
                       ))}
                     </select>
@@ -2548,18 +2548,18 @@ export default function PropertyManager() {
                     onChange={(e) => setWasteTariffForm({...wasteTariffForm, vat_rate: e.target.value})}
                     style={styles.input}
                   />
-                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                  <div style={{display: "flex", alignItems: "center", gap: "8px", padding: "12px", background: "#f9fafb", borderRadius: "6px", border: "1px solid #e2e8f0"}}>
                     <input
                       type="checkbox"
                       checked={wasteTariffForm.include_in_invoice}
                       onChange={(e) => setWasteTariffForm({...wasteTariffForm, include_in_invoice: e.target.checked})}
-                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                      style={{width: "18px", height: "18px", cursor: "pointer"}}
                     />
-                    <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>
+                    <label style={{fontSize: "13px", cursor: "pointer", margin: 0, flex: 1}}>
                       ✓ Iekļaut mēneša rēķinā
                     </label>
                   </div>
-                  <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '10px', fontSize: '12px', color: '#0369a1', marginBottom: '12px'}}>
+                  <div style={{background: "#f0f9ff", border: "1px solid #0ea5e9", borderRadius: "6px", padding: "10px", fontSize: "12px", color: "#0369a1", marginBottom: "12px"}}>
                     ℹ️ Summa automātiski tiks dalīta uz visu dzīvokļu deklarēto personu skaitu.
                   </div>
                   <button type="submit" style={styles.btn}>Saglabāt Tarifu</button>
@@ -2568,12 +2568,12 @@ export default function PropertyManager() {
 
               {/* Waste Distribution by Declared Persons */}
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>♻️ Atkritumu Sadalījums - {new Date(wasteTariffForm.period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</h2>
+                <h2 style={styles.cardTitle}>♻️ Atkritumu Sadalījums - {new Date(wasteTariffForm.period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}</h2>
                 <div style={styles.list}>
                   {(() => {
                     const wasteTariff = wasteTariffs.find(w => w.period === wasteTariffForm.period);
                     if (!wasteTariff) {
-                      return <div style={{color: '#999', textAlign: 'center', padding: '20px'}}>Nav norādīts atkritumu tarifs</div>;
+                      return <div style={{color: "#999", textAlign: "center", padding: "20px"}}>Nav norādīts atkritumu tarifs</div>;
                     }
                     
                     const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
@@ -2582,7 +2582,7 @@ export default function PropertyManager() {
                     
                     return (
                       <>
-                        <div style={{background: '#f9fafb', padding: '12px', borderRadius: '6px', marginBottom: '12px', fontSize: '13px'}}>
+                        <div style={{background: "#f9fafb", padding: "12px", borderRadius: "6px", marginBottom: "12px", fontSize: "13px"}}>
                           <strong>Kopā deklarēto personu:</strong> {totalDeclaredPersons}<br/>
                           <strong>Kopējā summa bez PVN:</strong> €{totalAmountWithoutVat.toFixed(2)}<br/>
                           <strong>PVN likme:</strong> {vatRate}%
@@ -2594,12 +2594,12 @@ export default function PropertyManager() {
                           const shareTotal = shareAmount + shareVat;
                           
                           return (
-                            <div key={apt.id} style={{...styles.listItem, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
+                            <div key={apt.id} style={{...styles.listItem, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px"}}>
                               <div>
-                                <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number} - {apt.owner_name}</div>
-                                <div style={{fontSize: '12px', color: '#666'}}>{declaredPersons} pers. × €{(totalAmountWithoutVat / totalDeclaredPersons).toFixed(4)} = €{shareAmount.toFixed(2)} + €{shareVat.toFixed(2)} PVN</div>
+                                <div style={{fontWeight: "bold"}}>Dzīv. {apt.number} - {apt.owner_name}</div>
+                                <div style={{fontSize: "12px", color: "#666"}}>{declaredPersons} pers. × €{(totalAmountWithoutVat / totalDeclaredPersons).toFixed(4)} = €{shareAmount.toFixed(2)} + €{shareVat.toFixed(2)} PVN</div>
                               </div>
-                              <div style={{fontWeight: 'bold', color: '#003399'}}>€{shareTotal.toFixed(2)}</div>
+                              <div style={{fontWeight: "bold", color: "#003399"}}>€{shareTotal.toFixed(2)}</div>
                             </div>
                           );
                         })}
@@ -2611,7 +2611,7 @@ export default function PropertyManager() {
 
               {/* Water Consumption - from Meter Readings */}
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>💧 Patēriņš - {new Date(tariffPeriod + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</h2>
+                <h2 style={styles.cardTitle}>💧 Patēriņš - {new Date(tariffPeriod + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}</h2>
                 <div style={styles.list}>
                   {apartments.map(apt => {
                     // Ņem ūdens rādījumu no meter_readings (nevis water_consumption)
@@ -2623,21 +2623,21 @@ export default function PropertyManager() {
                     const totalAmount = amount + vatAmount;
 
                     return (
-                      <div key={apt.id} style={{...styles.listItem, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap'}}>
-                        <div style={{marginBottom: '8px', flex: '0 0 100%'}}>
-                          <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number} - {apt.owner_name}</div>
-                          <div style={{fontSize: '12px', color: '#666'}}>€{totalAmount.toFixed(2)}</div>
+                      <div key={apt.id} style={{...styles.listItem, display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexWrap: "wrap"}}>
+                        <div style={{marginBottom: "8px", flex: "0 0 100%"}}>
+                          <div style={{fontWeight: "bold"}}>Dzīv. {apt.number} - {apt.owner_name}</div>
+                          <div style={{fontSize: "12px", color: "#666"}}>€{totalAmount.toFixed(2)}</div>
                         </div>
-                        <div style={{display: 'flex', gap: '8px', alignItems: 'center', flex: '1 1 auto'}}>
+                        <div style={{display: "flex", gap: "8px", alignItems: "center", flex: "1 1 auto"}}>
                           <input
                             type="number"
                             step="0.01"
                             placeholder="m³"
                             value={consumptionValue}
                             onChange={(e) => saveWaterMeterReading(apt.id, e.target.value, tariffPeriod)}
-                            style={{...styles.input, width: '80px', padding: '8px'}}
+                            style={{...styles.input, width: "80px", padding: "8px"}}
                           />
-                          <span style={{fontSize: '12px', color: '#666', minWidth: '40px'}}>m³</span>
+                          <span style={{fontSize: "12px", color: "#666", minWidth: "40px"}}>m³</span>
                         </div>
                       </div>
                     );
@@ -2649,13 +2649,13 @@ export default function PropertyManager() {
             <div>
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
-                <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
+                <div style={{background: "#f0f9ff", border: "1px solid #0ea5e9", borderRadius: "6px", padding: "12px", marginBottom: "15px", fontSize: "13px", color: "#0369a1"}}>
                   <strong>ℹ️ Vairāki rēķini per dzīvokli:</strong> Var ģenerēt vairākus rēķinus uz vienu dzīvokli vienā mēnesī.
-                  <br/>Rēķini tiks numurēti kā <code style={{background: '#e0f2fe', padding: '2px 6px', borderRadius: '3px'}}>2026/03-14-1</code>, 
-                  <code style={{background: '#e0f2fe', padding: '2px 6px', borderRadius: '3px', marginLeft: '4px'}}>2026/03-14-2</code>, utt.
+                  <br/>Rēķini tiks numurēti kā <code style={{background: "#e0f2fe", padding: "2px 6px", borderRadius: "3px"}}>2026/03-14-1</code>, 
+                  <code style={{background: "#e0f2fe", padding: "2px 6px", borderRadius: "3px", marginLeft: "4px"}}>2026/03-14-2</code>, utt.
                 </div>
-                <form onSubmit={generateInvoices} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                <form onSubmit={generateInvoices} style={{display: "flex", flexDirection: "column", gap: "12px"}}>
+                  <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px"}}>
                     <select
                       value={invoiceMonth}
                       onChange={(e) => setInvoiceMonth(e.target.value)}
@@ -2664,14 +2664,14 @@ export default function PropertyManager() {
                       <option value="">-- Izvēlieties mēnesi --</option>
                       {uniqueTariffPeriods.map(period => (
                         <option key={period} value={period}>
-                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
+                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
                         </option>
                       ))}
                     </select>
                   </div>
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                  <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px"}}>
                     <div>
-                      <label style={{fontSize: '12px', color: '#666', marginBottom: '4px', display: 'block'}}>No datuma</label>
+                      <label style={{fontSize: "12px", color: "#666", marginBottom: "4px", display: "block"}}>No datuma</label>
                       <input
                         type="date"
                         value={invoiceFromDate}
@@ -2680,7 +2680,7 @@ export default function PropertyManager() {
                       />
                     </div>
                     <div>
-                      <label style={{fontSize: '12px', color: '#666', marginBottom: '4px', display: 'block'}}>Līdz datumam</label>
+                      <label style={{fontSize: "12px", color: "#666", marginBottom: "4px", display: "block"}}>Līdz datumam</label>
                       <input
                         type="date"
                         value={invoiceToDate}
@@ -2694,11 +2694,11 @@ export default function PropertyManager() {
               </div>
 
               <div style={styles.card}>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px"}}>
                   <h2 style={styles.cardTitle}>💳 Rēķini ({invoices.length})</h2>
                   <button
                     onClick={exportInvoicesToCSV}
-                    style={{padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500'}}
+                    style={{padding: "8px 16px", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px", fontWeight: "500"}}
                     title="Eksportēt uz CSV"
                   >
                     📊 CSV Export
@@ -2706,7 +2706,7 @@ export default function PropertyManager() {
                 </div>
                 
                 {sortedMonths.length === 0 ? (
-                  <div style={{textAlign: 'center', color: '#999', padding: '40px'}}>Nav rēķinu</div>
+                  <div style={{textAlign: "center", color: "#999", padding: "40px"}}>Nav rēķinu</div>
                 ) : (
                   <div>
                     {sortedMonths.map(month => {
@@ -2716,25 +2716,25 @@ export default function PropertyManager() {
                       const isExpanded = expandedInvoiceMonth === month;
 
                       return (
-                        <div key={month} style={{marginBottom: '15px'}}>
+                        <div key={month} style={{marginBottom: "15px"}}>
                           <div
                             onClick={() => setExpandedInvoiceMonth(isExpanded ? null : month)}
                             style={{
-                              cursor: 'pointer',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              padding: '15px',
-                              background: '#f8fafc',
-                              borderRadius: '8px',
-                              border: '1px solid #e2e8f0'
+                              cursor: "pointer",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "15px",
+                              background: "#f8fafc",
+                              borderRadius: "8px",
+                              border: "1px solid #e2e8f0"
                             }}
                           >
                             <div>
-                              <div style={{fontWeight: 'bold', fontSize: '14px'}}>
-                                📅 {new Date(month + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
+                              <div style={{fontWeight: "bold", fontSize: "14px"}}>
+                                📅 {new Date(month + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
                               </div>
-                              <div style={{fontSize: '12px', color: '#666'}}>
+                              <div style={{fontSize: "12px", color: "#666"}}>
                                 €{monthTotal.toFixed(2)} • Parāds: €{monthUnpaid.toFixed(2)}
                               </div>
                             </div>
@@ -2743,70 +2743,70 @@ export default function PropertyManager() {
                                 e.stopPropagation();
                                 regenerateInvoices(month);
                               }}
-                              style={{...styles.btnSmall, fontSize: '12px', padding: '4px 8px', background: '#fcd34d', color: '#000', borderRadius: '4px', marginRight: '10px', fontWeight: '500'}}
+                              style={{...styles.btnSmall, fontSize: "12px", padding: "4px 8px", background: "#fcd34d", color: "#000", borderRadius: "4px", marginRight: "10px", fontWeight: "500"}}
                               title="Reģenerēt visus rēķinus"
                             >
                               🔄 Regen.
                             </button>
-                            <div style={{fontSize: '18px'}}>{isExpanded ? '▼' : '▶'}</div>
+                            <div style={{fontSize: "18px"}}>{isExpanded ? '▼' : "▶"}</div>
                           </div>
 
                           {isExpanded && (
-                            <div style={{marginTop: '10px'}}>
+                            <div style={{marginTop: "10px"}}>
                               {monthInvoices.map(invoice => {
                                 const apt = apartments.find(a => a.id === invoice.apartment_id);
                                 const tariff = tariffs.find(t => t.id === invoice.tariff_id);
                                 return (
                                   <div key={invoice.id} style={styles.invoiceCard}>
-                                    <div style={{display: 'flex', alignItems: 'center', gap: '10px', flex: 1}}>
+                                    <div style={{display: "flex", alignItems: "center", gap: "10px", flex: 1}}>
                                       <input
                                         type="checkbox"
                                         checked={invoice.paid || false}
                                         onChange={() => toggleInvoicePaid(invoice.id, invoice.paid)}
-                                        style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                                        style={{width: "18px", height: "18px", cursor: "pointer"}}
                                       />
                                       <div style={{flex: 1}}>
-                                        <div style={{fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                        <div style={{fontWeight: "600", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px"}}>
                                           Dzīv. {apt?.number} • {tariff?.name}
                                           {(() => {
                                             const status = getInvoiceStatus(invoice);
                                             return (
                                               <span style={{
-                                                fontSize: '11px',
-                                                fontWeight: '500',
-                                                padding: '2px 8px',
-                                                borderRadius: '4px',
+                                                fontSize: "11px",
+                                                fontWeight: "500",
+                                                padding: "2px 8px",
+                                                borderRadius: "4px",
                                                 backgroundColor: status.color,
-                                                color: 'white'
+                                                color: "white"
                                               }}>
                                                 {status.emoji} {status.status}
                                               </span>
                                             );
                                           })()}
                                         </div>
-                                        <div style={{fontSize: '12px', color: '#666'}}>
+                                        <div style={{fontSize: "12px", color: "#666"}}>
                                           {invoice.invoice_number} • Termiņš: {new Date(invoice.due_date).toLocaleDateString('lv-LV')}
                                         </div>
                                       </div>
                                     </div>
-                                    <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '10px'}}>
+                                    <div style={{display: "flex", flexDirection: "column", alignItems: "flex-end", marginRight: "10px"}}>
                                       {invoice.vat_rate > 0 && (
-                                        <div style={{fontSize: '11px', color: '#999', marginBottom: '2px'}}>
+                                        <div style={{fontSize: "11px", color: "#999", marginBottom: "2px"}}>
                                           €{invoice.amount_without_vat?.toFixed(2) || '0.00'} + €{invoice.vat_amount?.toFixed(2) || '0.00'}
                                         </div>
                                       )}
                                       <div style={{
-                                        fontWeight: 'bold',
-                                        color: invoice.paid ? '#10b981' : '#ef4444',
-                                        minWidth: '80px',
-                                        textAlign: 'right'
+                                        fontWeight: "bold",
+                                        color: invoice.paid ? '#10b981' : "#ef4444",
+                                        minWidth: "80px",
+                                        textAlign: "right"
                                       }}>
                                         €{invoice.amount.toFixed(2)}
                                       </div>
                                     </div>
                                     <button
                                       onClick={() => downloadPDF(invoice)}
-                                      style={{...styles.btnSmall, padding: '6px 12px'}}
+                                      style={{...styles.btnSmall, padding: "6px 12px"}}
                                       title="Lejupielādēt PDF"
                                     >
                                       📥
@@ -2817,7 +2817,7 @@ export default function PropertyManager() {
                                         invoiceNumber: invoice.invoice_number,
                                         debtNote: invoice.debt_note || ''
                                       })}
-                                      style={{...styles.btnSmall, padding: '6px 12px', fontSize: '12px', background: '#f59e0b'}}
+                                      style={{...styles.btnSmall, padding: "6px 12px", fontSize: "12px", background: "#f59e0b"}}
                                       title="Parāda paskaidrojums"
                                     >
                                       📝 Parāds
@@ -2829,21 +2829,21 @@ export default function PropertyManager() {
                                         amount: invoice.overpayment_amount || 0,
                                         month: invoice.overpayment_month || ''
                                       })}
-                                      style={{...styles.btnSmall, padding: '6px 12px', fontSize: '12px', background: '#06b6d4'}}
+                                      style={{...styles.btnSmall, padding: "6px 12px", fontSize: "12px", background: "#06b6d4"}}
                                       title="Pārmaksa"
                                     >
                                       💰 Pārmaksa
                                     </button>
                                     <button
                                       onClick={() => regenerateInvoices(month, invoice.tariff_id)}
-                                      style={{...styles.btnSmall, padding: '6px 12px', fontSize: '14px'}}
+                                      style={{...styles.btnSmall, padding: "6px 12px", fontSize: "14px"}}
                                       title="Reģenerēt šo rēķinu"
                                     >
                                       🔄
                                     </button>
                                     <button
                                       onClick={() => deleteInvoice(invoice.id)}
-                                      style={{...styles.btnSmall, padding: '6px 12px'}}
+                                      style={{...styles.btnSmall, padding: "6px 12px"}}
                                       title="Dzēst"
                                     >
                                       🗑️
@@ -2860,79 +2860,80 @@ export default function PropertyManager() {
                 )}
               </div>
             </div>
+          )
           ) : activeTab === "settings" ? (
             <div>
               <h2 style={styles.h2}>Iestatījumi</h2>
               
               {/* MAKSĀJUMA INFORMĀCIJA */}
-              <div style={{...styles.card, marginBottom: '20px'}}>
+              <div style={{...styles.card, marginBottom: "20px"}}>
                 <h3 style={styles.cardTitle}>💰 Maksājuma informācija</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
                   
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Maksājuma termiņš (dienas):</label>
+                    <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold", fontSize: "13px" }}>Maksājuma termiņš (dienas):</label>
                     <input
                       type="number"
                       value={invoiceSettings.payment_term_days || 14}
                       onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_term_days: e.target.value})}
-                      style={{...styles.input, width: '100%'}}
+                      style={{...styles.input, width: "100%"}}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Maksājuma metode (IBAN):</label>
+                    <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold", fontSize: "13px" }}>Maksājuma metode (IBAN):</label>
                     <input
                       type="text"
                       value={invoiceSettings.payment_method || ''}
                       onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_method: e.target.value})}
                       placeholder="LV62HABA0551064112797"
-                      style={{...styles.input, width: '100%'}}
+                      style={{...styles.input, width: "100%"}}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Uzņēmuma nosaukums:</label>
+                    <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold", fontSize: "13px" }}>Uzņēmuma nosaukums:</label>
                     <input
                       type="text"
                       value={invoiceSettings.payment_company || ''}
                       onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_company: e.target.value})}
                       placeholder="BIEDRĪBA &quot;BARONA 78&quot;"
-                      style={{...styles.input, width: '100%'}}
+                      style={{...styles.input, width: "100%"}}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Atsauces teksts:</label>
+                    <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold", fontSize: "13px" }}>Atsauces teksts:</label>
                     <input
                       type="text"
                       value={invoiceSettings.payment_ref || ''}
                       onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_ref: e.target.value})}
                       placeholder="Rēķina numurs"
-                      style={{...styles.input, width: '100%'}}
+                      style={{...styles.input, width: "100%"}}
                     />
                   </div>
                 </div>
               </div>
 
               {/* GLOBĀLĀ PIEZĪME */}
-              <div style={{...styles.card, marginBottom: '20px'}}>
+              <div style={{...styles.card, marginBottom: "20px"}}>
                 <h3 style={styles.cardTitle}>📝 Globālā piezīme (redzama VISOS rēķinos)</h3>
                 <textarea
                   value={invoiceSettings.global_invoice_note || ''}
                   onChange={(e) => setInvoiceSettings({...invoiceSettings, global_invoice_note: e.target.value})}
                   placeholder="Piezīme, kas parādīsies visu rēķinu apakšā..."
                   style={{
-                    width: '100%',
-                    height: '120px',
-                    padding: '10px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '4px',
-                    fontFamily: 'Arial',
-                    resize: 'vertical',
-                    marginBottom: '10px'
+                    width: "100%",
+                    height: "120px",
+                    padding: "10px",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "4px",
+                    fontFamily: "Arial",
+                    resize: "vertical",
+                    marginBottom: "10px"
                   }}
                 />
-                <p style={{ fontSize: '12px', color: '#666' }}>
+                <p style={{ fontSize: "12px", color: "#666" }}>
                   ℹ️ Šī piezīme automātiski parādīsies visos ģenerētajos rēķinos
                 </p>
               </div>
@@ -2941,14 +2942,14 @@ export default function PropertyManager() {
               <button
                 onClick={saveSettings}
                 style={{
-                  padding: '12px 24px',
-                  background: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '14px'
+                  padding: "12px 24px",
+                  background: "#10b981",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  fontSize: "14px"
                 }}
               >
                 ✓ Saglabāt iestatījumus
@@ -2964,209 +2965,209 @@ export default function PropertyManager() {
 
 const styles = {
   app: {
-    display: 'flex',
-    minHeight: '100vh',
-    background: '#f8fafc',
+    display: "flex",
+    minHeight: "100vh",
+    background: "#f8fafc",
     fontFamily: "'Plus Jakarta Sans', sans-serif"
   },
   sidebar: {
-    width: '250px',
-    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-    color: 'white',
-    padding: '30px 20px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-    position: 'fixed',
-    height: '100vh',
+    width: "250px",
+    background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+    color: "white",
+    padding: "30px 20px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    position: "fixed",
+    height: "100vh",
     left: 0,
     top: 0,
-    overflowY: 'auto'
+    overflowY: "auto"
   },
   logo: {
-    fontSize: '20px',
-    fontWeight: 'bold',
-    marginBottom: '40px',
-    textAlign: 'center',
-    paddingBottom: '20px',
-    borderBottom: '1px solid rgba(255,255,255,0.1)'
+    fontSize: "20px",
+    fontWeight: "bold",
+    marginBottom: "40px",
+    textAlign: "center",
+    paddingBottom: "20px",
+    borderBottom: "1px solid rgba(255,255,255,0.1)"
   },
   nav: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px'
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px"
   },
   navBtn: {
-    background: 'transparent',
-    color: '#94a3b8',
-    border: 'none',
-    padding: '12px 15px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-    transition: 'all 0.2s',
-    textAlign: 'left'
+    background: "transparent",
+    color: "#94a3b8",
+    border: "none",
+    padding: "12px 15px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "500",
+    transition: "all 0.2s",
+    textAlign: "left"
   },
   navBtnActive: {
-    background: 'rgba(59, 130, 246, 0.2)',
-    color: '#60a5fa',
-    borderTop: 'none',
-    borderRight: 'none',
-    borderBottom: 'none',
-    borderLeft: '3px solid #3b82f6'
+    background: "rgba(59, 130, 246, 0.2)",
+    color: "#60a5fa",
+    borderTop: "none",
+    borderRight: "none",
+    borderBottom: "none",
+    borderLeft: "3px solid #3b82f6"
   },
   main: {
-    marginLeft: '250px',
+    marginLeft: "250px",
     flex: 1,
-    padding: '40px'
+    padding: "40px"
   },
   header: {
-    marginBottom: '40px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center'
+    marginBottom: "40px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center"
   },
   h1: {
-    fontSize: '32px',
-    fontWeight: 'bold',
-    color: '#0f172a',
-    margin: '0 0 8px 0'
+    fontSize: "32px",
+    fontWeight: "bold",
+    color: "#0f172a",
+    margin: "0 0 8px 0"
   },
   h2: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#0f172a',
-    margin: '0 0 20px 0'
+    fontSize: "24px",
+    fontWeight: "bold",
+    color: "#0f172a",
+    margin: "0 0 20px 0"
   },
   subtitle: {
-    fontSize: '14px',
-    color: '#64748b',
+    fontSize: "14px",
+    color: "#64748b",
     margin: 0
   },
   content: {},
   statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '15px',
-    marginBottom: '30px'
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: "15px",
+    marginBottom: "30px"
   },
   stat: {
-    background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
-    color: 'white',
-    padding: '25px',
-    borderRadius: '12px',
-    textAlign: 'center',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+    background: "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)",
+    color: "white",
+    padding: "25px",
+    borderRadius: "12px",
+    textAlign: "center",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
   },
   statValue: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    marginBottom: '8px'
+    fontSize: "28px",
+    fontWeight: "bold",
+    marginBottom: "8px"
   },
   statLabel: {
-    fontSize: '12px',
+    fontSize: "12px",
     opacity: 0.9
   },
   card: {
-    background: 'white',
-    borderRadius: '12px',
-    padding: '25px',
-    marginBottom: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-    border: '1px solid #e2e8f0'
+    background: "white",
+    borderRadius: "12px",
+    padding: "25px",
+    marginBottom: "20px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+    border: "1px solid #e2e8f0"
   },
   cardTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    marginBottom: '20px',
-    color: '#0f172a'
+    fontSize: "18px",
+    fontWeight: "600",
+    marginBottom: "20px",
+    color: "#0f172a"
   },
   twoCol: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '20px'
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "20px"
   },
   form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px"
   },
   formRow: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px'
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "12px"
   },
   input: {
-    padding: '12px 14px',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontFamily: 'inherit',
-    transition: 'border 0.2s'
+    padding: "12px 14px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontFamily: "inherit",
+    transition: "border 0.2s"
   },
   btn: {
-    padding: '12px 20px',
-    background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '14px',
-    transition: 'transform 0.2s'
+    padding: "12px 20px",
+    background: "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "14px",
+    transition: "transform 0.2s"
   },
   btnSmall: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '16px',
-    padding: '4px 8px'
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "16px",
+    padding: "4px 8px"
   },
   list: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px'
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px"
   },
   listItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '12px 15px',
-    background: '#f8fafc',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    fontSize: '14px'
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px 15px",
+    background: "#f8fafc",
+    borderRadius: "8px",
+    border: "1px solid #e2e8f0",
+    fontSize: "14px"
   },
   invoiceCard: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '12px 15px',
-    background: '#f8fafc',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    marginBottom: '8px',
-    gap: '10px'
+    display: "flex",
+    alignItems: "center",
+    padding: "12px 15px",
+    background: "#f8fafc",
+    borderRadius: "8px",
+    border: "1px solid #e2e8f0",
+    marginBottom: "8px",
+    gap: "10px"
   },
   summaryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '20px'
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "20px"
   },
   summaryItem: {
-    padding: '20px',
-    background: '#f8fafc',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0'
+    padding: "20px",
+    background: "#f8fafc",
+    borderRadius: "8px",
+    border: "1px solid #e2e8f0"
   },
   summaryLabel: {
-    fontSize: '12px',
-    color: '#64748b',
-    marginBottom: '8px',
-    fontWeight: '500'
+    fontSize: "12px",
+    color: "#64748b",
+    marginBottom: "8px",
+    fontWeight: "500"
   },
   loading: {
-    textAlign: 'center',
-    padding: '40px',
-    fontSize: '16px',
-    color: '#64748b'
+    textAlign: "center",
+    padding: "40px",
+    fontSize: "16px",
+    color: "#64748b"
   }
 };
