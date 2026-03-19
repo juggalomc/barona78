@@ -370,16 +370,34 @@ export default function PropertyManager() {
       await supabase.from('invoices').delete().eq('period', period);
 
       const invoicesToAdd = [];
+      let updatedCount = 0; // Skaits update operāciju (regenerate gadījumā vienmēr 0)
       const [year, month] = period.split('-');
       
       // Aprēķināt periode datumi
-      const daysInMonth = new Date(year, month, 0).getDate();
+      const monthNum = parseInt(month); // Pārvērst string uz skaitli
+      const daysInMonth = new Date(year, monthNum, 0).getDate();
       const dateFrom = `${year}-${month}-01`;
       const dateTo = `${year}-${month}-${daysInMonth}`;
       
       // Filtrer tikai atzīmētus tarifus
       const periodTariffs = tariffs.filter(t => t.period === period && t.include_in_invoice !== false);
       const waterTariff = waterTariffs.find(w => w.period === period);
+      
+      // Debug: parādīt cik tarifus atrads
+      console.log(`Tarifi periodam ${period}:`, tariffs.filter(t => t.period === period).length);
+      console.log(`Atzīmēti tarifi:`, periodTariffs.length);
+      console.log(`Dzīvokļi:`, apartments.length);
+      
+      // Pārbaude vai ir kādi atzīmēti tarifi
+      if (periodTariffs.length === 0) {
+        const allPeriodTariffs = tariffs.filter(t => t.period === period);
+        if (allPeriodTariffs.length === 0) {
+          showToast(`Nav tarifuu periodam ${period}. Pievienojiet tarifus vispirms!`, 'error');
+        } else {
+          showToast(`Visi tarifi periodam ${period} ir neatzīmēti. Atzīmējiet "Iekļaut rēķinā" checkbox!`, 'error');
+        }
+        return;
+      }
 
       for (const apt of apartments) {
         let totalAmountWithoutVat = 0;
@@ -454,8 +472,13 @@ export default function PropertyManager() {
         });
       }
 
-      if (invoicesToAdd.length === 0) {
-        showToast('Nav dzīvokļu ar atzīmētajiem tarifiem šajā periodā', 'error');
+      if (invoicesToAdd.length === 0 && updatedCount === 0) {
+        // Pārbaude - vai vispār ir atzīmēti tarifi?
+        if (periodTariffs.length === 0) {
+          showToast(`Nav atzīmētu tarifū periodam ${period}. Atzīmējiet "Iekļaut rēķinā" checkbox!`, 'error');
+        } else {
+          showToast('Nav dzīvokļu ar atzīmētajiem tarifiem šajā mēnesī. Pievienojiet dzīvokļus!', 'error');
+        }
         return;
       }
 
@@ -494,7 +517,8 @@ export default function PropertyManager() {
       
       if (!dateFrom || !dateTo) {
         // Default: mēneša 1. līdz pēdējais diems
-        const daysInMonth = new Date(year, month, 0).getDate();
+        const monthNum = parseInt(month); // Pārvērst string uz skaitli
+        const daysInMonth = new Date(year, monthNum, 0).getDate();
         dateFrom = dateFrom || `${year}-${month}-01`;
         dateTo = dateTo || `${year}-${month}-${daysInMonth}`;
       }
@@ -633,7 +657,7 @@ export default function PropertyManager() {
       }
 
       if (invoicesToAdd.length === 0 && updatedCount === 0) {
-        showToast('Nav dzīvokļu ar atzīmētajiem tarifiem šajā mēnesī', 'error');
+        showToast('Nav jaunu rēķinu vai atjauninājumu. Iespējams visi dzīvokļi jau ir atjaunināti šajā mēnesī.', 'error');
         return;
       }
 
@@ -1010,6 +1034,43 @@ export default function PropertyManager() {
     }
   };
 
+  // Eksportēt rēķinus uz CSV
+  const exportInvoicesToCSV = () => {
+    const headers = ['Rēķina numurs', 'Dzīvoklis', 'Īpašnieks', 'Periods', 'Summa (EUR)', 'Termiņš', 'Statuss', 'Apmaksāts'];
+    
+    const rows = invoices.map(inv => {
+      const apt = apartments.find(a => a.id === inv.apartment_id);
+      const status = getInvoiceStatus(inv);
+      return [
+        inv.invoice_number,
+        apt?.number || '-',
+        `${apt?.owner_name || '-'} ${apt?.owner_surname || ''}`,
+        inv.period,
+        inv.amount.toFixed(2),
+        new Date(inv.due_date).toLocaleDateString('lv-LV'),
+        status.status,
+        inv.paid ? 'Jā' : 'Nē'
+      ];
+    });
+
+    // Izveidot CSV tekstu
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Lejupielādēt
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent));
+    element.setAttribute('download', `recini_${new Date().toISOString().split('T')[0]}.csv`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    
+    showToast(`✓ Eksportēti ${invoices.length} rēķini`);
+  };
+
   const downloadPDF = (invoice) => {
     const apt = apartments.find(a => a.id === invoice.apartment_id);
     const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
@@ -1283,7 +1344,16 @@ export default function PropertyManager() {
             <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0 }}>🏠 Dzīvoklis {userApartment?.number}</h1>
             <p style={{ margin: '5px 0 0 0', color: '#ddd', fontSize: '14px' }}>{userApartment?.owner_name}</p>
           </div>
-          <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Izrakstīties</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '12px', color: '#ccc', marginBottom: '4px' }}>Kopā apmaksāt:</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4ade80' }}>€{userInvoices.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
+              <div style={{ fontSize: '11px', color: '#ccc', marginTop: '4px' }}>
+                Parāds: €{userInvoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
+              </div>
+            </div>
+            <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Izrakstīties</button>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -1650,9 +1720,22 @@ export default function PropertyManager() {
                         </div>
                       ) : (
                         <>
-                          <div>
+                          <div style={{flex: 1}}>
                             <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
                             <div style={{fontSize: '13px', color: '#666'}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
+                            {(() => {
+                              const apartmentDebt = invoices
+                                .filter(inv => inv.apartment_id === apt.id && !inv.paid && new Date(inv.due_date) <= new Date())
+                                .reduce((sum, inv) => sum + inv.amount, 0);
+                              if (apartmentDebt > 0) {
+                                return (
+                                  <div style={{fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: '500'}}>
+                                    ⚠️ Parāds: €{apartmentDebt.toFixed(2)}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                           <div style={{display: 'flex', gap: '4px'}}>
                             <button onClick={() => startEditApartment(apt)} style={{...styles.btnSmall, padding: '4px 8px'}} title="Rediģēt">✏️</button>
@@ -1947,7 +2030,19 @@ export default function PropertyManager() {
                               </div>
                             ) : (
                               <div style={{flex: 1}}>
-                                <div style={{fontWeight: 'bold', fontSize: '13px'}}>{tar.name}</div>
+                                <div style={{fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                  {tar.name}
+                                  <span style={{
+                                    fontSize: '10px',
+                                    padding: '2px 6px',
+                                    borderRadius: '3px',
+                                    backgroundColor: tar.include_in_invoice !== false ? '#dcfce7' : '#fee2e2',
+                                    color: tar.include_in_invoice !== false ? '#166534' : '#991b1b',
+                                    fontWeight: '500'
+                                  }}>
+                                    {tar.include_in_invoice !== false ? '✓ Iekļaut' : '✕ Neiekļaut'}
+                                  </span>
+                                </div>
                                 <div style={{fontSize: '12px', color: '#666'}}>
                                   €{parseFloat(tar.total_amount).toFixed(2)} • €{pricePerSqm.toFixed(4)}/m²
                                   {tar.vat_rate > 0 && ` • PVN: ${tar.vat_rate}%`}
@@ -2130,7 +2225,16 @@ export default function PropertyManager() {
               </div>
 
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>💳 Rēķini ({invoices.length})</h2>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                  <h2 style={styles.cardTitle}>💳 Rēķini ({invoices.length})</h2>
+                  <button
+                    onClick={exportInvoicesToCSV}
+                    style={{padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500'}}
+                    title="Eksportēt uz CSV"
+                  >
+                    📊 CSV Export
+                  </button>
+                </div>
                 
                 {sortedMonths.length === 0 ? (
                   <div style={{textAlign: 'center', color: '#999', padding: '40px'}}>Nav rēķinu</div>
