@@ -313,6 +313,31 @@ export default function PropertyManager() {
           });
         }
 
+        // Pievienot ūdens patēriņu
+        const waterConsumptionRecord = waterConsumption.find(w => w.apartment_id === apt.id && w.period === invoiceMonth);
+        const waterTariff = waterTariffs.find(w => w.period === invoiceMonth);
+
+        if (waterConsumptionRecord && waterTariff) {
+          const waterConsumptionM3 = parseFloat(waterConsumptionRecord.consumption_m3) || 0;
+          const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
+          const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
+          const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
+          const waterVatAmount = Math.round(waterAmountWithoutVat * waterVatRate / 100 * 100) / 100;
+
+          totalAmountWithoutVat += waterAmountWithoutVat;
+          totalVatAmount += waterVatAmount;
+
+          invoiceDetails.push({
+            tariff_id: waterTariff.id,
+            tariff_name: `Ūdens (${waterConsumptionM3} m³)`,
+            consumption_m3: waterConsumptionM3,
+            price_per_m3: waterPricePerM3,
+            amount_without_vat: waterAmountWithoutVat,
+            vat_rate: waterVatRate,
+            vat_amount: waterVatAmount
+          });
+        }
+
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
         const invoiceNumber = `${year}/${month}-${apt.number}`;
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
@@ -523,14 +548,27 @@ export default function PropertyManager() {
     const vatAmount = invoice.vat_amount || 0;
     const amountWithVat = invoice.amount_with_vat || invoice.amount;
 
-    const tableRows = invoiceDetails.map(detail => `
-      <tr>
-        <td>${detail.tariff_name}</td>
-        <td style="text-align: center;">${apt.area} m²</td>
-        <td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td>
-        <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
-      </tr>
-    `).join('');
+    const tableRows = invoiceDetails.map(detail => {
+      if (detail.type === 'water') {
+        return `
+          <tr>
+            <td>${detail.tariff_name}</td>
+            <td style="text-align: center;">${detail.consumption_m3} m³</td>
+            <td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td>
+            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
+          </tr>
+        `;
+      } else {
+        return `
+          <tr>
+            <td>${detail.tariff_name}</td>
+            <td style="text-align: center;">${apt.area} m²</td>
+            <td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td>
+            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
+          </tr>
+        `;
+      }
+    }).join('');
 
     const vatRows = invoiceDetails
       .filter(d => d.vat_rate > 0)
@@ -603,11 +641,11 @@ export default function PropertyManager() {
           </table>
 
           <div style="text-align: right; margin: 20px 0; border-top: 2px solid #000; padding-top: 15px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px;">
+              <span>Summa bez PVN:</span>
+              <span>€${amountWithoutVat.toFixed(2)}</span>
+            </div>
             ${vatAmount > 0 ? `
-              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px;">
-                <span>Summa bez PVN:</span>
-                <span>€${amountWithoutVat.toFixed(2)}</span>
-              </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 15px;">
                 <span>PVN kopā:</span>
                 <span>€${vatAmount.toFixed(2)}</span>
