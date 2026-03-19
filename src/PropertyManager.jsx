@@ -1542,6 +1542,24 @@ export default function PropertyManager() {
 
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>💳 Kopsavilkums</h2>
+                
+                {totalDebt > 0 && (
+                  <div style={{
+                    background: '#fee2e2',
+                    border: '1px solid #fca5a5',
+                    borderRadius: '8px',
+                    padding: '15px',
+                    marginBottom: '15px',
+                    color: '#991b1b'
+                  }}>
+                    <div style={{fontWeight: 'bold', marginBottom: '8px'}}>⚠️ SVARĪGI - Ir parāds!</div>
+                    <div style={{fontSize: '13px'}}>
+                      Kopā parāds: <strong>€{totalDebt.toFixed(2)}</strong><br/>
+                      Dzīvokļu skaits ar parādu: <strong>{invoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).map(i => i.apartment_id).filter((v, i, a) => a.indexOf(v) === i).length}</strong>
+                    </div>
+                  </div>
+                )}
+                
                 <div style={styles.summaryGrid}>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>Kopā apmaksāt</div>
