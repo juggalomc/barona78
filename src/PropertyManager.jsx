@@ -458,10 +458,41 @@ export default function PropertyManager() {
           });
         }
 
+        // Pievienot Atkritumu izvešanu - dalīta uz declared_persons
+        const wasteTariff = wasteTariffs.find(w => w.period === period);
+        if (wasteTariff) {
+          // Aprēķināt kopējo declared_persons visos dzīvokļos
+          const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
+          
+          if (totalDeclaredPersons > 0) {
+            const declaredPersonsInApt = parseInt(apt.declared_persons) || 1;
+            const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
+            const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
+            const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
+
+            totalAmountWithoutVat += wasteAmountWithoutVat;
+            totalVatAmount += wasteVatAmount;
+
+            invoiceDetails.push({
+              tariff_id: wasteTariff.id,
+              tariff_name: `♻️ Atkritumu izvešana (${declaredPersonsInApt} pers.)`,
+              declared_persons: declaredPersonsInApt,
+              total_persons: totalDeclaredPersons,
+              amount_without_vat: wasteAmountWithoutVat,
+              vat_rate: wasteVatRate,
+              vat_amount: wasteVatAmount,
+              type: 'waste'
+            });
+          }
+        }
+
         if (invoiceDetails.length === 0) continue;
 
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
-        const invoiceNumber = `${year}/${month}-${apt.number}`;
+        
+        // RĒĶINA NUMURS - Piesaistīts ģenerēšanas laikam
+        const timestamp = Math.floor(Date.now() / 1000);
+        const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
 
         invoicesToAdd.push({
@@ -622,12 +653,11 @@ export default function PropertyManager() {
 
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
         
-        // VAIRĀKI RĒĶINI PER DZĪVOKLIS - Aprēķināt secības numuru
-        const existingInvoicesCount = invoices.filter(inv => 
-          inv.apartment_id === apt.id && inv.period === invoiceMonth
-        ).length;
-        const sequenceNumber = existingInvoicesCount + 1;
-        const invoiceNumber = `${year}/${month}-${apt.number}-${sequenceNumber}`;
+        // RĒĶINA NUMURS - Piesaistīts ģenerēšanas laikam, nevis mēnesim
+        // Formāts: YYYY/MM-DD-ApartmentNumber-TIMESTAMP
+        const now = new Date();
+        const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp
+        const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
         
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
 
