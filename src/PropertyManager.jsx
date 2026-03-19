@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase konfigurācija (aizstāj ar saviem atslēgiem)
-const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
-const SUPABASE_KEY = 'YOUR_ANON_KEY';
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export default function PropertyManager() {
@@ -85,7 +85,7 @@ export default function PropertyManager() {
   };
 
   const deleteResident = async (id) => {
-    if (!confirm('Vai tiešām vēlaties izdzēst šo iedzīvotāju?')) return;
+    if (!window.confirm('Vai tiešām vēlaties izdzēst šo iedzīvotāju?')) return;
 
     try {
       // Vispirms izdzēsim viņa rēķinus
@@ -148,7 +148,7 @@ export default function PropertyManager() {
   };
 
   const deleteInvoice = async (id) => {
-    if (!confirm('Vai tiešām vēlaties izdzēst šo rēķinu?')) return;
+    if (!window.confirm('Vai tiešām vēlaties izdzēst šo rēķinu?')) return;
 
     try {
       const { error } = await supabase
