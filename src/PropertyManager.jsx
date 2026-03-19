@@ -255,6 +255,8 @@ export default function PropertyManager() {
       showToast('Kļūda: ' + error.message, 'error');
     }
   };
+
+  const generateInvoices = async (e) => {
     e.preventDefault();
     if (!invoiceMonth) {
       showToast('Izvēlieties mēnesi', 'error');
