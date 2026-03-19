@@ -68,12 +68,25 @@ export default function PropertyManager() {
   const addApartment = async (e) => {
     e.preventDefault();
     if (!apartmentForm.number || !apartmentForm.area || !apartmentForm.owner_name) {
-      alert('Lūdzu, aizpildiet obligātos laukus!');
+      alert('Lūdzu, aizpildiet obligātos laukus (numurs, platība, vārds)!');
       return;
     }
 
     try {
-      const { error } = await supabase.from('apartments').insert([apartmentForm]);
+      // Sagatavot datus - noņemt tukšus stringus no numeric laukiem
+      const dataToInsert = {
+        number: apartmentForm.number.trim(),
+        area: parseFloat(apartmentForm.area),
+        kadaster: apartmentForm.kadaster || null,
+        owner_name: apartmentForm.owner_name.trim(),
+        owner_surname: apartmentForm.owner_surname || null,
+        personal_code: apartmentForm.personal_code || null,
+        phone: apartmentForm.phone || null,
+        email: apartmentForm.email || null,
+        share: apartmentForm.share ? parseFloat(apartmentForm.share) : null
+      };
+
+      const { error } = await supabase.from('apartments').insert([dataToInsert]);
       if (error) throw error;
       
       setApartmentForm({
@@ -102,7 +115,13 @@ export default function PropertyManager() {
     }
 
     try {
-      const { error } = await supabase.from('tariffs').insert([tariffForm]);
+      const dataToInsert = {
+        name: tariffForm.name.trim(),
+        total_amount: parseFloat(tariffForm.total_amount),
+        calculation_type: 'per_sqm'
+      };
+
+      const { error } = await supabase.from('tariffs').insert([dataToInsert]);
       if (error) throw error;
       
       setTariffForm({ name: '', total_amount: '', calculation_type: 'per_sqm' });
