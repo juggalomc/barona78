@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
@@ -7,7 +7,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const BUILDING_NAME = "BIEDRĪBA \"BARONA 78\"";
 const BUILDING_ADDRESS = "Kr. Barona iela 78-14, Rīga, LV-1001";
-const TOTAL_AREA = 1959;
 const IBAN = "LV62HABA0551064112797";
 
 const Toast = ({ message, type, onClose }) => (
@@ -43,12 +42,8 @@ export default function PropertyManager() {
 
   // ADMIN STATE
   const [apartments, setApartments] = useState([]);
-  const [tariffs, setTariffs] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [waterConsumption, setWaterConsumption] = useState([]);
-  const [waterTariffs, setWaterTariffs] = useState([]);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   
   // USER STATE
@@ -120,35 +115,23 @@ export default function PropertyManager() {
   // ADMIN FUNCTIONS
   const fetchAdminData = async () => {
     try {
-      setLoading(true);
-      const [aptRes, tarRes, invRes, wcRes, wtRes, usersRes, mrRes] = await Promise.all([
+      const [aptRes, invRes, usersRes] = await Promise.all([
         supabase.from('apartments').select('*').order('number', { ascending: true }),
-        supabase.from('tariffs').select('*').order('period', { ascending: false }),
         supabase.from('invoices').select('*').order('period', { ascending: false }),
-        supabase.from('water_consumption').select('*'),
-        supabase.from('water_tariffs').select('*'),
-        supabase.from('users').select('*'),
-        supabase.from('meter_readings').select('*')
+        supabase.from('users').select('*')
       ]);
 
       setApartments(aptRes.data || []);
-      setTariffs(tarRes.data || []);
       setInvoices(invRes.data || []);
-      setWaterConsumption(wcRes.data || []);
-      setWaterTariffs(wtRes.data || []);
       setUsers(usersRes.data || []);
-      setMeterReadings(mrRes.data || []);
     } catch (error) {
       showToast('Kļūda ielādējot datus', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
   // USER FUNCTIONS
   const fetchUserData = async (apartmentId) => {
     try {
-      setLoading(true);
       const [aptRes, invRes, mrRes] = await Promise.all([
         supabase.from('apartments').select('*').eq('id', apartmentId).single(),
         supabase.from('invoices').select('*').eq('apartment_id', apartmentId).order('period', { ascending: false }),
@@ -160,8 +143,6 @@ export default function PropertyManager() {
       setMeterReadings(mrRes.data || []);
     } catch (error) {
       showToast('Kļūda ielādējot datus', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
