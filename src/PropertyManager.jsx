@@ -35,13 +35,13 @@ export default function PropertyManager() {
   const fetchResidents = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data: residentsData, error } = await supabase
         .from('residents')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setResidents(data || []);
+      setResidents(residentsData || []);
       
       // Fetch invoices
       const { data: invoiceData } = await supabase
@@ -64,7 +64,7 @@ export default function PropertyManager() {
     }
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('residents')
         .insert([{
           name: formData.name,
@@ -187,7 +187,7 @@ export default function PropertyManager() {
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerContent}>
-          <h1 style={styles.title}>🏢 Mājas Apsaimniekošana</h1>
+          <h1 style={styles.title}>ߏ Mājas Apsaimniekošana</h1>
           <p style={styles.subtitle}>Rēķinu vadības sistēma ar Supabase</p>
         </div>
         <div style={styles.stats}>
@@ -212,13 +212,13 @@ export default function PropertyManager() {
           style={{...styles.tab, ...(activeTab === 'residents' ? styles.tabActive : {})}}
           onClick={() => setActiveTab('residents')}
         >
-          👥 Iedzīvotāji
+          ߑ Iedzīvotāji
         </button>
         <button
           style={{...styles.tab, ...(activeTab === 'invoices' ? styles.tabActive : {})}}
           onClick={() => setActiveTab('invoices')}
         >
-          💰 Rēķini
+          ߒ Rēķini
         </button>
       </div>
 
@@ -278,7 +278,7 @@ export default function PropertyManager() {
 
             {/* Residents List */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>📋 Iedzīvotāju saraksts</h2>
+              <h2 style={styles.cardTitle}>ߓ Iedzīvotāju saraksts</h2>
               <input
                 type="text"
                 placeholder="Meklēt..."
@@ -295,7 +295,7 @@ export default function PropertyManager() {
                       <div>
                         <strong style={styles.residentName}>{resident.name}</strong>
                         <div style={styles.residentMeta}>
-                          📍 Dzīv. {resident.apartment} • {resident.email}
+                          ߓ Dzīv. {resident.apartment} • {resident.email}
                           {resident.phone && ` • ☎️ ${resident.phone}`}
                         </div>
                       </div>
@@ -303,7 +303,7 @@ export default function PropertyManager() {
                         onClick={() => deleteResident(resident.id)}
                         style={styles.btnDelete}
                       >
-                        🗑️
+                        ߗ️
                       </button>
                     </div>
                   ))
@@ -315,7 +315,7 @@ export default function PropertyManager() {
           <div style={styles.twoColumn}>
             {/* Generate Invoice Form */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinu</h2>
+              <h2 style={styles.cardTitle}>ߓ Ģenerēt rēķinu</h2>
               <form onSubmit={generateInvoices} style={styles.form}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Iedzīvotājs *</label>
@@ -325,7 +325,7 @@ export default function PropertyManager() {
                     style={styles.input}
                   >
                     <option value="">-- Izvēlieties --</option>
-                    <option value="all">📢 Visi iedzīvotāji</option>
+                    <option value="all">ߓ Visi iedzīvotāji</option>
                     {residents.map(r => (
                       <option key={r.id} value={r.id}>
                         {r.name} (Dzīv. {r.apartment})
@@ -341,13 +341,13 @@ export default function PropertyManager() {
                     style={styles.input}
                   >
                     <option value="">-- Izvēlieties --</option>
-                    <option value="Ūdens">💧 Ūdens</option>
-                    <option value="Siltums">🔥 Siltums</option>
+                    <option value="Ūdens">ߒ Ūdens</option>
+                    <option value="Siltums">ߔ Siltums</option>
                     <option value="Elektrība">⚡ Elektrība</option>
-                    <option value="Gāze">🌬️ Gāze</option>
-                    <option value="Kanalizācija">🚰 Kanalizācija</option>
-                    <option value="Ņemējsistēma">📡 Ņemējsistēma</option>
-                    <option value="Apkope">🧹 Apkope</option>
+                    <option value="Gāze">ߌ️ Gāze</option>
+                    <option value="Kanalizācija">ߚ Kanalizācija</option>
+                    <option value="Ņemējsistēma">ߓ Ņemējsistēma</option>
+                    <option value="Apkope">ߧ Apkope</option>
                   </select>
                 </div>
                 <div style={styles.formGroup}>
@@ -385,7 +385,7 @@ export default function PropertyManager() {
 
             {/* Invoices List */}
             <div style={styles.card}>
-              <h2 style={styles.cardTitle}>📋 Rēķinu saraksts</h2>
+              <h2 style={styles.cardTitle}>ߓ Rēķinu saraksts</h2>
               <div style={styles.invoicesList}>
                 {invoices.length === 0 ? (
                   <div style={styles.empty}>Nav rēķinu</div>
@@ -409,7 +409,7 @@ export default function PropertyManager() {
                           onClick={() => deleteInvoice(invoice.id)}
                           style={styles.btnDelete}
                         >
-                          🗑️
+                          ߗ️
                         </button>
                       </div>
                     );
