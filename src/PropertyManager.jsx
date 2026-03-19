@@ -71,10 +71,6 @@ export default function PropertyManager() {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [expandedMonth, setExpandedMonth] = useState(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -93,6 +89,10 @@ export default function PropertyManager() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
