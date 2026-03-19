@@ -118,6 +118,7 @@ export default function PropertyManager() {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
   const [invoiceToDate, setInvoiceToDate] = useState('');
+  const [invoiceGenerationMode, setInvoiceGenerationMode] = useState('update'); // 'update' vai 'separate'
   const [expandedMonth, setExpandedMonth] = useState(null);
   const [expandedInvoiceMonth, setExpandedInvoiceMonth] = useState(null);
   const [editingTariff, setEditingTariff] = useState(null);
@@ -524,63 +525,6 @@ export default function PropertyManager() {
       }
 
       for (const apt of apartments) {
-        // UNIKĀLUMA PĀRBAUDE - pārbaudīt vai šis dzīvoklis jau ir rēķinā šajā mēnesī
-        const existingInvoice = invoices.find(inv => 
-          inv.apartment_id === apt.id && inv.period === invoiceMonth
-        );
-        
-        if (existingInvoice) {
-          // Rēķins jau pastāv - prēkt tik tarifus kas nav viņā iekļauti
-          const existingDetails = existingInvoice.invoice_details ? JSON.parse(existingInvoice.invoice_details) : [];
-          const existingTariffIds = existingDetails.map(d => d.tariff_id);
-          
-          // Filtrēt tarifus kas vēl nav šajā rēķinā
-          const newTariffs = periodTariffs.filter(t => !existingTariffIds.includes(t.id));
-          
-          if (newTariffs.length === 0) {
-            // Nav jaunu tarifuu - skip šo dzīvokli
-            continue;
-          }
-          
-          // Pievienot jaunos tarifus esošajam rēķinam
-          let additionalAmountWithoutVat = 0;
-          let additionalVatAmount = 0;
-          
-          for (const tariff of newTariffs) {
-            const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
-            const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
-            const vatRate = parseFloat(tariff.vat_rate) || 0;
-            const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
-
-            additionalAmountWithoutVat += amountWithoutVat;
-            additionalVatAmount += vatAmount;
-
-            existingDetails.push({
-              tariff_id: tariff.id,
-              tariff_name: tariff.name,
-              amount_without_vat: amountWithoutVat,
-              vat_rate: vatRate,
-              vat_amount: vatAmount,
-              type: 'tariff'
-            });
-          }
-          
-          // Update esošo rēķinu
-          const newTotalWithoutVat = (existingInvoice.amount_without_vat || 0) + additionalAmountWithoutVat;
-          const newTotalVat = (existingInvoice.vat_amount || 0) + additionalVatAmount;
-          const newTotalAmount = newTotalWithoutVat + newTotalVat;
-          
-          await supabase.from('invoices').update({
-            amount: newTotalAmount,
-            amount_without_vat: newTotalWithoutVat,
-            amount_with_vat: newTotalAmount,
-            vat_amount: newTotalVat,
-            invoice_details: JSON.stringify(existingDetails)
-          }).eq('id', existingInvoice.id);
-          
-          updatedCount++; // Skaits update
-          continue;
-        }
         
         // JAUNS RĒĶINS - aprēķināt visus tarifus šim dzīvoklim
         let totalAmountWithoutVat = 0;
@@ -635,7 +579,14 @@ export default function PropertyManager() {
         if (invoiceDetails.length === 0) continue; // Neskop dzīvokļus bez tarifiem
 
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
-        const invoiceNumber = `${year}/${month}-${apt.number}`;
+        
+        // VAIRĀKI RĒĶINI PER DZĪVOKLIS - Aprēķināt secības numuru
+        const existingInvoicesCount = invoices.filter(inv => 
+          inv.apartment_id === apt.id && inv.period === invoiceMonth
+        ).length;
+        const sequenceNumber = existingInvoicesCount + 1;
+        const invoiceNumber = `${year}/${month}-${apt.number}-${sequenceNumber}`;
+        
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
 
         invoicesToAdd.push({
@@ -2203,6 +2154,11 @@ export default function PropertyManager() {
             <div>
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
+                <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
+                  <strong>ℹ️ Vairāki rēķini per dzīvokli:</strong> Var ģenerēt vairākus rēķinus uz vienu dzīvokli vienā mēnesī.
+                  <br/>Rēķini tiks numurēti kā <code style={{background: '#e0f2fe', padding: '2px 6px', borderRadius: '3px'}}>2026/03-14-1</code>, 
+                  <code style={{background: '#e0f2fe', padding: '2px 6px', borderRadius: '3px', marginLeft: '4px'}}>2026/03-14-2</code>, utt.
+                </div>
                 <form onSubmit={generateInvoices} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                   <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
                     <select
