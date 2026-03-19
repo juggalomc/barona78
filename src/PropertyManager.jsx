@@ -118,6 +118,7 @@ export default function PropertyManager() {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
   const [invoiceToDate, setInvoiceToDate] = useState('');
+  const [invoiceGenerationMode, setInvoiceGenerationMode] = useState('update'); // 'update' vai 'separate'
   const [expandedMonth, setExpandedMonth] = useState(null);
   const [expandedInvoiceMonth, setExpandedInvoiceMonth] = useState(null);
   const [editingTariff, setEditingTariff] = useState(null);
@@ -635,7 +636,14 @@ export default function PropertyManager() {
         if (invoiceDetails.length === 0) continue; // Neskop dzīvokļus bez tarifiem
 
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
-        const invoiceNumber = `${year}/${month}-${apt.number}`;
+        
+        // VAIRĀKI RĒĶINI PER DZĪVOKLIS - Aprēķināt secības numuru
+        const existingInvoicesCount = invoices.filter(inv => 
+          inv.apartment_id === apt.id && inv.period === invoiceMonth
+        ).length;
+        const sequenceNumber = existingInvoicesCount + 1;
+        const invoiceNumber = `${year}/${month}-${apt.number}-${sequenceNumber}`;
+        
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
 
         invoicesToAdd.push({
@@ -2203,6 +2211,11 @@ export default function PropertyManager() {
             <div>
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
+                <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
+                  <strong>ℹ️ Vairāki rēķini per dzīvokli:</strong> Var ģenerēt vairākus rēķinus uz vienu dzīvokli vienā mēnesī.
+                  <br/>Rēķini tiks numurēti kā <code style={{background: '#e0f2fe', padding: '2px 6px', borderRadius: '3px'}}>2026/03-14-1</code>, 
+                  <code style={{background: '#e0f2fe', padding: '2px 6px', borderRadius: '3px', marginLeft: '4px'}}>2026/03-14-2</code>, utt.
+                </div>
                 <form onSubmit={generateInvoices} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                   <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
                     <select
