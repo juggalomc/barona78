@@ -47,6 +47,8 @@ export default function PropertyManager() {
   const [apartments, setApartments] = useState([]);
   const [tariffs, setTariffs] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [waterConsumption, setWaterConsumption] = useState([]);
+  const [waterTariffs, setWaterTariffs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState(null);
@@ -81,15 +83,19 @@ export default function PropertyManager() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [aptRes, tarRes, invRes] = await Promise.all([
+      const [aptRes, tarRes, invRes, wcRes, wtRes] = await Promise.all([
         supabase.from('apartments').select('*').order('number', { ascending: true }),
         supabase.from('tariffs').select('*').order('period', { ascending: false }).order('created_at', { ascending: false }),
-        supabase.from('invoices').select('*').order('period', { ascending: false })
+        supabase.from('invoices').select('*').order('period', { ascending: false }),
+        supabase.from('water_consumption').select('*').order('period', { ascending: false }),
+        supabase.from('water_tariffs').select('*').order('period', { ascending: false })
       ]);
 
       setApartments(aptRes.data || []);
       setTariffs(tarRes.data || []);
       setInvoices(invRes.data || []);
+      setWaterConsumption(wcRes.data || []);
+      setWaterTariffs(wtRes.data || []);
     } catch (error) {
       showToast('Kļūda ielādējot datus', 'error');
     } finally {
@@ -206,44 +212,54 @@ export default function PropertyManager() {
     
     try {
       // Dzēst esošos rēķinus
-      let deleteQuery = supabase.from('invoices').delete().eq('period', period);
-      if (tariffId) {
-        deleteQuery = deleteQuery.eq('tariff_id', tariffId);
-      }
-      await deleteQuery;
+      await supabase.from('invoices').delete().eq('period', period);
 
       // Ģenerēt jaunus
       const invoicesToAdd = [];
       const [year, month] = period.split('-');
-      const periodTariffs = tariffId 
-        ? tariffs.filter(t => t.period === period && t.id === tariffId)
-        : tariffs.filter(t => t.period === period);
+      const periodTariffs = tariffs.filter(t => t.period === period);
 
       for (const apt of apartments) {
+        let totalAmountWithoutVat = 0;
+        let totalVatAmount = 0;
+        let invoiceDetails = [];
+
         for (const tariff of periodTariffs) {
           const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
           const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
           const vatRate = parseFloat(tariff.vat_rate) || 0;
           const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
-          const amountWithVat = Math.round((amountWithoutVat + vatAmount) * 100) / 100;
 
-          const invoiceNumber = `${year}/${month}-${apt.number}`;
-          const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+          totalAmountWithoutVat += amountWithoutVat;
+          totalVatAmount += vatAmount;
 
-          invoicesToAdd.push({
-            apartment_id: apt.id,
+          invoiceDetails.push({
             tariff_id: tariff.id,
-            invoice_number: invoiceNumber,
-            period: period,
-            amount: amountWithVat,
+            tariff_name: tariff.name,
             amount_without_vat: amountWithoutVat,
-            amount_with_vat: amountWithVat,
-            vat_amount: vatAmount,
             vat_rate: vatRate,
-            due_date: dueDate,
-            paid: false
+            vat_amount: vatAmount
           });
         }
+
+        const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
+        const invoiceNumber = `${year}/${month}-${apt.number}`;
+        const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+
+        invoicesToAdd.push({
+          apartment_id: apt.id,
+          tariff_id: periodTariffs[0].id,
+          invoice_number: invoiceNumber,
+          period: period,
+          amount: totalAmountWithVat,
+          amount_without_vat: totalAmountWithoutVat,
+          amount_with_vat: totalAmountWithVat,
+          vat_amount: totalVatAmount,
+          vat_rate: 0,
+          due_date: dueDate,
+          paid: false,
+          invoice_details: JSON.stringify(invoiceDetails)
+        });
       }
 
       const { error } = await supabase.from('invoices').insert(invoicesToAdd);
@@ -274,30 +290,47 @@ export default function PropertyManager() {
       const [year, month] = invoiceMonth.split('-');
 
       for (const apt of apartments) {
+        // Aprēķināt visus tarifus šim dzīvoklim
+        let totalAmountWithoutVat = 0;
+        let totalVatAmount = 0;
+        let invoiceDetails = [];
+
         for (const tariff of periodTariffs) {
           const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
           const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
           const vatRate = parseFloat(tariff.vat_rate) || 0;
           const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
-          const amountWithVat = Math.round((amountWithoutVat + vatAmount) * 100) / 100;
 
-          const invoiceNumber = `${year}/${month}-${apt.number}`;
-          const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+          totalAmountWithoutVat += amountWithoutVat;
+          totalVatAmount += vatAmount;
 
-          invoicesToAdd.push({
-            apartment_id: apt.id,
+          invoiceDetails.push({
             tariff_id: tariff.id,
-            invoice_number: invoiceNumber,
-            period: invoiceMonth,
-            amount: amountWithVat,
+            tariff_name: tariff.name,
             amount_without_vat: amountWithoutVat,
-            amount_with_vat: amountWithVat,
-            vat_amount: vatAmount,
             vat_rate: vatRate,
-            due_date: dueDate,
-            paid: false
+            vat_amount: vatAmount
           });
         }
+
+        const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
+        const invoiceNumber = `${year}/${month}-${apt.number}`;
+        const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+
+        invoicesToAdd.push({
+          apartment_id: apt.id,
+          tariff_id: periodTariffs[0].id, // Primārais tarifs (tiks glabāts attiecībās)
+          invoice_number: invoiceNumber,
+          period: invoiceMonth,
+          amount: totalAmountWithVat,
+          amount_without_vat: totalAmountWithoutVat,
+          amount_with_vat: totalAmountWithVat,
+          vat_amount: totalVatAmount,
+          vat_rate: 0, // Nav viena VAT, jo var būt dažādi
+          due_date: dueDate,
+          paid: false,
+          invoice_details: JSON.stringify(invoiceDetails) // Saglabāt detalizējumu
+        });
       }
 
       const { error } = await supabase.from('invoices').insert(invoicesToAdd);
@@ -306,6 +339,72 @@ export default function PropertyManager() {
       setInvoiceMonth('');
       fetchData();
       showToast(`✓ Ģenerēti ${invoicesToAdd.length} rēķini`);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const saveWaterTariff = async (e) => {
+    e.preventDefault();
+    try {
+      const { data: existing } = await supabase
+        .from('water_tariffs')
+        .select('*')
+        .eq('period', tariffPeriod);
+
+      if (existing && existing.length > 0) {
+        const { error } = await supabase
+          .from('water_tariffs')
+          .update({
+            price_per_m3: parseFloat(document.getElementById('waterPrice')?.value || 0),
+            vat_rate: parseFloat(document.getElementById('waterVat')?.value || 0)
+          })
+          .eq('id', existing[0].id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('water_tariffs')
+          .insert([{
+            period: tariffPeriod,
+            price_per_m3: parseFloat(document.getElementById('waterPrice')?.value || 0),
+            vat_rate: parseFloat(document.getElementById('waterVat')?.value || 0)
+          }]);
+        if (error) throw error;
+      }
+
+      fetchData();
+      showToast('✓ Ūdens tarifs saglabāts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const saveWaterConsumption = async (apartmentId, consumption) => {
+    try {
+      const { data: existing } = await supabase
+        .from('water_consumption')
+        .select('*')
+        .eq('apartment_id', apartmentId)
+        .eq('period', tariffPeriod);
+
+      if (existing && existing.length > 0) {
+        const { error } = await supabase
+          .from('water_consumption')
+          .update({ consumption_m3: parseFloat(consumption) })
+          .eq('id', existing[0].id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('water_consumption')
+          .insert([{
+            apartment_id: apartmentId,
+            period: tariffPeriod,
+            consumption_m3: parseFloat(consumption)
+          }]);
+        if (error) throw error;
+      }
+
+      fetchData();
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -392,11 +491,28 @@ export default function PropertyManager() {
 
   const downloadPDF = (invoice) => {
     const apt = apartments.find(a => a.id === invoice.apartment_id);
-    const tariff = tariffs.find(t => t.id === invoice.tariff_id);
-
-    const amountWithoutVat = invoice.amount_without_vat || invoice.amount;
+    const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
+    const amountWithoutVat = invoice.amount_without_vat || 0;
     const vatAmount = invoice.vat_amount || 0;
     const amountWithVat = invoice.amount_with_vat || invoice.amount;
+
+    const tableRows = invoiceDetails.map(detail => `
+      <tr>
+        <td>${detail.tariff_name}</td>
+        <td style="text-align: center;">${apt.area} m²</td>
+        <td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td>
+        <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const vatRows = invoiceDetails
+      .filter(d => d.vat_rate > 0)
+      .map(detail => `
+        <tr style="background: #f9fafb;">
+          <td colspan="3" style="text-align: right; font-size: 11px;">PVN (${detail.vat_rate}%) - ${detail.tariff_name}:</td>
+          <td style="text-align: right; font-size: 11px;">€${detail.vat_amount.toFixed(2)}</td>
+        </tr>
+      `).join('');
 
     const htmlContent = `
       <html>
@@ -455,22 +571,18 @@ export default function PropertyManager() {
               <th style="text-align: right;">CENA</th>
               <th style="text-align: right;">SUMMA</th>
             </tr>
-            <tr>
-              <td>${tariff.name}</td>
-              <td style="text-align: center;">${apt.area} m²</td>
-              <td style="text-align: right;">€${(amountWithoutVat / apt.area).toFixed(4)}</td>
-              <td style="text-align: right; font-weight: bold;">€${amountWithoutVat.toFixed(2)}</td>
-            </tr>
+            ${tableRows}
+            ${vatRows}
           </table>
 
-          <div style="text-align: right; margin: 20px 0;">
-            ${tariff.vat_rate > 0 ? `
+          <div style="text-align: right; margin: 20px 0; border-top: 2px solid #000; padding-top: 15px;">
+            ${vatAmount > 0 ? `
               <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px;">
                 <span>Summa bez PVN:</span>
                 <span>€${amountWithoutVat.toFixed(2)}</span>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
-                <span>PVN (${tariff.vat_rate}%):</span>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 15px;">
+                <span>PVN kopā:</span>
                 <span>€${vatAmount.toFixed(2)}</span>
               </div>
             ` : ''}
@@ -542,6 +654,7 @@ export default function PropertyManager() {
             { id: 'overview', label: '📊 Pārskats' },
             { id: 'apartments', label: '🏠 Dzīvokļi' },
             { id: 'tariffs', label: '💰 Tarifi' },
+            { id: 'water', label: '💧 Ūdens' },
             { id: 'invoices', label: '📄 Rēķini' }
           ].map(tab => (
             <button
@@ -859,6 +972,76 @@ export default function PropertyManager() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          ) : activeTab === 'water' ? (
+            <div style={styles.twoCol}>
+              {/* Water Tariff */}
+              <div style={styles.card}>
+                <h2 style={styles.cardTitle}>💧 Ūdens Tarifs</h2>
+                <form onSubmit={saveWaterTariff} style={styles.form}>
+                  <div>
+                    <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
+                    <input
+                      type="month"
+                      value={tariffPeriod}
+                      onChange={(e) => setTariffPeriod(e.target.value)}
+                      style={styles.input}
+                    />
+                  </div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Cena par m³ (€) *"
+                    id="waterPrice"
+                    defaultValue={waterTariffs.find(w => w.period === tariffPeriod)?.price_per_m3 || ''}
+                    style={styles.input}
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="PVN (%)"
+                    id="waterVat"
+                    defaultValue={waterTariffs.find(w => w.period === tariffPeriod)?.vat_rate || 0}
+                    style={styles.input}
+                  />
+                  <button type="submit" style={styles.btn}>Saglabāt Tarifu</button>
+                </form>
+              </div>
+
+              {/* Water Consumption */}
+              <div style={styles.card}>
+                <h2 style={styles.cardTitle}>💧 Patēriņš - {new Date(tariffPeriod + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</h2>
+                <div style={styles.list}>
+                  {apartments.map(apt => {
+                    const consumption = waterConsumption.find(w => w.apartment_id === apt.id && w.period === tariffPeriod);
+                    const waterTariff = waterTariffs.find(w => w.period === tariffPeriod);
+                    const consumptionValue = consumption?.consumption_m3 || '';
+                    const amount = consumptionValue ? parseFloat(consumptionValue) * parseFloat(waterTariff?.price_per_m3 || 0) : 0;
+                    const vatAmount = amount * parseFloat(waterTariff?.vat_rate || 0) / 100;
+                    const totalAmount = amount + vatAmount;
+
+                    return (
+                      <div key={apt.id} style={{...styles.listItem, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px'}}>
+                        <div>
+                          <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
+                          <div style={{fontSize: '12px', color: '#666'}}>€{totalAmount.toFixed(2)}</div>
+                        </div>
+                        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="m³"
+                            value={consumptionValue}
+                            onChange={(e) => saveWaterConsumption(apt.id, e.target.value)}
+                            style={{...styles.input, width: '80px', padding: '8px'}}
+                          />
+                          <span style={{fontSize: '12px', color: '#666', minWidth: '40px'}}>m³</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ) : (
