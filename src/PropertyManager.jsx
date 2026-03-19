@@ -371,6 +371,12 @@ export default function PropertyManager() {
 
       const invoicesToAdd = [];
       const [year, month] = period.split('-');
+      
+      // Aprēķināt periode datumi
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const dateFrom = `${year}-${month}-01`;
+      const dateTo = `${year}-${month}-${daysInMonth}`;
+      
       // Filtrer tikai atzīmētus tarifus
       const periodTariffs = tariffs.filter(t => t.period === period && t.include_in_invoice !== false);
       const waterTariff = waterTariffs.find(w => w.period === period);
@@ -441,6 +447,8 @@ export default function PropertyManager() {
           vat_amount: totalVatAmount,
           vat_rate: 0,
           due_date: dueDate,
+          date_from: dateFrom,
+          date_to: dateTo,
           paid: false,
           invoice_details: JSON.stringify(invoiceDetails)
         });
@@ -478,9 +486,71 @@ export default function PropertyManager() {
     try {
       const invoicesToAdd = [];
       const [year, month] = invoiceMonth.split('-');
+      
+      // Aprēķināt periode datumi (1. - mēneša pēdējais diems)
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const dateFrom = `${year}-${month}-01`;
+      const dateTo = `${year}-${month}-${daysInMonth}`;
 
       for (const apt of apartments) {
-        // Aprēķināt visus tarifus šim dzīvoklim
+        // UNIKĀLUMA PĀRBAUDE - pārbaudīt vai šis dzīvoklis jau ir rēķinā šajā mēnesī
+        const existingInvoice = invoices.find(inv => 
+          inv.apartment_id === apt.id && inv.period === invoiceMonth
+        );
+        
+        if (existingInvoice) {
+          // Rēķins jau pastāv - prēkt tik tarifus kas nav viņā iekļauti
+          const existingDetails = existingInvoice.invoice_details ? JSON.parse(existingInvoice.invoice_details) : [];
+          const existingTariffIds = existingDetails.map(d => d.tariff_id);
+          
+          // Filtrēt tarifus kas vēl nav šajā rēķinā
+          const newTariffs = periodTariffs.filter(t => !existingTariffIds.includes(t.id));
+          
+          if (newTariffs.length === 0) {
+            // Nav jaunu tarifuu - skip šo dzīvokli
+            continue;
+          }
+          
+          // Pievienot jaunos tarifus esošajam rēķinam
+          let additionalAmountWithoutVat = 0;
+          let additionalVatAmount = 0;
+          
+          for (const tariff of newTariffs) {
+            const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
+            const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
+            const vatRate = parseFloat(tariff.vat_rate) || 0;
+            const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
+
+            additionalAmountWithoutVat += amountWithoutVat;
+            additionalVatAmount += vatAmount;
+
+            existingDetails.push({
+              tariff_id: tariff.id,
+              tariff_name: tariff.name,
+              amount_without_vat: amountWithoutVat,
+              vat_rate: vatRate,
+              vat_amount: vatAmount,
+              type: 'tariff'
+            });
+          }
+          
+          // Update esošo rēķinu
+          const newTotalWithoutVat = (existingInvoice.amount_without_vat || 0) + additionalAmountWithoutVat;
+          const newTotalVat = (existingInvoice.vat_amount || 0) + additionalVatAmount;
+          const newTotalAmount = newTotalWithoutVat + newTotalVat;
+          
+          await supabase.from('invoices').update({
+            amount: newTotalAmount,
+            amount_without_vat: newTotalWithoutVat,
+            amount_with_vat: newTotalAmount,
+            vat_amount: newTotalVat,
+            invoice_details: JSON.stringify(existingDetails)
+          }).eq('id', existingInvoice.id);
+          
+          continue;
+        }
+        
+        // JAUNS RĒĶINS - aprēķināt visus tarifus šim dzīvoklim
         let totalAmountWithoutVat = 0;
         let totalVatAmount = 0;
         let invoiceDetails = [];
@@ -547,6 +617,8 @@ export default function PropertyManager() {
           vat_amount: totalVatAmount,
           vat_rate: 0,
           due_date: dueDate,
+          date_from: dateFrom,
+          date_to: dateTo,
           paid: false,
           invoice_details: JSON.stringify(invoiceDetails)
         });
@@ -1016,6 +1088,8 @@ export default function PropertyManager() {
           <div style="font-size: 12px;">
             <p><strong>Nr:</strong> ${invoice.invoice_number}</p>
             <p><strong>PERIODS:</strong> ${invoice.period}</p>
+            <p><strong>NO DATUMA:</strong> ${invoice.date_from ? new Date(invoice.date_from).toLocaleDateString('lv-LV') : '-'}</p>
+            <p><strong>LĪDZ DATUMAM:</strong> ${invoice.date_to ? new Date(invoice.date_to).toLocaleDateString('lv-LV') : '-'}</p>
             <p><strong>IZRAKSTĪTS:</strong> ${new Date().toLocaleDateString('lv-LV')}</p>
           </div>
 
