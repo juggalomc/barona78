@@ -52,13 +52,6 @@ export default function PropertyManager() {
   // ===== USER PORTAL STATE =====
   const [userApartment, setUserApartment] = useState(null);
   const [userInvoices, setUserInvoices] = useState([]);
-  const [userMeterReadings, setUserMeterReadings] = useState([]);
-  const [userMeterForm, setUserMeterForm] = useState({
-    meter_type: 'electricity',
-    reading_value: '',
-    reading_date: new Date().toISOString().split('T')[0],
-    period: new Date().toISOString().split('T')[0].substring(0, 7) // YYYY-MM
-  });
   
   // ===== ADMIN STATE (PropertyManager) =====
   const [apartments, setApartments] = useState([]);
@@ -73,10 +66,8 @@ export default function PropertyManager() {
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState(null);
   
-  // Enabled meters state
+  // Enabled meters state - tikai ūdens
   const [enabledMeters, setEnabledMeters] = useState({
-    electricity: true,
-    gas: true,
     water: true
   });
   
@@ -119,7 +110,15 @@ export default function PropertyManager() {
   const [wasteTariffForm, setWasteTariffForm] = useState({
     period: '2026-01',
     total_amount: '',
-    vat_rate: 21
+    vat_rate: 21,
+    include_in_invoice: true
+  });
+
+  const [waterTariffForm, setWaterTariffForm] = useState({
+    period: '2026-01',
+    price_per_m3: '',
+    vat_rate: 0,
+    include_in_invoice: true
   });
 
   const [invoiceMonth, setInvoiceMonth] = useState('');
@@ -203,36 +202,6 @@ export default function PropertyManager() {
       showToast('Kļūda ielādējot datus', 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const saveMeterReading = async (e) => {
-    e.preventDefault();
-    if (!currentUser || !userApartment || !userMeterForm.reading_value) return;
-
-    try {
-      // Ņem period no formas (YYYY-MM)
-      const period = userMeterForm.period || new Date().toISOString().split('T')[0].substring(0, 7);
-      
-      const { error } = await supabase.from('meter_readings').insert([{
-        apartment_id: currentUser.apartment_id,
-        meter_type: userMeterForm.meter_type,
-        reading_date: userMeterForm.reading_date,
-        reading_value: parseFloat(userMeterForm.reading_value),
-        period: period
-      }]);
-
-      if (error) throw error;
-      setUserMeterForm({ 
-        meter_type: 'electricity', 
-        reading_value: '', 
-        reading_date: new Date().toISOString().split('T')[0],
-        period: new Date().toISOString().split('T')[0].substring(0, 7)
-      });
-      fetchUserData(currentUser.apartment_id);
-      showToast('✓ Rādījums saglabāts');
-    } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
     }
   };
 
@@ -436,7 +405,7 @@ export default function PropertyManager() {
         // Pievienot ūdens patēriņu no meter_readings
         const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === period);
 
-        if (waterReading && waterTariff && enabledMeters.water) {
+        if (waterReading && waterTariff && enabledMeters.water && waterTariff.include_in_invoice !== false) {
           const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
           const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
           const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
@@ -458,10 +427,41 @@ export default function PropertyManager() {
           });
         }
 
+        // Pievienot Atkritumu izvešanu - dalīta uz declared_persons
+        const wasteTariff = wasteTariffs.find(w => w.period === period);
+        if (wasteTariff && wasteTariff.include_in_invoice !== false) {
+          // Aprēķināt kopējo declared_persons visos dzīvokļos
+          const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
+          
+          if (totalDeclaredPersons > 0) {
+            const declaredPersonsInApt = parseInt(apt.declared_persons) || 1;
+            const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
+            const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
+            const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
+
+            totalAmountWithoutVat += wasteAmountWithoutVat;
+            totalVatAmount += wasteVatAmount;
+
+            invoiceDetails.push({
+              tariff_id: wasteTariff.id,
+              tariff_name: `♻️ Atkritumu izvešana (${declaredPersonsInApt} pers.)`,
+              declared_persons: declaredPersonsInApt,
+              total_persons: totalDeclaredPersons,
+              amount_without_vat: wasteAmountWithoutVat,
+              vat_rate: wasteVatRate,
+              vat_amount: wasteVatAmount,
+              type: 'waste'
+            });
+          }
+        }
+
         if (invoiceDetails.length === 0) continue;
 
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
-        const invoiceNumber = `${year}/${month}-${apt.number}`;
+        
+        // RĒĶINA NUMURS - Piesaistīts ģenerēšanas laikam
+        const timestamp = Math.floor(Date.now() / 1000);
+        const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
 
         invoicesToAdd.push({
@@ -568,7 +568,7 @@ export default function PropertyManager() {
         const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === invoiceMonth);
         const waterTariff = waterTariffs.find(w => w.period === invoiceMonth);
 
-        if (waterReading && waterTariff && enabledMeters.water) {
+        if (waterReading && waterTariff && enabledMeters.water && waterTariff.include_in_invoice !== false) {
           const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
           const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
           const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
@@ -592,7 +592,7 @@ export default function PropertyManager() {
 
         // Pievienot Atkritumu izvešanu - dalīta uz declared_persons
         const wasteTariff = wasteTariffs.find(w => w.period === invoiceMonth);
-        if (wasteTariff) {
+        if (wasteTariff && wasteTariff.include_in_invoice !== false) {
           // Aprēķināt kopējo declared_persons visos dzīvokļos
           const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
           
@@ -622,12 +622,11 @@ export default function PropertyManager() {
 
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
         
-        // VAIRĀKI RĒĶINI PER DZĪVOKLIS - Aprēķināt secības numuru
-        const existingInvoicesCount = invoices.filter(inv => 
-          inv.apartment_id === apt.id && inv.period === invoiceMonth
-        ).length;
-        const sequenceNumber = existingInvoicesCount + 1;
-        const invoiceNumber = `${year}/${month}-${apt.number}-${sequenceNumber}`;
+        // RĒĶINA NUMURS - Piesaistīts ģenerēšanas laikam, nevis mēnesim
+        // Formāts: YYYY/MM-DD-ApartmentNumber-TIMESTAMP
+        const now = new Date();
+        const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp
+        const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
         
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
 
@@ -673,8 +672,10 @@ export default function PropertyManager() {
   const saveWaterTariff = async (e) => {
     e.preventDefault();
     try {
-      const priceValue = parseFloat(document.getElementById('waterPrice')?.value || 0);
-      const vatValue = parseFloat(document.getElementById('waterVat')?.value || 0);
+      const priceValue = parseFloat(waterTariffForm.price_per_m3 || 0);
+      const vatValue = parseFloat(waterTariffForm.vat_rate || 0);
+      const period = waterTariffForm.period;
+      const includeInvoice = waterTariffForm.include_in_invoice;
 
       // Validēt vērtības
       if (isNaN(priceValue) || priceValue < 0 || priceValue > 9999.99) {
@@ -690,14 +691,15 @@ export default function PropertyManager() {
       const { data: existing } = await supabase
         .from('water_tariffs')
         .select('*')
-        .eq('period', tariffPeriod);
+        .eq('period', period);
 
       if (existing && existing.length > 0) {
         const { error } = await supabase
           .from('water_tariffs')
           .update({
             price_per_m3: priceValue,
-            vat_rate: vatValue
+            vat_rate: vatValue,
+            include_in_invoice: includeInvoice
           })
           .eq('id', existing[0].id);
         if (error) throw error;
@@ -705,9 +707,10 @@ export default function PropertyManager() {
         const { error } = await supabase
           .from('water_tariffs')
           .insert([{
-            period: tariffPeriod,
+            period: period,
             price_per_m3: priceValue,
-            vat_rate: vatValue
+            vat_rate: vatValue,
+            include_in_invoice: includeInvoice
           }]);
         if (error) throw error;
       }
@@ -725,6 +728,7 @@ export default function PropertyManager() {
       const totalAmount = parseFloat(wasteTariffForm.total_amount || 0);
       const vatRate = parseFloat(wasteTariffForm.vat_rate || 0);
       const period = wasteTariffForm.period;
+      const includeInvoice = wasteTariffForm.include_in_invoice;
 
       if (isNaN(totalAmount) || totalAmount <= 0) {
         showToast('Summa jābūt lielāka par 0', 'error');
@@ -748,7 +752,8 @@ export default function PropertyManager() {
           .from('waste_tariffs')
           .update({
             total_amount: totalAmount,
-            vat_rate: vatRate
+            vat_rate: vatRate,
+            include_in_invoice: includeInvoice
           })
           .eq('id', existing[0].id);
         if (error) throw error;
@@ -759,12 +764,12 @@ export default function PropertyManager() {
           .insert([{
             period: period,
             total_amount: totalAmount,
-            vat_rate: vatRate
+            vat_rate: vatRate,
+            include_in_invoice: includeInvoice
           }]);
         if (error) throw error;
       }
 
-      setWasteTariffForm({ period, total_amount: '', vat_rate: 21 });
       fetchData();
       showToast('✓ Atkritumu izvešanas tarifs saglabāts');
     } catch (error) {
@@ -1471,67 +1476,6 @@ export default function PropertyManager() {
             </div>
           </div>
 
-          {/* SKAITĪTĀJA RĀDĪJUMI */}
-          <div style={{ background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h2>📊 Skaitītāja rādījumi</h2>
-            <form onSubmit={saveMeterReading} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-              <select
-                value={userMeterForm.meter_type}
-                onChange={(e) => setUserMeterForm({ ...userMeterForm, meter_type: e.target.value })}
-                style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
-              >
-                <option value="">-- Izvēlieties skaitītāju --</option>
-                {enabledMeters.electricity && <option value="electricity">⚡ Elektrība (kWh)</option>}
-                {enabledMeters.gas && <option value="gas">🔥 Gāze (m³)</option>}
-                {enabledMeters.water && <option value="water">💧 Ūdens (m³)</option>}
-              </select>
-              <input
-                type="month"
-                value={userMeterForm.period}
-                onChange={(e) => setUserMeterForm({ ...userMeterForm, period: e.target.value })}
-                style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
-              />
-              <input
-                type="date"
-                value={userMeterForm.reading_date}
-                onChange={(e) => setUserMeterForm({ ...userMeterForm, reading_date: e.target.value })}
-                style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
-              />
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Rādījums"
-                value={userMeterForm.reading_value}
-                onChange={(e) => setUserMeterForm({ ...userMeterForm, reading_value: e.target.value })}
-                style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
-              />
-              <button type="submit" style={{ padding: '10px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-                Saglabāt rādījumu
-              </button>
-            </form>
-
-            <h3 style={{ marginTop: '20px', fontSize: '16px', marginBottom: '10px' }}>Jaunākie rādījumi</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {userMeterReadings.length === 0 ? (
-                <p style={{ color: '#999' }}>Nav rādījumu</p>
-              ) : (
-                userMeterReadings.slice(0, 10).map(mr => (
-                  <div key={mr.id} style={{ padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: 'bold' }}>
-                        {mr.meter_type === 'electricity' && '⚡ Elektrība'}
-                        {mr.meter_type === 'gas' && '🔥 Gāze'}
-                        {mr.meter_type === 'water' && '💧 Ūdens'}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>{mr.reading_date}</div>
-                    </div>
-                    <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{mr.reading_value}</div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
 
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </div>
@@ -2184,29 +2128,56 @@ export default function PropertyManager() {
                 <form onSubmit={saveWaterTariff} style={styles.form}>
                   <div>
                     <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
-                    <input
-                      type="month"
-                      value={tariffPeriod}
-                      onChange={(e) => setTariffPeriod(e.target.value)}
+                    <select
+                      value={waterTariffForm.period}
+                      onChange={(e) => {
+                        setWaterTariffForm({...waterTariffForm, period: e.target.value});
+                        const existing = waterTariffs.find(w => w.period === e.target.value);
+                        if (existing) {
+                          setWaterTariffForm({
+                            period: e.target.value,
+                            price_per_m3: existing.price_per_m3 || '',
+                            vat_rate: existing.vat_rate || 0,
+                            include_in_invoice: existing.include_in_invoice !== false
+                          });
+                        }
+                      }}
                       style={styles.input}
-                    />
+                    >
+                      {uniqueTariffPeriods.map(period => (
+                        <option key={period} value={period}>
+                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <input
                     type="number"
                     step="0.01"
                     placeholder="Cena par m³ (€) *"
-                    id="waterPrice"
-                    defaultValue={waterTariffs.find(w => w.period === tariffPeriod)?.price_per_m3 || ''}
+                    value={waterTariffForm.price_per_m3}
+                    onChange={(e) => setWaterTariffForm({...waterTariffForm, price_per_m3: e.target.value})}
                     style={styles.input}
                   />
                   <input
                     type="number"
                     step="0.01"
                     placeholder="PVN (%)"
-                    id="waterVat"
-                    defaultValue={waterTariffs.find(w => w.period === tariffPeriod)?.vat_rate || 0}
+                    value={waterTariffForm.vat_rate}
+                    onChange={(e) => setWaterTariffForm({...waterTariffForm, vat_rate: e.target.value})}
                     style={styles.input}
                   />
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                    <input
+                      type="checkbox"
+                      checked={waterTariffForm.include_in_invoice}
+                      onChange={(e) => setWaterTariffForm({...waterTariffForm, include_in_invoice: e.target.checked})}
+                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                    />
+                    <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>
+                      ✓ Iekļaut mēneša rēķinā
+                    </label>
+                  </div>
                   <button type="submit" style={styles.btn}>Saglabāt Tarifu</button>
                 </form>
               </div>
@@ -2219,7 +2190,18 @@ export default function PropertyManager() {
                     <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
                     <select
                       value={wasteTariffForm.period}
-                      onChange={(e) => setWasteTariffForm({...wasteTariffForm, period: e.target.value})}
+                      onChange={(e) => {
+                        setWasteTariffForm({...wasteTariffForm, period: e.target.value});
+                        const existing = wasteTariffs.find(w => w.period === e.target.value);
+                        if (existing) {
+                          setWasteTariffForm({
+                            period: e.target.value,
+                            total_amount: existing.total_amount || '',
+                            vat_rate: existing.vat_rate || 21,
+                            include_in_invoice: existing.include_in_invoice !== false
+                          });
+                        }
+                      }}
                       style={styles.input}
                     >
                       {uniqueTariffPeriods.map(period => (
@@ -2245,6 +2227,17 @@ export default function PropertyManager() {
                     onChange={(e) => setWasteTariffForm({...wasteTariffForm, vat_rate: e.target.value})}
                     style={styles.input}
                   />
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                    <input
+                      type="checkbox"
+                      checked={wasteTariffForm.include_in_invoice}
+                      onChange={(e) => setWasteTariffForm({...wasteTariffForm, include_in_invoice: e.target.checked})}
+                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                    />
+                    <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>
+                      ✓ Iekļaut mēneša rēķinā
+                    </label>
+                  </div>
                   <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '10px', fontSize: '12px', color: '#0369a1', marginBottom: '12px'}}>
                     ℹ️ Summa automātiski tiks dalīta uz visu dzīvokļu deklarēto personu skaitu.
                   </div>
