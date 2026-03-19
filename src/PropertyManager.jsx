@@ -78,6 +78,8 @@ export default function PropertyManager() {
   const [expandedInvoiceMonth, setExpandedInvoiceMonth] = useState(null);
   const [editingTariff, setEditingTariff] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [editingApartment, setEditingApartment] = useState(null);
+  const [editApartmentForm, setEditApartmentForm] = useState({});
   const [copySourceMonth, setCopySourceMonth] = useState(null);
   const [selectedTariffsToCopy, setSelectedTariffsToCopy] = useState({});
 
@@ -507,6 +509,49 @@ export default function PropertyManager() {
     }
   };
 
+  const startEditApartment = (apt) => {
+    setEditingApartment(apt.id);
+    setEditApartmentForm({
+      number: apt.number,
+      area: apt.area,
+      kadaster: apt.kadaster || '',
+      owner_name: apt.owner_name,
+      owner_surname: apt.owner_surname || '',
+      personal_code: apt.personal_code || '',
+      phone: apt.phone || '',
+      email: apt.email || '',
+      share: apt.share || '',
+      declared_persons: apt.declared_persons || 1
+    });
+  };
+
+  const saveEditApartment = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('apartments')
+        .update({
+          number: editApartmentForm.number,
+          area: parseFloat(editApartmentForm.area),
+          kadaster: editApartmentForm.kadaster || null,
+          owner_name: editApartmentForm.owner_name,
+          owner_surname: editApartmentForm.owner_surname || null,
+          personal_code: editApartmentForm.personal_code || null,
+          phone: editApartmentForm.phone || null,
+          email: editApartmentForm.email || null,
+          share: editApartmentForm.share ? parseFloat(editApartmentForm.share) : null,
+          declared_persons: parseInt(editApartmentForm.declared_persons) || 1
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+      setEditingApartment(null);
+      fetchData();
+      showToast('✓ Dzīvoklis atjaunināts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
   const deleteApartment = async (id) => {
     if (!window.confirm('Izdzēst dzīvokli?')) return;
     try {
@@ -600,14 +645,27 @@ export default function PropertyManager() {
       }
     }).join('');
 
-    const vatRows = invoiceDetails
-      .filter(d => d.vat_rate > 0)
-      .map(detail => `
+    const vatRows = (() => {
+      // Grupēt PVN pēc procentiem
+      const vatByRate = {};
+      invoiceDetails.forEach(detail => {
+        if (detail.vat_rate > 0) {
+          const rate = detail.vat_rate;
+          if (!vatByRate[rate]) {
+            vatByRate[rate] = 0;
+          }
+          vatByRate[rate] += detail.vat_amount;
+        }
+      });
+
+      // Ģenerēt rindas - viena per PVN%
+      return Object.entries(vatByRate).map(([rate, totalVat]) => `
         <tr style="background: #f9fafb;">
-          <td colspan="3" style="text-align: right; font-size: 11px;">PVN (${detail.vat_rate}%) - ${detail.tariff_name}:</td>
-          <td style="text-align: right; font-size: 11px;">€${detail.vat_amount.toFixed(2)}</td>
+          <td colspan="3" style="text-align: right; font-size: 11px;">PVN (${rate}%):</td>
+          <td style="text-align: right; font-size: 11px;">€${totalVat.toFixed(2)}</td>
         </tr>
       `).join('');
+    })();
 
     const htmlContent = `
       <html>
@@ -895,11 +953,72 @@ export default function PropertyManager() {
                 <div style={styles.list}>
                   {apartments.map(apt => (
                     <div key={apt.id} style={styles.listItem}>
-                      <div>
-                        <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
-                        <div style={{fontSize: '13px', color: '#666'}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
-                      </div>
-                      <button onClick={() => deleteApartment(apt.id)} style={styles.btnSmall}>🗑️</button>
+                      {editingApartment === apt.id ? (
+                        <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                          <input
+                            type="number"
+                            placeholder="Dzīvokļa numurs"
+                            value={editApartmentForm.number}
+                            onChange={(e) => setEditApartmentForm({...editApartmentForm, number: e.target.value})}
+                            style={{...styles.input, fontSize: '12px'}}
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Platība (m²)"
+                            value={editApartmentForm.area}
+                            onChange={(e) => setEditApartmentForm({...editApartmentForm, area: e.target.value})}
+                            style={{...styles.input, fontSize: '12px'}}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Īpašnieka vārds"
+                            value={editApartmentForm.owner_name}
+                            onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_name: e.target.value})}
+                            style={{...styles.input, fontSize: '12px'}}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Uzvārds"
+                            value={editApartmentForm.owner_surname}
+                            onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_surname: e.target.value})}
+                            style={{...styles.input, fontSize: '12px'}}
+                          />
+                          <input
+                            type="number"
+                            placeholder="Deklarēto personu skaits"
+                            min="1"
+                            value={editApartmentForm.declared_persons}
+                            onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})}
+                            style={{...styles.input, fontSize: '12px'}}
+                          />
+                          <div style={{display: 'flex', gap: '8px'}}>
+                            <button
+                              onClick={() => saveEditApartment(apt.id)}
+                              style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}
+                            >
+                              ✓ Saglabāt
+                            </button>
+                            <button
+                              onClick={() => setEditingApartment(null)}
+                              style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}
+                            >
+                              Atcelt
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div>
+                            <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
+                            <div style={{fontSize: '13px', color: '#666'}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
+                          </div>
+                          <div style={{display: 'flex', gap: '4px'}}>
+                            <button onClick={() => startEditApartment(apt)} style={{...styles.btnSmall, padding: '4px 8px'}} title="Rediģēt">✏️</button>
+                            <button onClick={() => deleteApartment(apt.id)} style={styles.btnSmall}>🗑️</button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
