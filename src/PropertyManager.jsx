@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -10,7 +11,7 @@ const BUILDING_CODE = "40008325768";
 const BUILDING_ADDRESS = "Kr. Barona iela 78-14, Rīga, LV-1001";
 const TOTAL_AREA = 1959;
 
-// Toast Notification Component
+// Toast Component
 function Toast({ message, type = 'success', onClose }) {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -35,8 +36,7 @@ function Toast({ message, type = 'success', onClose }) {
       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
       zIndex: 9999,
       animation: 'slideIn 0.3s ease-out',
-      fontWeight: 500,
-      maxWidth: '400px'
+      fontWeight: 500
     }}>
       {message}
     </div>
@@ -69,7 +69,6 @@ export default function PropertyManager() {
   });
 
   const [invoiceMonth, setInvoiceMonth] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
   const [expandedMonth, setExpandedMonth] = useState(null);
 
   useEffect(() => {
@@ -214,7 +213,7 @@ export default function PropertyManager() {
       
       if (error) throw error;
       fetchData();
-      showToast(!currentStatus ? '✓ Rēķins atzīmēts kā apmaksāts' : '✓ Rēķins atzīmēts kā neapmaksāts');
+      showToast(!currentStatus ? '✓ Apmaksāts' : '✓ Neapmaksāts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -226,7 +225,7 @@ export default function PropertyManager() {
       await supabase.from('invoices').delete().eq('apartment_id', id);
       await supabase.from('apartments').delete().eq('id', id);
       fetchData();
-      showToast('✓ Dzīvoklis izdzēsts');
+      showToast('✓ Izdzēsts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -238,7 +237,18 @@ export default function PropertyManager() {
       await supabase.from('invoices').delete().eq('tariff_id', id);
       await supabase.from('tariffs').delete().eq('id', id);
       fetchData();
-      showToast('✓ Tarifs izdzēsts');
+      showToast('✓ Izdzēsts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const deleteInvoice = async (id) => {
+    if (!window.confirm('Izdzēst rēķinu?')) return;
+    try {
+      await supabase.from('invoices').delete().eq('id', id);
+      fetchData();
+      showToast('✓ Izdzēsts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -375,38 +385,34 @@ export default function PropertyManager() {
         }
       `}</style>
 
-      {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Sidebar */}
       <div style={styles.sidebar}>
         <div style={styles.logo}>🏢 BARONA 78</div>
         <nav style={styles.nav}>
           {[
-            { id: 'overview', label: '📊 Pārskats', icon: '📊' },
-            { id: 'apartments', label: '🏠 Dzīvokļi', icon: '🏠' },
-            { id: 'tariffs', label: '💰 Tarifi', icon: '💰' },
-            { id: 'invoices', label: '📄 Rēķini', icon: '📄' }
+            { id: 'overview', label: '📊 Pārskats' },
+            { id: 'apartments', label: '🏠 Dzīvokļi' },
+            { id: 'tariffs', label: '💰 Tarifi' },
+            { id: 'invoices', label: '📄 Rēķini' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                ...styles.navBtn,
-                ...(activeTab === tab.id ? styles.navBtnActive : {})
-              }}
+              style={activeTab === tab.id ? {...styles.navBtn, ...styles.navBtnActive} : styles.navBtn}
             >
-              {tab.icon} {tab.label}
+              {tab.label}
             </button>
           ))}
         </nav>
       </div>
 
-      {/* Main Content */}
       <div style={styles.main}>
         <header style={styles.header}>
-          <h1 style={styles.h1}>Rēķinu Vadības Sistēma</h1>
-          <p style={styles.subtitle}>Inteligenta mājas apsaimniekošana</p>
+          <div>
+            <h1 style={styles.h1}>Rēķinu Vadības Sistēma</h1>
+            <p style={styles.subtitle}>Inteligenta mājas apsaimniekošana</p>
+          </div>
         </header>
 
         <div style={styles.content}>
@@ -611,7 +617,6 @@ export default function PropertyManager() {
                           <div
                             onClick={() => setExpandedMonth(isExpanded ? null : month)}
                             style={{
-                              ...styles.monthHeader,
                               cursor: 'pointer',
                               display: 'flex',
                               justifyContent: 'space-between',
@@ -668,8 +673,16 @@ export default function PropertyManager() {
                                     <button
                                       onClick={() => downloadPDF(invoice)}
                                       style={{...styles.btnSmall, padding: '6px 12px'}}
+                                      title="Lejupielādēt PDF"
                                     >
                                       📥
+                                    </button>
+                                    <button
+                                      onClick={() => deleteInvoice(invoice.id)}
+                                      style={{...styles.btnSmall, padding: '6px 12px'}}
+                                      title="Dzēst"
+                                    >
+                                      🗑️
                                     </button>
                                   </div>
                                 );
@@ -737,6 +750,9 @@ const styles = {
   navBtnActive: {
     background: 'rgba(59, 130, 246, 0.2)',
     color: '#60a5fa',
+    borderTop: 'none',
+    borderRight: 'none',
+    borderBottom: 'none',
     borderLeft: '3px solid #3b82f6'
   },
   main: {
@@ -861,10 +877,6 @@ const styles = {
     border: '1px solid #e2e8f0',
     marginBottom: '8px',
     gap: '10px'
-  },
-  monthHeader: {
-    fontWeight: '600',
-    fontSize: '15px'
   },
   summaryGrid: {
     display: 'grid',
