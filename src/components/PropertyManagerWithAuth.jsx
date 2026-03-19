@@ -2862,7 +2862,7 @@ export default function PropertyManager() {
             </div>
           ) : activeTab === 'settings' ? (
             <div>
-              <h2 style={styles.h2}>⚙️ Iestatījumi</h2>
+              <h2 style={styles.h2}>Iestatījumi</h2>
               
               {/* MAKSĀJUMA INFORMĀCIJA */}
               <div style={{...styles.card, marginBottom: '20px'}}>
@@ -2896,7 +2896,7 @@ export default function PropertyManager() {
                       type="text"
                       value={invoiceSettings.payment_company || ''}
                       onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_company: e.target.value})}
-                      placeholder='BIEDRĪBA "BARONA 78"'
+                      placeholder="BIEDRĪBA &quot;BARONA 78&quot;"
                       style={{...styles.input, width: '100%'}}
                     />
                   </div>
@@ -3030,6 +3030,12 @@ const styles = {
     fontWeight: 'bold',
     color: '#0f172a',
     margin: '0 0 8px 0'
+  },
+  h2: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#0f172a',
+    margin: '0 0 20px 0'
   },
   subtitle: {
     fontSize: '14px',
