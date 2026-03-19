@@ -72,7 +72,11 @@ export default function PropertyManager() {
 
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [expandedMonth, setExpandedMonth] = useState(null);
-  const [copiedFromMonth, setCopiedFromMonth] = useState(null);
+  const [expandedInvoiceMonth, setExpandedInvoiceMonth] = useState(null);
+  const [editingTariff, setEditingTariff] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [copySourceMonth, setCopySourceMonth] = useState(null);
+  const [selectedTariffsToCopy, setSelectedTariffsToCopy] = useState({});
 
   const fetchData = async () => {
     try {
@@ -169,16 +173,16 @@ export default function PropertyManager() {
     }
   };
 
-  const copyTariffsFromPreviousMonth = async (fromPeriod, toPeriod) => {
-    try {
-      const previousTariffs = tariffs.filter(t => t.period === fromPeriod);
-      
-      if (previousTariffs.length === 0) {
-        showToast('Nav tarifū no šī mēneša', 'error');
-        return;
-      }
+  const copySelectedTariffs = async (fromPeriod, toPeriod) => {
+    const selectedIds = Object.keys(selectedTariffsToCopy).filter(id => selectedTariffsToCopy[id]);
+    if (selectedIds.length === 0) {
+      showToast('Atlasiet vismaz vienu tarifu', 'error');
+      return;
+    }
 
-      const newTariffs = previousTariffs.map(t => ({
+    try {
+      const tariffsToCopy = tariffs.filter(t => t.period === fromPeriod && selectedIds.includes(t.id));
+      const newTariffs = tariffsToCopy.map(t => ({
         name: t.name,
         total_amount: t.total_amount,
         vat_rate: t.vat_rate,
@@ -188,15 +192,69 @@ export default function PropertyManager() {
       const { error } = await supabase.from('tariffs').insert(newTariffs);
       if (error) throw error;
 
+      setSelectedTariffsToCopy({});
+      setCopySourceMonth(null);
       fetchData();
-      showToast(`✓ Kopēti ${newTariffs.length} tarifi no ${fromPeriod}`);
-      setCopiedFromMonth(fromPeriod);
+      showToast(`✓ Kopēti ${newTariffs.length} tarifi`);
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
   };
 
-  const generateInvoices = async (e) => {
+  const regenerateInvoices = async (period, tariffId = null) => {
+    if (!window.confirm('Reģenerēt rēķinus? Esošie tiks dzēsti!')) return;
+    
+    try {
+      // Dzēst esošos rēķinus
+      let deleteQuery = supabase.from('invoices').delete().eq('period', period);
+      if (tariffId) {
+        deleteQuery = deleteQuery.eq('tariff_id', tariffId);
+      }
+      await deleteQuery;
+
+      // Ģenerēt jaunus
+      const invoicesToAdd = [];
+      const [year, month] = period.split('-');
+      const periodTariffs = tariffId 
+        ? tariffs.filter(t => t.period === period && t.id === tariffId)
+        : tariffs.filter(t => t.period === period);
+
+      for (const apt of apartments) {
+        for (const tariff of periodTariffs) {
+          const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
+          const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
+          const vatRate = parseFloat(tariff.vat_rate) || 0;
+          const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
+          const amountWithVat = Math.round((amountWithoutVat + vatAmount) * 100) / 100;
+
+          const invoiceNumber = `${year}/${month}-${apt.number}`;
+          const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+
+          invoicesToAdd.push({
+            apartment_id: apt.id,
+            tariff_id: tariff.id,
+            invoice_number: invoiceNumber,
+            period: period,
+            amount: amountWithVat,
+            amount_without_vat: amountWithoutVat,
+            amount_with_vat: amountWithVat,
+            vat_amount: vatAmount,
+            vat_rate: vatRate,
+            due_date: dueDate,
+            paid: false
+          });
+        }
+      }
+
+      const { error } = await supabase.from('invoices').insert(invoicesToAdd);
+      if (error) throw error;
+
+      fetchData();
+      showToast(`✓ Reģenerēti ${invoicesToAdd.length} rēķini`);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
     e.preventDefault();
     if (!invoiceMonth) {
       showToast('Izvēlieties mēnesi', 'error');
@@ -273,6 +331,35 @@ export default function PropertyManager() {
       await supabase.from('apartments').delete().eq('id', id);
       fetchData();
       showToast('✓ Izdzēsts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const startEditTariff = (tariff) => {
+    setEditingTariff(tariff.id);
+    setEditForm({
+      name: tariff.name,
+      total_amount: tariff.total_amount,
+      vat_rate: tariff.vat_rate || 0
+    });
+  };
+
+  const saveEditTariff = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('tariffs')
+        .update({
+          name: editForm.name,
+          total_amount: parseFloat(editForm.total_amount),
+          vat_rate: parseFloat(editForm.vat_rate) || 0
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+      setEditingTariff(null);
+      fetchData();
+      showToast('✓ Tarifs atjaunināts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -644,11 +731,27 @@ export default function PropertyManager() {
 
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>💰 Tarifi pa mēnešiem</h2>
+                
+                {copySourceMonth && (
+                  <div style={{background: '#fef3c7', padding: '12px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px'}}>
+                    <div style={{marginBottom: '10px'}}>📋 Kopēšanas režīms - atlasiet tarifus no <strong>{new Date(copySourceMonth + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</strong></div>
+                    <button
+                      onClick={() => copySelectedTariffs(copySourceMonth, tariffPeriod)}
+                      style={{...styles.btn, fontSize: '12px', padding: '8px 12px', marginRight: '8px'}}
+                    >
+                      ✓ Kopēt atlasītos
+                    </button>
+                    <button
+                      onClick={() => {setCopySourceMonth(null); setSelectedTariffsToCopy({});}}
+                      style={{background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px'}}
+                    >
+                      ✕ Atcelt
+                    </button>
+                  </div>
+                )}
+
                 {uniqueTariffPeriods.map(period => {
                   const periodTariffs = tariffs.filter(t => t.period === period);
-                  const previousPeriod = new Date(period + '-01');
-                  previousPeriod.setMonth(previousPeriod.getMonth() - 1);
-                  const prevPeriodStr = previousPeriod.toISOString().split('T')[0].slice(0, 7);
 
                   return (
                     <div key={period} style={{marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #e2e8f0'}}>
@@ -656,28 +759,98 @@ export default function PropertyManager() {
                         <div style={{fontWeight: 'bold', fontSize: '14px'}}>
                           📅 {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
                         </div>
-                        {tariffs.some(t => t.period === prevPeriodStr) && !copiedFromMonth?.includes(period) && (
-                          <button
-                            onClick={() => copyTariffsFromPreviousMonth(prevPeriodStr, period)}
-                            style={{...styles.btnSmall, fontSize: '12px', padding: '4px 8px', background: '#e0e7ff', color: '#3730a3', borderRadius: '4px', fontWeight: '500'}}
-                            title="Kopēt no iepriekšējā mēneša"
-                          >
-                            📋 Kopēt
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setCopySourceMonth(copySourceMonth === period ? null : period)}
+                          style={{...styles.btnSmall, fontSize: '12px', padding: '4px 8px', background: '#e0e7ff', color: '#3730a3', borderRadius: '4px', fontWeight: '500'}}
+                          title="Kopēt tarifus"
+                        >
+                          📋 {copySourceMonth === period ? 'Atcelt' : 'Kopēt'}
+                        </button>
                       </div>
+                      
                       {periodTariffs.map(tar => {
                         const pricePerSqm = parseFloat(tar.total_amount) / TOTAL_AREA;
+                        const isEditing = editingTariff === tar.id;
+
                         return (
-                          <div key={tar.id} style={{...styles.listItem, marginBottom: '8px'}}>
-                            <div>
-                              <div style={{fontWeight: 'bold', fontSize: '13px'}}>{tar.name}</div>
-                              <div style={{fontSize: '12px', color: '#666'}}>
-                                €{parseFloat(tar.total_amount).toFixed(2)} • €{pricePerSqm.toFixed(4)}/m²
-                                {tar.vat_rate > 0 && ` • PVN: ${tar.vat_rate}%`}
+                          <div key={tar.id} style={{...styles.listItem, marginBottom: '8px', display: 'flex', gap: '8px'}}>
+                            {copySourceMonth === period && (
+                              <input
+                                type="checkbox"
+                                checked={selectedTariffsToCopy[tar.id] || false}
+                                onChange={(e) => setSelectedTariffsToCopy({...selectedTariffsToCopy, [tar.id]: e.target.checked})}
+                                style={{width: '18px', height: '18px', cursor: 'pointer', minWidth: '18px'}}
+                              />
+                            )}
+                            
+                            {isEditing ? (
+                              <div style={{flex: 1, display: 'flex', gap: '8px', flexDirection: 'column'}}>
+                                <input
+                                  type="text"
+                                  value={editForm.name}
+                                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                                  style={{...styles.input, fontSize: '12px'}}
+                                />
+                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editForm.total_amount}
+                                    onChange={(e) => setEditForm({...editForm, total_amount: e.target.value})}
+                                    style={{...styles.input, fontSize: '12px'}}
+                                  />
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="PVN %"
+                                    value={editForm.vat_rate}
+                                    onChange={(e) => setEditForm({...editForm, vat_rate: e.target.value})}
+                                    style={{...styles.input, fontSize: '12px'}}
+                                  />
+                                </div>
+                                <div style={{display: 'flex', gap: '8px'}}>
+                                  <button
+                                    onClick={() => saveEditTariff(tar.id)}
+                                    style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}
+                                  >
+                                    ✓ Saglabāt
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingTariff(null)}
+                                    style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}
+                                  >
+                                    Atcelt
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                            <button onClick={() => deleteTariff(tar.id)} style={styles.btnSmall}>🗑️</button>
+                            ) : (
+                              <div style={{flex: 1}}>
+                                <div style={{fontWeight: 'bold', fontSize: '13px'}}>{tar.name}</div>
+                                <div style={{fontSize: '12px', color: '#666'}}>
+                                  €{parseFloat(tar.total_amount).toFixed(2)} • €{pricePerSqm.toFixed(4)}/m²
+                                  {tar.vat_rate > 0 && ` • PVN: ${tar.vat_rate}%`}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {!isEditing && (
+                              <div style={{display: 'flex', gap: '4px'}}>
+                                <button
+                                  onClick={() => startEditTariff(tar)}
+                                  style={{...styles.btnSmall, padding: '4px 8px'}}
+                                  title="Rediģēt"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => deleteTariff(tar.id)}
+                                  style={{...styles.btnSmall, padding: '4px 8px'}}
+                                  title="Dzēst"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -718,12 +891,12 @@ export default function PropertyManager() {
                       const monthInvoices = groupedInvoices[month];
                       const monthTotal = monthInvoices.reduce((sum, inv) => sum + inv.amount, 0);
                       const monthUnpaid = monthInvoices.filter(i => !i.paid).reduce((sum, inv) => sum + inv.amount, 0);
-                      const isExpanded = expandedMonth === month;
+                      const isExpanded = expandedInvoiceMonth === month;
 
                       return (
                         <div key={month} style={{marginBottom: '15px'}}>
                           <div
-                            onClick={() => setExpandedMonth(isExpanded ? null : month)}
+                            onClick={() => setExpandedInvoiceMonth(isExpanded ? null : month)}
                             style={{
                               cursor: 'pointer',
                               display: 'flex',
@@ -743,6 +916,16 @@ export default function PropertyManager() {
                                 €{monthTotal.toFixed(2)} • Parāds: €{monthUnpaid.toFixed(2)}
                               </div>
                             </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                regenerateInvoices(month);
+                              }}
+                              style={{...styles.btnSmall, fontSize: '12px', padding: '4px 8px', background: '#fcd34d', color: '#000', borderRadius: '4px', marginRight: '10px', fontWeight: '500'}}
+                              title="Reģenerēt visus rēķinus"
+                            >
+                              🔄 Regen.
+                            </button>
                             <div style={{fontSize: '18px'}}>{isExpanded ? '▼' : '▶'}</div>
                           </div>
 
@@ -790,6 +973,13 @@ export default function PropertyManager() {
                                       title="Lejupielādēt PDF"
                                     >
                                       📥
+                                    </button>
+                                    <button
+                                      onClick={() => regenerateInvoices(month, invoice.tariff_id)}
+                                      style={{...styles.btnSmall, padding: '6px 12px', fontSize: '14px'}}
+                                      title="Reģenerēt šo rēķinu"
+                                    >
+                                      🔄
                                     </button>
                                     <button
                                       onClick={() => deleteInvoice(invoice.id)}
