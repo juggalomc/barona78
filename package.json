@@ -1,12 +1,15 @@
 {
-  "name": "property-manager",
-  "version": "0.1.0",
+  "name": "barona78-system",
+  "version": "2.0.0",
+  "description": "Inteligenta mājas apsaimniekošanas un rēķinu vadības sistēma",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "@supabase/supabase-js": "^2.33.2"
+    "@supabase/supabase-js": "^2.38.0",
+    "jspdf": "^2.5.1",
+    "html2canvas": "^1.4.1"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -15,10 +18,25 @@
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "extends": ["react-app"]
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
   },
   "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0"
   }
 }
