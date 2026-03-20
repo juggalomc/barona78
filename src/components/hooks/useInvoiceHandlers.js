@@ -1276,17 +1276,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     try {
-      showToast('⏳ Ģenerē PDF...', 'info');
-      
-      // Ielādē bibliotēkas
-      const loadScript = (src) => new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-
       // Ielādēt pdfmake bibliotēku
       const loadScript = (src) => new Promise((resolve, reject) => {
         const script = document.createElement('script');
