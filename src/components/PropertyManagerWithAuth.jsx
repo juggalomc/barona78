@@ -12,14 +12,15 @@ const BUILDING_ADDRESS = "Kr. Barona iela 78-14, Rīga, LV-1001";
 const TOTAL_AREA = 1959;
 
 // Latvian months for consistent display
-const LATVIAN_MONTHS = {
-  "01": "Janvāris", "02": "Februāris", "03": "Marts", "04": "Aprīlis",
-  "05": "Maijs", "06": "Jūnijs", "07": "Jūlijs", "08": "Augusts",
-  "09": "Septembris", "10": "Oktobris", "11": "Novembris", "12": "Decembris"
+const getLatvianMonth = (monthNum) => {
+  const months = ["Janvāris", "Februāris", "Marts", "Aprīlis",
+                  "Maijs", "Jūnijs", "Jūlijs", "Augusts",
+                  "Septembris", "Oktobris", "Novembris", "Decembris"];
+  return months[parseInt(monthNum) - 1] || monthNum;
 };
 
 // Toast Component
-function Toast( message, type = 'success', onClose }) {
+function Toast({ message, type = 'success', onClose }) {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
     return () => clearTimeout(timer);
@@ -50,12 +51,6 @@ function Toast( message, type = 'success', onClose }) {
   );
 }
 
-const LATVIAN_MONTHS = {
-  "01": "Janvāris", "02": "Februāris", "03": "Marts", "04": "Aprīlis",
-  "05": "Maijs", "06": "Jūnijs", "07": "Jūlijs", "08": "Augusts",
-  "09": "Septembris", "10": "Oktobris", "11": "Novembris", "12": "Decembris"
-};
-
 // Helper function to format date in Latvian
 function formatDateLatvian(dateString, options = {}) {
   if (!dateString) return "-";
@@ -65,7 +60,7 @@ function formatDateLatvian(dateString, options = {}) {
     const year = date.getFullYear();
     
     if (options.month === "long" && options.year === "numeric") {
-      return `${LATVIAN_MONTHS[month]} ${year}`;
+      return `${getLatvianMonth(month)} ${year}`;
     }
     
     return date.toLocaleDateString('lv-LV');
@@ -2900,7 +2895,7 @@ export default function PropertyManager() {
       </div>
     </div>
   );
-}
+}}
 
 
 const styles = {
