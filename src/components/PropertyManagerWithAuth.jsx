@@ -52,6 +52,20 @@ export default function PropertyManager() {
   const waterHandlers = useWaterHandlers(supabase, apartments, fetchData, showToast);
   const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, wasteTariffs, meterReadings, fetchData, showToast);
 
+  // DEBUG - Uzrādīt rēķinu datus console.log
+  useEffect(() => {
+    if (invoices.length > 0) {
+      console.log('📋 RĒĶINU DATI:', invoices.slice(0, 3).map(inv => ({
+        id: inv.id,
+        invoice_number: inv.invoice_number,
+        previous_debt_amount: inv.previous_debt_amount,
+        previous_debt_note: inv.previous_debt_note,
+        overpayment_amount: inv.overpayment_amount,
+        amount: inv.amount
+      })));
+    }
+  }, [invoices]);
+
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
