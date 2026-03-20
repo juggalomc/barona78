@@ -443,6 +443,21 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px;">Maksājuma informācija</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
               <div>
+                <div style="margin-bottom: 5px;">ĒKAS NOSAUKUMS</div>
+                <div style="font-weight: bold;">${buildingName}</div>
+              </div>
+              <div>
+                <div style="margin-bottom: 5px;">REĢISTRĀCIJAS KODS</div>
+                <div style="font-weight: bold;">${buildingCode}</div>
+              </div>
+              <div>
+                <div style="margin-bottom: 5px;">ADRESE</div>
+                <div style="font-weight: bold;">${buildingAddress}</div>
+              </div>
+              <div style="grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 15px; margin-top: 10px;">
+                <div style="margin-bottom: 5px; font-size: 11px; opacity: 0.9;">MAKSĀJUMA REKVIZĪTI</div>
+              </div>
+              <div>
                 <div style="margin-bottom: 5px;">BANKA</div>
                 <div style="font-weight: bold;">${paymentBank}</div>
               </div>
