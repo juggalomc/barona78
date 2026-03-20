@@ -228,6 +228,7 @@ export default function PropertyManager() {
                 uniqueTariffPeriods={uniqueTariffPeriods}
                 getInvoiceStatus={getInvoiceStatus}
                 showToast={showToast}
+                regenerateInvoice={invoiceHandlers.regenerateInvoice}
                 {...invoiceHandlers}
               />
             ) : null}

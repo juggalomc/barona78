@@ -23,7 +23,8 @@ export function InvoicesTab({
   saveDebtNote,
   saveOverpayment,
   getInvoiceStatus,
-  showToast
+  showToast,
+  regenerateInvoice  // JAUNAIS - reģenerēšana
 }) {
   const groupedInvoices = {};
   invoices.forEach(inv => {
@@ -107,11 +108,15 @@ export function InvoicesTab({
                                 <div style={{fontWeight: '600', fontSize: '13px'}}>Dzīv. {apt?.number}</div>
                                 <div style={{fontSize: '12px', color: '#666'}}>{invoice.invoice_number}</div>
 
-                                {/* PARĀDS */}
+                                {/* PARĀDS AR KOMENTĀRU */}
                                 {invoice.previous_debt_amount > 0 && (
                                   <div style={{fontSize: '12px', color: '#991b1b', marginTop: '4px', padding: '8px', background: '#fee2e2', borderRadius: '4px'}}>
                                     <strong>⚠️ Parāds: €{invoice.previous_debt_amount.toFixed(2)}</strong>
-                                    {invoice.previous_debt_note && <div style={{marginTop: '4px', fontStyle: 'italic'}}><strong>{invoice.previous_debt_note}</strong></div>}
+                                    {invoice.previous_debt_note && (
+                                      <div style={{marginTop: '4px', fontStyle: 'italic', fontSize: '11px'}}>
+                                        💬 {invoice.previous_debt_note}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
 
@@ -122,7 +127,7 @@ export function InvoicesTab({
                                   </div>
                                 )}
 
-                                {/* PARĀDA NOPIEŠANA */}
+                                {/* PARĀDA NOPIEŠA */}
                                 {debtNoteForm.invoiceId === invoice.id && (
                                   <div style={{marginTop: '8px', display: 'flex', gap: '8px'}}>
                                     <input type="text" placeholder="Paskaidrojums..." value={debtNoteForm.note} onChange={(e) => setDebtNoteForm({...debtNoteForm, note: e.target.value})} style={{...styles.input, flex: 1, fontSize: '12px'}} />
@@ -137,6 +142,7 @@ export function InvoicesTab({
                                 €{invoice.amount.toFixed(2)}
                               </div>
                               <button onClick={() => downloadPDF(invoice)} style={{...styles.btnSmall, padding: '6px 12px'}} title="PDF">📥</button>
+                              <button onClick={() => regenerateInvoice(invoice)} style={{...styles.btnSmall, padding: '6px 12px'}} title="Reģenerēt rēķinu">🔄</button>
                               {invoice.previous_debt_amount > 0 && (
                                 <button onClick={() => setDebtNoteForm({invoiceId: invoice.id, note: invoice.previous_debt_note || ''})} style={{...styles.btnSmall, padding: '6px 12px', background: '#fecaca', borderRadius: '4px'}}>📝</button>
                               )}
