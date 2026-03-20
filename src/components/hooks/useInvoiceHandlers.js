@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { TOTAL_AREA } from '../shared/constants';
-import jsPDF from 'jspdf';
 
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
