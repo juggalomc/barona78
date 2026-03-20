@@ -1291,59 +1291,131 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
         loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
       ]).then(async () => {
+        const html2canvas = window.html2canvas;
         const jsPDF = window.jspdf.jsPDF;
 
         try {
-          // Sagatavo HTML saturu iframe, lai stilus iekļautu PDF renderēšanā
-          const iframe = document.createElement('iframe');
-          iframe.style.position = 'fixed';
-          iframe.style.left = '-9999px';
-          iframe.style.top = '-9999px';
-          iframe.style.width = '210mm';
-          iframe.style.height = '297mm';
-          iframe.style.visibility = 'hidden';
-          document.body.appendChild(iframe);
-
+          // Izveido jaunu logu ar rēķina HTML
+          const printWindow = window.open('about:blank', '_blank', 'width=800,height=1200');
           const htmlContent = generateInvoicePdfHtml(invoice, apt);
-          iframe.contentDocument.open();
-          iframe.contentDocument.write(htmlContent);
-          iframe.contentDocument.close();
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
 
-          await new Promise((resolve) => {
-            if (iframe.contentDocument.readyState === 'complete') {
-              resolve();
-            } else {
-              iframe.onload = () => resolve();
+          // Gaidīsim ielādi un renderēšanu
+          printWindow.onload = async () => {
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            try {
+              // Ņem screenshot no loga
+              const scale = 1.5;
+              const canvas = await html2canvas(printWindow.document.body, {
+                scale,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                windowWidth: printWindow.document.body.scrollWidth,
+                windowHeight: printWindow.document.body.scrollHeight,
+                allowTaint: true,
+                foreignObjectRendering: false
+              });
+
+              // Sagatavo PDF ar attēlu lapu(s)
+              const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+              });
+
+              const imgWidth = 210;
+              const imgHeight = (canvas.height * imgWidth) / canvas.width;
+              const pageHeight = 297;
+              const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+              let heightLeft = imgHeight;
+              let position = 0;
+
+              pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+              heightLeft -= pageHeight;
+
+              while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+              }
+
+              // Teksta slānis (ne redzams, bet select-able)
+              const mmPerPx = (imgWidth / (canvas.width / scale));
+              const pageTotal = Math.ceil(imgHeight / pageHeight);
+
+              pdf.setTextRenderingMode(3);
+              pdf.setFont('helvetica', 'normal');
+
+              const walker = printWindow.document.createTreeWalker(
+                printWindow.document.body,
+                NodeFilter.SHOW_TEXT,
+                {
+                  acceptNode(node) {
+                    return node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                  }
+                }
+              );
+
+              while (walker.nextNode()) {
+                const textNode = walker.currentNode;
+                const rawText = textNode.nodeValue.replace(/\s+/g, ' ').trim();
+                if (!rawText) continue;
+
+                const range = printWindow.document.createRange();
+                range.selectNodeContents(textNode);
+                const rect = range.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) continue;
+
+                const absoluteY = rect.top + (printWindow.scrollY || 0);
+                const pageIndex = Math.floor((absoluteY * mmPerPx) / pageHeight);
+                while (pdf.getNumberOfPages() < pageIndex + 1) {
+                  pdf.addPage();
+                }
+
+                pdf.setPage(pageIndex + 1);
+                const x = rect.left * mmPerPx;
+                const y = (absoluteY * mmPerPx) - pageIndex * pageHeight;
+                const fontSizePx = parseFloat(printWindow.getComputedStyle(textNode.parentElement).fontSize) || 11;
+                pdf.setFontSize(fontSizePx * 0.75);
+
+                pdf.text(rawText, x, y, {
+                  baseline: 'top',
+                  maxWidth: rect.width * mmPerPx
+                });
+              }
+
+              pdf.setTextRenderingMode(0);
+              printWindow.close();
+
+              // Saglabā
+              pdf.save(`recins_${invoice.invoice_number}.pdf`);
+              showToast(`✓ PDF lejuplādēts: recins_${invoice.invoice_number}.pdf`);
+
+            } catch (err) {
+              console.error('PDF ģenerēšanas kļūda:', err);
+              if (printWindow && !printWindow.closed) {
+                printWindow.close();
+              }
+              showToast('Kļūda PDF ģenerēšanā', 'error');
             }
-          });
+          };
 
-          // Izveido PDF no HTML ar teksta slāni (selectable text)
-          const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4',
-            compress: true
-          });
-
-          await pdf.html(iframe.contentDocument.body, {
-            x: 0,
-            y: 0,
-            html2canvas: {
-              scale: 1.0,
-              useCORS: true,
-              logging: false,
-              backgroundColor: '#ffffff'
+          // Timeout, ja loga ielāde neizdodas
+          setTimeout(() => {
+            if (printWindow && !printWindow.closed) {
+              printWindow.close();
             }
-          });
+          }, 5000);
 
-          document.body.removeChild(iframe);
-
-          pdf.save(`recins_${invoice.invoice_number}.pdf`);
-          showToast(`✓ PDF lejuplādēts: recins_${invoice.invoice_number}.pdf`);
-
-        } catch (err) {
-          console.error('PDF ģenerēšanas kļūda:', err);
-          showToast('Kļūda PDF ģenerēšanā', 'error');
+        } catch (error) {
+          console.error('PDF kļūda:', error);
+          showToast('Kļūda PDF ģenerēšanā: ' + error.message, 'error');
         }
 
       }).catch(err => {
