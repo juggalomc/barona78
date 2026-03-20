@@ -25,6 +25,10 @@ export function WaterTab({
   const [editValues, setEditValues] = React.useState({});
   const [selectedPeriod, setSelectedPeriod] = React.useState(tariffPeriod);
   const [adminEditApt, setAdminEditApt] = React.useState(null);
+  const [adminAddMonth, setAdminAddMonth] = React.useState('');
+  const [adminAddApt, setAdminAddApt] = React.useState('');
+  const [adminAddMeterType, setAdminAddMeterType] = React.useState('water');
+  const [adminAddValue, setAdminAddValue] = React.useState('');
 
   // Filtrēt rādījumus pēc perioda
   const periodReadings = meterReadings.filter(mr => mr.period === selectedPeriod);
@@ -157,6 +161,52 @@ export function WaterTab({
             );
           })()}
         </div>
+      </div>
+
+      {/* ===== ADMIN - IEPRIEKŠĒJO MĒNEŠU IEVADE ===== */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>⏮️ Admin - Pievienot Iepriekšējos Mēnešu Rādījumus</h2>
+        <div style={{background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#92400e'}}>
+          <strong>ℹ️</strong> Izmantojiet šo formu, lai pievienotu skaitītāju rādījumus iepriekšējiem mēnešiem
+        </div>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (!adminAddMonth || !adminAddApt || !adminAddValue) {
+            alert('Aizpildiet visus laukus');
+            return;
+          }
+          saveWaterMeterReading(adminAddApt, adminAddValue, adminAddMonth);
+          setAdminAddMonth('');
+          setAdminAddApt('');
+          setAdminAddValue('');
+        }} style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '12px', alignItems: 'flex-end'}}>
+          <div>
+            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Periods:</label>
+            <select value={adminAddMonth} onChange={(e) => setAdminAddMonth(e.target.value)} style={styles.input}>
+              <option value="">-- Izvēlieties --</option>
+              {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'short', year: 'numeric'})}</option>))}
+            </select>
+          </div>
+          <div>
+            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Dzīvoklis:</label>
+            <select value={adminAddApt} onChange={(e) => setAdminAddApt(e.target.value)} style={styles.input}>
+              <option value="">-- Izvēlieties --</option>
+              {apartments.sort((a, b) => parseInt(a.number) - parseInt(b.number)).map(apt => (<option key={apt.id} value={apt.id}>Dzīv. {apt.number}</option>))}
+            </select>
+          </div>
+          <div>
+            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Tips:</label>
+            <select value={adminAddMeterType} onChange={(e) => setAdminAddMeterType(e.target.value)} style={styles.input}>
+              <option value="water">❄️ Aukstais</option>
+              <option value="hot_water">🔥 Siltais</option>
+            </select>
+          </div>
+          <div>
+            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Rādījums (m³):</label>
+            <input type="number" step="0.01" placeholder="0.00" value={adminAddValue} onChange={(e) => setAdminAddValue(e.target.value)} style={styles.input} />
+          </div>
+          <button type="submit" style={{...styles.btn, padding: '10px 20px', whiteSpace: 'nowrap'}}>Pievienot</button>
+        </form>
       </div>
 
       {/* ===== SKAITĪTĀJU PĀRVALDĪŠANA ===== */}
