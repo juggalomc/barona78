@@ -27,51 +27,58 @@ export function SettingsTab({
   };
 
   const SettingField = ({ label, prop, icon }) => (
-    <div style={{...styles.listItem, marginBottom: '12px'}}>
-      <div style={{flex: 1}}>
-        <div style={{fontSize: '14px', fontWeight: '600', marginBottom: '4px'}}>
-          {icon} {label}
-        </div>
-        {editingField === prop ? (
-          <div style={{display: 'flex', gap: '8px'}}>
-            <input
-              type="text"
-              value={editForm[prop] !== undefined ? editForm[prop] : (settings[prop] || '')}
-              onChange={(e) => setEditForm({...editForm, [prop]: e.target.value})}
-              style={{...styles.input, flex: 1}}
-              placeholder={settings[prop] || ''}
-            />
-            <button
-              onClick={() => handleSave(prop)}
-              style={{padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}
-            >
-              ✓
-            </button>
-            <button
-              onClick={() => {
-                setEditingField(null);
-                setEditForm({...editForm, [prop]: settings[prop] || ''});
-              }}
-              style={{padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '4px', cursor: 'pointer'}}
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <div style={{fontSize: '13px', color: '#666', wordBreak: 'break-word'}}>{settings[prop] || '(tukšs)'}</div>
-            <button
-              onClick={() => {
-                setEditingField(prop);
-                setEditForm({...editForm, [prop]: settings[prop] || ''});
-              }}
-              style={{padding: '6px 12px', background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500', color: '#0369a1'}}
-            >
-              ✏️ Rediģēt
-            </button>
-          </div>
-        )}
+    <div style={{marginBottom: '12px', padding: '12px 15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+      <div style={{fontSize: '14px', fontWeight: '600', marginBottom: '8px'}}>
+        {icon} {label}
       </div>
+      {editingField === prop ? (
+        <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+          <input
+            type="text"
+            value={editForm[prop] !== undefined ? editForm[prop] : (settings[prop] || '')}
+            onChange={(e) => setEditForm({...editForm, [prop]: e.target.value})}
+            style={{
+              padding: '10px 12px',
+              fontSize: '14px',
+              border: '2px solid #0ea5e9',
+              borderRadius: '4px',
+              flex: 1,
+              minWidth: '250px',
+              fontFamily: 'inherit'
+            }}
+            placeholder={settings[prop] || ''}
+            autoFocus
+          />
+          <button
+            onClick={() => handleSave(prop)}
+            style={{padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap'}}
+          >
+            ✓
+          </button>
+          <button
+            onClick={() => {
+              setEditingField(null);
+              setEditForm({...editForm, [prop]: settings[prop] || ''});
+            }}
+            style={{padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap'}}
+          >
+            ✕
+          </button>
+        </div>
+      ) : (
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap'}}>
+          <div style={{fontSize: '13px', color: '#666', wordBreak: 'break-word', flex: 1, minWidth: '150px'}}>{settings[prop] || '(tukšs)'}</div>
+          <button
+            onClick={() => {
+              setEditingField(prop);
+              setEditForm({...editForm, [prop]: settings[prop] || ''});
+            }}
+            style={{padding: '6px 12px', background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500', color: '#0369a1', whiteSpace: 'nowrap'}}
+          >
+            ✏️ Rediģēt
+          </button>
+        </div>
+      )}
     </div>
   );
 

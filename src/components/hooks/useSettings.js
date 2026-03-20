@@ -45,20 +45,55 @@ export function useSettings(supabase) {
 
   const updateSetting = async (key, value) => {
     try {
-      const { error } = await supabase
+      console.log(`🔄 Saglabāju iestatījumu: ${key} = ${value}`);
+      
+      // Pirmais - meklēt esošo ierakstu
+      const { data: existing, error: fetchError } = await supabase
         .from('settings')
-        .upsert([{
-          setting_key: key,
-          setting_value: value
-        }]);
+        .select('id')
+        .eq('setting_key', key)
+        .single();
 
-      if (error) throw error;
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Kļūda meklējot iestatījumu:', fetchError);
+        throw fetchError;
+      }
+
+      if (existing && existing.id) {
+        // UPDATE esošo
+        console.log(`✏️ Atjauninu iestatījumu ID: ${existing.id}`);
+        const { error: updateError } = await supabase
+          .from('settings')
+          .update({ setting_value: value })
+          .eq('id', existing.id);
+
+        if (updateError) {
+          console.error('UPDATE kļūda:', updateError);
+          throw updateError;
+        }
+        console.log(`✓ Iestatījums atjaunināts: ${key}`);
+      } else {
+        // INSERT jaunu
+        console.log(`➕ Pievieno jaunu iestatījumu: ${key}`);
+        const { error: insertError } = await supabase
+          .from('settings')
+          .insert([{
+            setting_key: key,
+            setting_value: value
+          }]);
+
+        if (insertError) {
+          console.error('INSERT kļūda:', insertError);
+          throw insertError;
+        }
+        console.log(`✓ Iestatījums pievienots: ${key}`);
+      }
 
       setSettings(prev => ({ ...prev, [key]: value }));
       setEditForm(prev => ({ ...prev, [key]: value }));
       return true;
     } catch (error) {
-      console.error(`Kļūda atjauninot ${key}:`, error);
+      console.error(`❌ Kļūda atjauninot ${key}:`, error);
       return false;
     }
   };
