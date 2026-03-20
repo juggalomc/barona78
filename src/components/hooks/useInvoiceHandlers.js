@@ -1368,71 +1368,94 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
 
         let processedCount = 0;
+        const generatePdfAndAdd = (invoice, index) => {
+          return new Promise((resolve) => {
+            const apt = apartments.find(a => a.id === invoice.apartment_id);
+            if (!apt) {
+              resolve();
+              return;
+            }
 
-        for (const invoice of monthInvoices) {
-          const apt = apartments.find(a => a.id === invoice.apartment_id);
-          if (!apt) continue;
-
-          try {
-            const htmlContent = generateInvoicePdfHtml(invoice, apt);
-            
-            // Izveido temp div
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlContent;
-            tempDiv.style.position = 'absolute';
-            tempDiv.style.left = '-9999px';
-            tempDiv.style.width = '210mm';
-            tempDiv.style.padding = '20mm';
-            tempDiv.style.backgroundColor = 'white';
-            document.body.appendChild(tempDiv);
-            
-            // Gaidīsim renderēšanu
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Izveido PDF ar jsPDF html() metodi
-            const doc = new jsPDF({
-              orientation: 'portrait',
-              unit: 'mm',
-              format: 'a4'
-            });
-
-            // Izmanto html() metodi - teksta PDF
-            doc.html(tempDiv, {
-              callback: function (doc) {
-                const pdfBlob = doc.output('blob');
-                const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
-                zip.file(`${safeFileName}.pdf`, pdfBlob);
-                processedCount++;
-
-                // Ja visi PDF ir ģenerēti, izveidoj ZIP
-                if (processedCount === monthInvoices.length) {
-                  zip.generateAsync({ type: 'blob' }).then(zipContent => {
-                    const zipUrl = URL.createObjectURL(zipContent);
-                    const link = document.createElement('a');
-                    link.href = zipUrl;
-                    link.download = `recini_${period}.zip`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(zipUrl);
-                    showToast(`✓ Lejuplādes ${processedCount} PDF rēķini ZIP failā`);
+            try {
+              const htmlContent = generateInvoicePdfHtml(invoice, apt);
+              
+              // Izveido temp div
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = htmlContent;
+              tempDiv.style.position = 'absolute';
+              tempDiv.style.left = '-9999px';
+              tempDiv.style.width = '210mm';
+              tempDiv.style.padding = '20mm';
+              tempDiv.style.backgroundColor = 'white';
+              document.body.appendChild(tempDiv);
+              
+              // Gaidīsim renderēšanu
+              setTimeout(() => {
+                try {
+                  // Izveido PDF ar jsPDF html() metodi
+                  const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
                   });
-                }
-              },
-              x: 0,
-              y: 0,
-              width: 190,
-              margin: 10,
-              windowHeight: 1600
-            });
 
-            // Dzēš temp div
-            document.body.removeChild(tempDiv);
-            
-          } catch (err) {
-            console.error(`Kļūda ģenerējot PDF rēķinam ${invoice.invoice_number}:`, err);
-            processedCount++; // Skaitīt arī neveiksmīgos, lai nebūtu bezgalīga cikla
-          }
+                  // Izmanto html() metodi - teksta PDF
+                  doc.html(tempDiv, {
+                    callback: function (doc) {
+                      const pdfBlob = doc.output('blob');
+                      const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
+                      zip.file(`${safeFileName}.pdf`, pdfBlob);
+                      processedCount++;
+
+                      // Dzēš temp div
+                      if (document.body.contains(tempDiv)) {
+                        document.body.removeChild(tempDiv);
+                      }
+
+                      // Ja visi PDF ir ģenerēti, izveidoj ZIP
+                      if (processedCount === monthInvoices.length) {
+                        zip.generateAsync({ type: 'blob' }).then(zipContent => {
+                          const zipUrl = URL.createObjectURL(zipContent);
+                          const link = document.createElement('a');
+                          link.href = zipUrl;
+                          link.download = `recini_${period}.zip`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(zipUrl);
+                          showToast(`✓ Lejuplādes ${processedCount} PDF rēķini ZIP failā`);
+                        });
+                      }
+
+                      resolve();
+                    },
+                    x: 0,
+                    y: 0,
+                    width: 190,
+                    margin: 10,
+                    windowHeight: 1600
+                  });
+                } catch (err) {
+                  console.error(`Kļūda ģenerējot PDF rēķinam ${invoice.invoice_number}:`, err);
+                  processedCount++;
+                  if (document.body.contains(tempDiv)) {
+                    document.body.removeChild(tempDiv);
+                  }
+                  resolve();
+                }
+              }, 100);
+            } catch (err) {
+              console.error(`Kļūda ģenerējot PDF rēķinam ${invoice.invoice_number}:`, err);
+              processedCount++;
+              resolve();
+            }
+          });
+        };
+
+        // Izpildes visus PDF sekvenciāli
+        for (let i = 0; i < monthInvoices.length; i++) {
+          // eslint-disable-next-line no-await-in-loop
+          await generatePdfAndAdd(monthInvoices[i], i);
         }
       };
       
