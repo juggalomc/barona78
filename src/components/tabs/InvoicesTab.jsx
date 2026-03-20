@@ -28,12 +28,16 @@ export function InvoicesTab({
   generateInvoiceForApartment,
   sendInvoicesByEmail,
   deleteInvoices,
-  regenerateInvoices
+  regenerateInvoices,
+  updateOverpayment,
+  deleteOverpayment
 }) {
   const [selectedApartmentForGen, setSelectedApartmentForGen] = React.useState('');
   const [selectedInvoiceForEmail, setSelectedInvoiceForEmail] = React.useState('');
   const [selectedInvoices, setSelectedInvoices] = React.useState(new Set());
   const [batchMonth, setBatchMonth] = React.useState('');
+  const [editingOverpaymentId, setEditingOverpaymentId] = React.useState(null);
+  const [editingOverpaymentAmount, setEditingOverpaymentAmount] = React.useState('');
 
   const groupedInvoices = {};
   invoices.forEach(inv => {
@@ -51,7 +55,7 @@ export function InvoicesTab({
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus - VISI DZĪVOKĻI</h2>
         <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
-          <strong>ℹ️ Automātiski parāds + pārmaksa:</strong> Sistēma automātiski pievienos parādu un atņems pārmaksas.
+          <strong>ℹ️ Automātiski parāds + pārmaksa:</strong> Sistēma automātiski pievienos parādu un pārmaksu no iepriekšējiem rēķiniem (ja to gala summa ir negatīva).
         </div>
         <form onSubmit={(e) => generateInvoices(e, tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice === true), invoiceMonth, { water: true })} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
           <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(e.target.value)} style={styles.input}>
@@ -241,7 +245,56 @@ export function InvoicesTab({
                                 {/* PĀRMAKSA */}
                                 {invoice.overpayment_amount > 0 && (
                                   <div style={{fontSize: '12px', color: '#0369a1', marginTop: '4px', padding: '8px', background: '#dbeafe', borderRadius: '4px'}}>
-                                    <strong>💰 Pārmaksa: -€{invoice.overpayment_amount.toFixed(2)}</strong>
+                                    {editingOverpaymentId === invoice.id ? (
+                                      <div style={{display: 'flex', gap: '6px', alignItems: 'center'}}>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          value={editingOverpaymentAmount}
+                                          onChange={(e) => setEditingOverpaymentAmount(e.target.value)}
+                                          style={{flex: 1, padding: '4px 8px', fontSize: '12px', border: '1px solid #0369a1', borderRadius: '3px'}}
+                                          autoFocus
+                                        />
+                                        <button
+                                          onClick={() => {
+                                            updateOverpayment(invoice.id, parseFloat(editingOverpaymentAmount));
+                                            setEditingOverpaymentId(null);
+                                          }}
+                                          style={{padding: '4px 8px', background: '#10b981', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '11px', fontWeight: '600'}}
+                                        >
+                                          ✓
+                                        </button>
+                                        <button
+                                          onClick={() => setEditingOverpaymentId(null)}
+                                          style={{padding: '4px 8px', background: '#e5e7eb', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '11px'}}
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div style={{display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between'}}>
+                                        <strong>💰 Pārmaksa: -€{invoice.overpayment_amount.toFixed(2)}</strong>
+                                        <div style={{display: 'flex', gap: '6px'}}>
+                                          <button
+                                            onClick={() => {
+                                              setEditingOverpaymentId(invoice.id);
+                                              setEditingOverpaymentAmount(invoice.overpayment_amount);
+                                            }}
+                                            style={{padding: '4px 8px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '11px', fontWeight: '600'}}
+                                            title="Rediģēt pārmaksu"
+                                          >
+                                            ✏️
+                                          </button>
+                                          <button
+                                            onClick={() => deleteOverpayment(invoice.id)}
+                                            style={{padding: '4px 8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '11px', fontWeight: '600'}}
+                                            title="Dzēst pārmaksu"
+                                          >
+                                            🗑️
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
 
@@ -283,7 +336,7 @@ export function InvoicesTab({
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>💰 Rēķina Pārmaksa</h2>
         <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
-          <strong>ℹ️ Norādi pārmaksu pie konkrēta rēķina.</strong> Pārmaksa tiks atņemta no šī rēķina summas un parādīsies nākamajā mēneša rēķinā.
+          <strong>ℹ️ Norādi pārmaksu pie konkrēta rēķina.</strong> Pārmaksa tiks atņemta no šī rēķina summas un parādīsies nākamajā mēneša rēķinā (ja iepriekšējā rēķina gala summa ir negatīva).
         </div>
         <form onSubmit={saveOverpayment} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
           <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>

@@ -42,12 +42,14 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         return 0;
       }
 
-      // Ja rēķinā ir overpayment_amount, tā ir pārmaksa
-      const overpay = parseFloat(previousInvoice.overpayment_amount) || 0;
-      if (overpay > 0) {
+      // Pārmaksa eksistē, ja rēķina gala summa ir negatīva (vērtības < 0)
+      const finalAmount = parseFloat(previousInvoice.amount_with_vat) || 0;
+      if (finalAmount < 0) {
+        const overpay = Math.abs(finalAmount);
         console.log(`💰 Pārmaksa dzīv. ${apartments.find(a => a.id === apartmentId)?.number} par ${previousMonth}: €${overpay}`);
+        return overpay;
       }
-      return overpay;
+      return 0;
     } catch (err) {
       console.error('Kļūda aprēķinot pārmaksu:', err);
       return 0;
@@ -145,6 +147,82 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       setOverpaymentForm({ invoiceId: '', amount: '' });
       fetchData();
       showToast('✓ Pārmaksa saglabāta uz rēķina');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const updateOverpayment = async (invoiceId, newAmount) => {
+    try {
+      const invoice = invoices.find(inv => inv.id === invoiceId);
+      if (!invoice) {
+        showToast('Rēķins nav atrasts', 'error');
+        return;
+      }
+
+      // Parsē esošos rēķina detaļus
+      let invoiceDetails = [];
+      if (invoice.invoice_details) {
+        try {
+          invoiceDetails = JSON.parse(invoice.invoice_details);
+        } catch (e) {
+          invoiceDetails = [];
+        }
+      }
+
+      // Noņem vecāko pārmaksu detaļu
+      invoiceDetails = invoiceDetails.filter(d => d.type !== 'overpayment');
+
+      let updatedAmountWithoutVat = 0;
+      let updatedVatAmount = 0;
+
+      // Pārrēķina summu bez pārmaksas
+      invoiceDetails.forEach(detail => {
+        updatedAmountWithoutVat += parseFloat(detail.amount_without_vat) || 0;
+        updatedVatAmount += parseFloat(detail.vat_amount) || 0;
+      });
+
+      // Pievieno jauno pārmaksu detaļu
+      if (newAmount > 0) {
+        invoiceDetails.push({
+          tariff_id: null,
+          tariff_name: '💰 Pārmaksa',
+          amount_without_vat: -newAmount,
+          vat_rate: 0,
+          vat_amount: 0,
+          type: 'overpayment'
+        });
+        updatedAmountWithoutVat -= newAmount;
+      }
+
+      const updatedAmountWithVat = Math.round((updatedAmountWithoutVat + updatedVatAmount) * 100) / 100;
+
+      // Atjaunina rēķinu
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          amount: updatedAmountWithVat,
+          amount_without_vat: updatedAmountWithoutVat,
+          amount_with_vat: updatedAmountWithVat,
+          overpayment_amount: newAmount,
+          invoice_details: JSON.stringify(invoiceDetails)
+        })
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+
+      fetchData();
+      showToast('✓ Pārmaksa atjaunināta');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const deleteOverpayment = async (invoiceId) => {
+    if (!window.confirm('Dzēst pārmaksu?')) return;
+    
+    try {
+      await updateOverpayment(invoiceId, 0);
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -1095,6 +1173,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     calculateOverpayment,
     saveDebtNote,
     saveOverpayment,
+    updateOverpayment,
+    deleteOverpayment,
     generateInvoices,
     generateInvoiceForApartment,
     sendInvoicesByEmail,
