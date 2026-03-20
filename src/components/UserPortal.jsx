@@ -79,23 +79,19 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
           {/* Aukstais ūdens */}
           <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '6px', border: '1px solid #e0f2fe' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>❄️ Aukstais ūdens</label>
-            {waterTariffs.find(w => w.period === currentPeriod) ? (
-              <div>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Skaitītāja rādījums (m³)"
-                  value={meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'water' && mr.period === currentPeriod)?.reading_value || ''}
-                  onChange={(e) => onSaveWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px' }}
-                />
-                <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-                  Cena: €{parseFloat(waterTariffs.find(w => w.period === currentPeriod)?.price_per_m3 || 0).toFixed(4)}/m³
-                </div>
+            <div>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Skaitītāja rādījums (m³)"
+                value={coldCurrent}
+                onChange={(e) => onSaveWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
+                style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px' }}
+              />
+              <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                Iepriekšējais mēnesis ({previousPeriod}): {coldPrevious || 'nav datos'}
               </div>
-            ) : (
-              <p style={{ color: '#999', fontSize: '12px' }}>Tarifs nav norādīts</p>
-            )}
+            </div>
           </div>
 
           {/* Siltais ūdens */}
