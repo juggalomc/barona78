@@ -1,8 +1,6 @@
 import React from 'react';
 import { styles } from '../shared/styles';
-import React from 'react';
 // import { InvoiceTemplate } from '../InvoiceTemplate';  ❌ NOŅEMTS
-import { styles } from '../shared/styles';
 
 export function InvoicesTab({
   invoices,
