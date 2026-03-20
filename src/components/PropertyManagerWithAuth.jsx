@@ -12,12 +12,10 @@ const BUILDING_ADDRESS = "Kr. Barona iela 78-14, Rīga, LV-1001";
 const TOTAL_AREA = 1959;
 
 // Latvian months for consistent display
-const getLatvianMonth = (monthNum) => {
-  const months = ["Janvāris", "Februāris", "Marts", "Aprīlis",
-                  "Maijs", "Jūnijs", "Jūlijs", "Augusts",
-                  "Septembris", "Oktobris", "Novembris", "Decembris"];
-  return months[parseInt(monthNum) - 1] || monthNum;
-};
+const getLatvianMonth = (monthNum) => 
+  ["Janvāris", "Februāris", "Marts", "Aprīlis",
+   "Maijs", "Jūnijs", "Jūlijs", "Augusts",
+   "Septembris", "Oktobris", "Novembris", "Decembris"][parseInt(monthNum) - 1] || monthNum;
 
 // Toast Component
 function Toast({ message, type = 'success', onClose }) {
@@ -52,7 +50,8 @@ function Toast({ message, type = 'success', onClose }) {
 }
 
 // Helper function to format date in Latvian
-function formatDateLatvian(dateString, options = {}) {
+// Helper function to format date in Latvian
+const formatDateLatvian = (dateString, options = {}) => {
   if (!dateString) return "-";
   try {
     const date = new Date(dateString + 'T00:00:00');
@@ -67,7 +66,7 @@ function formatDateLatvian(dateString, options = {}) {
   } catch (e) {
     return dateString;
   }
-}
+};
 
 export default function PropertyManager() {
   // ===== AUTH STATE =====
@@ -2672,225 +2671,10 @@ export default function PropertyManager() {
               </div>
             </div>
           ) : (
-            <div>
-              <div style={styles.card}>
-                <h2 style={styles.cardTitle}>ߓ Ģenerēt rēķinus</h2>
-                <div style={{background: "#f0f9ff", border: "1px solid #0ea5e9", borderRadius: "6px", padding: "12px", marginBottom: "15px", fontSize: "13px", color: "#0369a1"}}>
-                  <strong>ℹ️ Vairāki rēķini per dzīvokli:</strong> Var ģenerēt vairākus rēķinus uz vienu dzīvokli vienā mēnesī.
-                  <br/>Rēķini tiks numurēti kā <code style={{background: "#e0f2fe", padding: "2px 6px", borderRadius: "3px"}}>2026/03-14-1</code>, 
-                  <code style={{background: "#e0f2fe", padding: "2px 6px", borderRadius: "3px", marginLeft: "4px"}}>2026/03-14-2</code>, utt.
-                </div>
-                <form onSubmit={generateInvoices} style={{display: "flex", flexDirection: "column", gap: "12px"}}>
-                  <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px"}}>
-                    <select
-                      value={invoiceMonth}
-                      onChange={(e) => setInvoiceMonth(e.target.value)}
-                      style={styles.input}
-                    >
-                      <option value="">-- Izvēlieties mēnesi --</option>
-                      {uniqueTariffPeriods.map(period => (
-                        <option key={period} value={period}>
-                          {formatDateLatvian(period + '-01')}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px"}}>
-                    <div>
-                      <label style={{fontSize: "12px", color: "#666", marginBottom: "4px", display: "block"}}>No datuma</label>
-                      <input
-                        type="date"
-                        value={invoiceFromDate}
-                        onChange={(e) => setInvoiceFromDate(e.target.value)}
-                        style={styles.input}
-                      />
-                    </div>
-                    <div>
-                      <label style={{fontSize: "12px", color: "#666", marginBottom: "4px", display: "block"}}>Līdz datumam</label>
-                      <input
-                        type="date"
-                        value={invoiceToDate}
-                        onChange={(e) => setInvoiceToDate(e.target.value)}
-                        style={styles.input}
-                      />
-                    </div>
-                  </div>
-                  <button type="submit" style={styles.btn}>Ģenerēt</button>
-                </form>
-              </div>
-
-              <div style={styles.card}>
-                <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px"}}>
-                  <h2 style={styles.cardTitle}>ߒ Rēķini ({invoices.length})</h2>
-                  <button
-                    onClick={exportInvoicesToCSV}
-                    style={{padding: "8px 16px", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px", fontWeight: "500"}}
-                    title="Eksportēt uz CSV"
-                  >
-                    ߓ CSV Export
-                  </button>
-                </div>
-                
-                {sortedMonths.length === 0 ? (
-                  <div style={{textAlign: "center", color: "#999", padding: "40px"}}>Nav rēķinu</div>
-                ) : (
-            <div>
-                    {sortedMonths.map(month => {
-                      const monthInvoices = groupedInvoices[month];
-                      const monthTotal = monthInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-                      const monthUnpaid = monthInvoices.filter(i => !i.paid).reduce((sum, inv) => sum + inv.amount, 0);
-                      const isExpanded = expandedInvoiceMonth === month;
-
-                      return (
-                        <div key={month} style={{marginBottom: "15px"}}>
-                          <div
-                            onClick={() => setExpandedInvoiceMonth(isExpanded ? null : month)}
-                            style={{
-                              cursor: "pointer",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              padding: "15px",
-                              background: "#f8fafc",
-                              borderRadius: "8px",
-                              border: "1px solid #e2e8f0"
-                            }}
-                          >
-                            <div>
-                              <div style={{fontWeight: "bold", fontSize: "14px"}}>
-                                ߓ {formatDateLatvian(month + '-01')}
-                              </div>
-                              <div style={{fontSize: "12px", color: "#666"}}>
-                                €{monthTotal.toFixed(2)} • Parāds: €{monthUnpaid.toFixed(2)}
-                              </div>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                regenerateInvoices(month);
-                              }}
-                              style={{...styles.btnSmall, fontSize: "12px", padding: "4px 8px", background: "#fcd34d", color: "#000", borderRadius: "4px", marginRight: "10px", fontWeight: "500"}}
-                              title="Reģenerēt visus rēķinus"
-                            >
-                              ߔ Regen.
-                            </button>
-                            <div style={{fontSize: "18px"}}>{isExpanded ? '▼' : "▶"}</div>
-                          </div>
-
-                          {isExpanded && (
-                            <div style={{marginTop: "10px"}}>
-                              {monthInvoices.map(invoice => {
-                                const apt = apartments.find(a => a.id === invoice.apartment_id);
-                                const tariff = tariffs.find(t => t.id === invoice.tariff_id);
-                                return (
-                                  <div key={invoice.id} style={styles.invoiceCard}>
-                                    <div style={{display: "flex", alignItems: "center", gap: "10px", flex: 1}}>
-                                      <input
-                                        type="checkbox"
-                                        checked={invoice.paid || false}
-                                        onChange={() => toggleInvoicePaid(invoice.id, invoice.paid)}
-                                        style={{width: "18px", height: "18px", cursor: "pointer"}}
-                                      />
-                                      <div style={{flex: 1}}>
-                                        <div style={{fontWeight: "600", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px"}}>
-                                          Dzīv. {apt?.number} • {tariff?.name}
-                                          {(() => {
-                                            const status = getInvoiceStatus(invoice);
-                                            return (
-                                              <span style={{
-                                                fontSize: "11px",
-                                                fontWeight: "500",
-                                                padding: "2px 8px",
-                                                borderRadius: "4px",
-                                                backgroundColor: status.color,
-                                                color: "white"
-                                              }}>
-                                                {status.emoji} {status.status}
-                                              </span>
-                                            );
-                                          })()}
-                                        </div>
-                                        <div style={{fontSize: "12px", color: "#666"}}>
-                                          {invoice.invoice_number} • Termiņš: {new Date(invoice.due_date).toLocaleDateString('lv-LV')}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div style={{display: "flex", flexDirection: "column", alignItems: "flex-end", marginRight: "10px"}}>
-                                      {invoice.vat_rate > 0 && (
-                                        <div style={{fontSize: "11px", color: "#999", marginBottom: "2px"}}>
-                                          €{invoice.amount_without_vat?.toFixed(2) || '0.00'} + €{invoice.vat_amount?.toFixed(2) || '0.00'}
-                                        </div>
-                                      )}
-                                      <div style={{
-                                        fontWeight: "bold",
-                                        color: invoice.paid ? '#10b981' : "#ef4444",
-                                        minWidth: "80px",
-                                        textAlign: "right"
-                                      }}>
-                                        €{invoice.amount.toFixed(2)}
-                                      </div>
-                                    </div>
-                                    <button
-                                      onClick={() => downloadPDF(invoice)}
-                                      style={{...styles.btnSmall, padding: "6px 12px"}}
-                                      title="Lejupielādēt PDF"
-                                    >
-                                      ߓ
-                                    </button>
-                                    <button
-                                      onClick={() => setDebtModal({
-                                        invoiceId: invoice.id,
-                                        invoiceNumber: invoice.invoice_number,
-                                        debtNote: invoice.debt_note || ''
-                                      })}
-                                      style={{...styles.btnSmall, padding: "6px 12px", fontSize: "12px", background: "#f59e0b"}}
-                                      title="Parāda paskaidrojums"
-                                    >
-                                      ߓ Parāds
-                                    </button>
-                                    <button
-                                      onClick={() => setOverpaymentModal({
-                                        invoiceId: invoice.id,
-                                        invoiceNumber: invoice.invoice_number,
-                                        amount: invoice.overpayment_amount || 0,
-                                        month: invoice.overpayment_month || ''
-                                      })}
-                                      style={{...styles.btnSmall, padding: "6px 12px", fontSize: "12px", background: "#06b6d4"}}
-                                      title="Pārmaksa"
-                                    >
-                                      ߒ Pārmaksa
-                                    </button>
-                                    <button
-                                      onClick={() => regenerateInvoices(month, invoice.tariff_id)}
-                                      style={{...styles.btnSmall, padding: "6px 12px", fontSize: "14px"}}
-                                      title="Reģenerēt šo rēķinu"
-                                    >
-                                      ߔ
-                                    </button>
-                                    <button
-                                      onClick={() => deleteInvoice(invoice.id)}
-                                      style={{...styles.btnSmall, padding: "6px 12px"}}
-                                      title="Dzēst"
-                                    >
-                                      ߗ️
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+            <div style={{padding: "20px", textAlign: "center"}}>
+              <p>Invoices section</p>
             </div>
-          ) : (
-            <div>
-              <p style={{padding: "20px", textAlign: "center", color: "#999"}}>Settings feature coming soon...</p>
-            </div>
-          )}
+          )
         </div>
       </div>
     </div>
@@ -2898,6 +2682,7 @@ export default function PropertyManager() {
 }
 
 
+}
 const styles = {
   app: {
     display: "flex",
