@@ -25,13 +25,37 @@ export function WaterTab({
   const [editValues, setEditValues] = React.useState({});
   const [selectedPeriod, setSelectedPeriod] = React.useState(tariffPeriod);
   const [adminEditApt, setAdminEditApt] = React.useState(null);
-  const [adminAddMonth, setAdminAddMonth] = React.useState('');
+  const [adminAddMonth, setAdminAddMonth] = React.useState(tariffPeriod); // Inicializēt ar pašreizējo
   const [adminAddApt, setAdminAddApt] = React.useState('');
   const [adminAddMeterType, setAdminAddMeterType] = React.useState('water');
   const [adminAddValue, setAdminAddValue] = React.useState('');
 
   // Filtrēt rādījumus pēc perioda
   const periodReadings = meterReadings.filter(mr => mr.period === selectedPeriod);
+
+  // Izveidot paplašinātu mēnešu sarakstu (iepriekšējie + nākamie)
+  const getAllAvailablePeriods = () => {
+    const allPeriods = new Set(uniqueTariffPeriods);
+    
+    // Pievienot 12 iepriekšējus mēnešus
+    const [currentYear, currentMonth] = tariffPeriod.split('-');
+    let year = parseInt(currentYear);
+    let month = parseInt(currentMonth);
+    
+    for (let i = 0; i < 24; i++) {
+      month--;
+      if (month === 0) {
+        month = 12;
+        year--;
+      }
+      const periodStr = `${year}-${String(month).padStart(2, '0')}`;
+      allPeriods.add(periodStr);
+    }
+    
+    return Array.from(allPeriods).sort().reverse();
+  };
+
+  const allAvailablePeriods = getAllAvailablePeriods();
 
   return (
     <div>
@@ -176,7 +200,7 @@ export function WaterTab({
             return;
           }
           saveWaterMeterReading(adminAddApt, adminAddValue, adminAddMonth);
-          setAdminAddMonth('');
+          setAdminAddMonth(tariffPeriod);
           setAdminAddApt('');
           setAdminAddValue('');
         }} style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '12px', alignItems: 'flex-end'}}>
@@ -184,7 +208,11 @@ export function WaterTab({
             <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Periods:</label>
             <select value={adminAddMonth} onChange={(e) => setAdminAddMonth(e.target.value)} style={styles.input}>
               <option value="">-- Izvēlieties --</option>
-              {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'short', year: 'numeric'})}</option>))}
+              {allAvailablePeriods.map(period => (
+                <option key={period} value={period}>
+                  {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'short', year: 'numeric'})}
+                </option>
+              ))}
             </select>
           </div>
           <div>
