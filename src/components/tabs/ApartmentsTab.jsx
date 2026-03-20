@@ -49,6 +49,7 @@ export function ApartmentsTab({
                   <input type="text" value={editApartmentForm.number} onChange={(e) => setEditApartmentForm({...editApartmentForm, number: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="number" step="0.01" value={editApartmentForm.area} onChange={(e) => setEditApartmentForm({...editApartmentForm, area: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="text" value={editApartmentForm.owner_name} onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                  <input type="email" placeholder="E-pasts" value={editApartmentForm.email || ''} onChange={(e) => setEditApartmentForm({...editApartmentForm, email: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="number" placeholder="Deklarēto personu skaits" min="1" value={editApartmentForm.declared_persons} onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <div style={{display: 'flex', gap: '8px'}}>
                     <button onClick={() => saveEditApartment(apt.id)} style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}>✓ Saglabāt</button>
@@ -60,6 +61,7 @@ export function ApartmentsTab({
                   <div style={{flex: 1}}>
                     <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
                     <div style={{fontSize: '13px', color: '#666'}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
+                    {apt.email && <div style={{fontSize: '12px', color: '#3b82f6'}}>📧 {apt.email}</div>}
                     {(() => {
                       const apartmentDebt = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid && new Date(inv.due_date) <= new Date()).reduce((sum, inv) => sum + inv.amount, 0);
                       if (apartmentDebt > 0) {

@@ -24,8 +24,13 @@ export function InvoicesTab({
   saveOverpayment,
   getInvoiceStatus,
   showToast,
-  regenerateInvoice  // JAUNAIS - reģenerēšana
+  regenerateInvoice,
+  generateInvoiceForApartment,
+  sendInvoicesByEmail
 }) {
+  const [selectedApartmentForGen, setSelectedApartmentForGen] = React.useState('');
+  const [selectedInvoiceForEmail, setSelectedInvoiceForEmail] = React.useState('');
+
   const groupedInvoices = {};
   invoices.forEach(inv => {
     if (!groupedInvoices[inv.period]) {
@@ -38,9 +43,9 @@ export function InvoicesTab({
 
   return (
     <div>
-      {/* RĒĶINU ĢENERĒŠANA */}
+      {/* RĒĶINU ĢENERĒŠANA - VISI */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
+        <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus - VISI DZĪVOKĻI</h2>
         <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
           <strong>ℹ️ Automātiski parāds + pārmaksa:</strong> Sistēma automātiski pievienos parādu un atņems pārmaksas.
         </div>
@@ -53,7 +58,43 @@ export function InvoicesTab({
             <input type="date" value={invoiceFromDate} onChange={(e) => setInvoiceFromDate(e.target.value)} style={styles.input} placeholder="No datuma" />
             <input type="date" value={invoiceToDate} onChange={(e) => setInvoiceToDate(e.target.value)} style={styles.input} placeholder="Līdz datumam" />
           </div>
-          <button type="submit" style={styles.btn}>Ģenerēt</button>
+          <button type="submit" style={styles.btn}>Ģenerēt VISIEM</button>
+        </form>
+      </div>
+
+      {/* RĒĶINU ĢENERĒŠANA - ATSEVIŠĶAM DZĪVOKLIM */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>🏠 Ģenerēt rēķinu - ATSEVIŠĶAM DZĪVOKLIM</h2>
+        <form onSubmit={(e) => generateInvoiceForApartment(e, selectedApartmentForGen, invoiceMonth, tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice === true), invoiceFromDate, invoiceToDate)} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+          <select value={selectedApartmentForGen} onChange={(e) => setSelectedApartmentForGen(e.target.value)} style={styles.input}>
+            <option value="">-- Izvēlieties dzīvokli --</option>
+            {apartments.map(apt => (<option key={apt.id} value={apt.id}>Dzīv. {apt.number} - {apt.owner_name}</option>))}
+          </select>
+          <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(e.target.value)} style={styles.input}>
+            <option value="">-- Izvēlieties mēnesi --</option>
+            {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
+          </select>
+          <button type="submit" style={styles.btn}>Ģenerēt ATSEVIŠĶI</button>
+        </form>
+      </div>
+
+      {/* NOSŪTĪT RĒĶINUS PA E-PASTU */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>📧 Nosūtīt rēķinus pa e-pastu</h2>
+        <form onSubmit={(e) => sendInvoicesByEmail(e, selectedInvoiceForEmail)} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+          <select value={selectedInvoiceForEmail} onChange={(e) => setSelectedInvoiceForEmail(e.target.value)} style={styles.input}>
+            <option value="">-- Izvēlieties rēķinu vai periodu --</option>
+            <optgroup label="Periodi">
+              {uniqueTariffPeriods.map(period => (<option key={period} value={`period-${period}`}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})} (visi)</option>))}
+            </optgroup>
+            <optgroup label="Atsevišķi rēķini">
+              {invoices.map(inv => {
+                const apt = apartments.find(a => a.id === inv.apartment_id);
+                return (<option key={inv.id} value={inv.id}>Dzīv. {apt?.number} - {inv.period} ({inv.invoice_number})</option>);
+              })}
+            </optgroup>
+          </select>
+          <button type="submit" style={styles.btn}>📤 Nosūtīt pa e-pastu</button>
         </form>
       </div>
 
@@ -127,7 +168,7 @@ export function InvoicesTab({
                                   </div>
                                 )}
 
-                                {/* PARĀDA NOPIEŠA */}
+                                {/* PARĀDA PASKAIDROJUMA FORMA */}
                                 {debtNoteForm.invoiceId === invoice.id && (
                                   <div style={{marginTop: '8px', display: 'flex', gap: '8px'}}>
                                     <input type="text" placeholder="Paskaidrojums..." value={debtNoteForm.note} onChange={(e) => setDebtNoteForm({...debtNoteForm, note: e.target.value})} style={{...styles.input, flex: 1, fontSize: '12px'}} />
@@ -143,6 +184,7 @@ export function InvoicesTab({
                               </div>
                               <button onClick={() => downloadPDF(invoice)} style={{...styles.btnSmall, padding: '6px 12px'}} title="PDF">📥</button>
                               <button onClick={() => regenerateInvoice(invoice)} style={{...styles.btnSmall, padding: '6px 12px'}} title="Reģenerēt rēķinu">🔄</button>
+                              <button onClick={() => sendInvoicesByEmail(new Event('submit'), invoice.id)} style={{...styles.btnSmall, padding: '6px 12px', background: '#3b82f6'}} title="Nosūtīt e-pastu">📧</button>
                               {invoice.previous_debt_amount > 0 && (
                                 <button onClick={() => setDebtNoteForm({invoiceId: invoice.id, note: invoice.previous_debt_note || ''})} style={{...styles.btnSmall, padding: '6px 12px', background: '#fecaca', borderRadius: '4px'}}>📝</button>
                               )}
