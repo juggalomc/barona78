@@ -1576,7 +1576,7 @@ export default function PropertyManager() {
     return (
       <div style={{ maxWidth: "400px", margin: "100px auto", padding: "20px", fontFamily: "Arial, sans-serif" }}>
         <div style={{ background: "white", padding: "30px", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          <h1 style={{ textAlign: "center", color: "#003399", marginBottom: "30px", fontSize: "28px" }}>🏢 BARONA 78</h1>
+          <h1 style={{ textAlign: "center", color: "#003399", marginBottom: "30px", fontSize: "28px" }}>ߏ BARONA 78</h1>
           <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <input
               type="email"
@@ -1608,7 +1608,7 @@ export default function PropertyManager() {
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px", fontFamily: "Arial, sans-serif", minHeight: "100vh", background: "#f8fafc" }}>
         <div style={{ background: "#003399", color: "white", padding: "30px", borderRadius: "8px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h1 style={{ fontSize: "28px", fontWeight: "bold", margin: 0 }}>🏠 Dzīvoklis {userApartment?.number}</h1>
+            <h1 style={{ fontSize: "28px", fontWeight: "bold", margin: 0 }}>ߏ Dzīvoklis {userApartment?.number}</h1>
             <p style={{ margin: "5px 0 0 0", color: "#ddd", fontSize: "14px" }}>{userApartment?.owner_name}</p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "30px" }}>
@@ -1626,7 +1626,7 @@ export default function PropertyManager() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
           {/* RĒĶINU VĒSTURE */}
           <div style={{ background: "white", padding: "20px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-            <h2>📄 Rēķinu vēsture</h2>
+            <h2>ߓ Rēķinu vēsture</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {userInvoices.length === 0 ? (
                 <p style={{ color: "#999" }}>Nav rēķinu</p>
@@ -1654,7 +1654,7 @@ export default function PropertyManager() {
                       </div>
                       <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
                         {inv.period} • Termiņš: {new Date(inv.due_date).toLocaleDateString('lv-LV')}<br/>
-                        📅 {inv.date_from ? new Date(inv.date_from).toLocaleDateString('lv-LV') : "-"} — {inv.date_to ? new Date(inv.date_to).toLocaleDateString('lv-LV') : "-"}
+                        ߓ {inv.date_from ? new Date(inv.date_from).toLocaleDateString('lv-LV') : "-"} — {inv.date_to ? new Date(inv.date_to).toLocaleDateString('lv-LV') : "-"}
                         {(() => {
                           const debtInfo = calculateDebt(inv.apartment_id, inv.period);
                           if (debtInfo.total > 0 || inv.overpayment_amount > 0) {
@@ -1662,7 +1662,7 @@ export default function PropertyManager() {
                               <div style={{ marginTop: "6px", fontSize: "11px" }}>
                                 {debtInfo.total > 0 && (
                                   <div style={{ color: "#ef4444", fontWeight: "bold" }}>
-                                    💔 Parāds: €{debtInfo.total.toFixed(2)}
+                                    ߒ Parāds: €{debtInfo.total.toFixed(2)}
                                   </div>
                                 )}
                                 {inv.overpayment_amount > 0 && (
@@ -1683,7 +1683,7 @@ export default function PropertyManager() {
                         onClick={() => downloadPDF(inv)}
                         style={{ fontSize: "12px", marginTop: "8px", padding: "4px 8px", background: "#003399", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
                       >
-                        📥 PDF
+                        ߓ PDF
                       </button>
                     </div>
                   </div>
@@ -1720,7 +1720,7 @@ export default function PropertyManager() {
             background: "white", padding: "30px", borderRadius: "8px",
             maxWidth: "500px", width: "90%", boxShadow: "0 10px 40px rgba(0,0,0,0.2)"
           }}>
-            <h3>📝 Parāda paskaidrojums</h3>
+            <h3>ߓ Parāda paskaidrojums</h3>
             <div style={{ marginBottom: "15px", padding: "10px", background: "#f0f9ff", borderRadius: "4px", color: "#333" }}>
               <strong>Rēķis:</strong> {debtModal.invoiceNumber}
             </div>
@@ -1774,7 +1774,7 @@ export default function PropertyManager() {
             background: "white", padding: "30px", borderRadius: "8px",
             maxWidth: "500px", width: "90%", boxShadow: "0 10px 40px rgba(0,0,0,0.2)"
           }}>
-            <h3>💰 Pārmaksa</h3>
+            <h3>ߒ Pārmaksa</h3>
             <div style={{ marginBottom: "15px", padding: "10px", background: "#f0f9ff", borderRadius: "4px", color: "#333" }}>
               <strong>Rēķis:</strong> {overpaymentModal.invoiceNumber}
             </div>
@@ -1842,15 +1842,15 @@ export default function PropertyManager() {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div style={styles.sidebar}>
-        <div style={styles.logo}>🏢 BARONA 78</div>
+        <div style={styles.logo}>ߏ BARONA 78</div>
         <nav style={styles.nav}>
           {[
-            { id: "overview", label: "📊 Pārskats" },
-            { id: "apartments", label: "🏠 Dzīvokļi" },
-            { id: "users", label: "👥 Lietotāji" },
-            { id: "tariffs", label: "💰 Tarifi" },
-            { id: "water", label: "💧 Ūdens" },
-            { id: "invoices", label: "📄 Rēķini" },
+            { id: "overview", label: "ߓ Pārskats" },
+            { id: "apartments", label: "ߏ Dzīvokļi" },
+            { id: "users", label: "ߑ Lietotāji" },
+            { id: "tariffs", label: "ߒ Tarifi" },
+            { id: "water", label: "ߒ Ūdens" },
+            { id: "invoices", label: "ߓ Rēķini" },
             { id: "settings", label: "⚙️ Iestatījumi" }
           ].map(tab => (
             <button
@@ -1898,7 +1898,7 @@ export default function PropertyManager() {
               </div>
 
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>💳 Kopsavilkums</h2>
+                <h2 style={styles.cardTitle}>ߒ Kopsavilkums</h2>
                 
                 {totalDebt > 0 && (
                   <div style={{
@@ -1936,7 +1936,7 @@ export default function PropertyManager() {
               </div>
 
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>📊 Rēķinu statusi</h2>
+                <h2 style={styles.cardTitle}>ߓ Rēķinu statusi</h2>
                 <div style={styles.summaryGrid}>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>✓ Apmaksāti</div>
@@ -2035,7 +2035,7 @@ export default function PropertyManager() {
               </div>
 
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>📋 Dzīvokļi ({apartments.length})</h2>
+                <h2 style={styles.cardTitle}>ߓ Dzīvokļi ({apartments.length})</h2>
                 <div style={styles.list}>
                   {apartments.map(apt => (
                     <div key={apt.id} style={styles.listItem}>
@@ -2097,7 +2097,7 @@ export default function PropertyManager() {
                         <>
                           <div style={{flex: 1}}>
                             <div style={{fontWeight: "bold"}}>Dzīv. {apt.number}</div>
-                            <div style={{fontSize: "13px", color: "#666"}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
+                            <div style={{fontSize: "13px", color: "#666"}}>ߓ {apt.area} m² • ߑ {apt.declared_persons || 1} • {apt.owner_name}</div>
                             {(() => {
                               const apartmentDebt = invoices
                                 .filter(inv => inv.apartment_id === apt.id && !inv.paid && new Date(inv.due_date) <= new Date())
@@ -2114,7 +2114,7 @@ export default function PropertyManager() {
                           </div>
                           <div style={{display: "flex", gap: "4px"}}>
                             <button onClick={() => startEditApartment(apt)} style={{...styles.btnSmall, padding: "4px 8px"}} title="Rediģēt">✏️</button>
-                            <button onClick={() => deleteApartment(apt.id)} style={styles.btnSmall}>🗑️</button>
+                            <button onClick={() => deleteApartment(apt.id)} style={styles.btnSmall}>ߗ️</button>
                           </div>
                         </>
                       )}
@@ -2167,7 +2167,7 @@ export default function PropertyManager() {
               </div>
 
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>👥 Lietotāji ({users.length})</h2>
+                <h2 style={styles.cardTitle}>ߑ Lietotāji ({users.length})</h2>
                 <div style={styles.list}>
                   {users.map(user => {
                     const apt = apartments.find(a => a.id === user.apartment_id);
@@ -2229,15 +2229,15 @@ export default function PropertyManager() {
                         ) : (
                           <>
                             <div>
-                              <div style={{fontWeight: "bold"}}>📧 {user.email}</div>
+                              <div style={{fontWeight: "bold"}}>ߓ {user.email}</div>
                               <div style={{fontSize: "13px", color: "#666"}}>
                                 {apt ? `Dzīv. ${apt.number}` : "Nav dzīvokļa"} • 
-                                {user.role === 'admin' ? ' 👤 Administrators' : " Lietotājs"}
+                                {user.role === 'admin' ? ' ߑ Administrators' : " Lietotājs"}
                               </div>
                             </div>
                             <div style={{display: "flex", gap: "4px"}}>
                               <button onClick={() => startEditUser(user)} style={{...styles.btnSmall, padding: "4px 8px"}} title="Rediģēt">✏️</button>
-                              <button onClick={() => deleteUser(user.id)} style={styles.btnSmall}>🗑️</button>
+                              <button onClick={() => deleteUser(user.id)} style={styles.btnSmall}>ߗ️</button>
                             </div>
                           </>
                         )}
@@ -2301,11 +2301,11 @@ export default function PropertyManager() {
               </div>
 
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>💰 Tarifi pa mēnešiem</h2>
+                <h2 style={styles.cardTitle}>ߒ Tarifi pa mēnešiem</h2>
                 
                 {copySourceMonth && (
                   <div style={{background: "#fef3c7", padding: "12px", borderRadius: "8px", marginBottom: "15px", fontSize: "13px"}}>
-                    <div style={{marginBottom: "10px"}}>📋 Kopēšanas režīms - atlasiet tarifus no <strong>{formatDateLatvian(copySourceMonth + '-01')}</strong></div>
+                    <div style={{marginBottom: "10px"}}>ߓ Kopēšanas režīms - atlasiet tarifus no <strong>{formatDateLatvian(copySourceMonth + '-01')}</strong></div>
                     <button
                       onClick={() => copySelectedTariffs(copySourceMonth, tariffPeriod)}
                       style={{...styles.btn, fontSize: "12px", padding: "8px 12px", marginRight: "8px"}}
@@ -2328,14 +2328,14 @@ export default function PropertyManager() {
                     <div key={period} style={{marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e2e8f0"}}>
                       <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px"}}>
                         <div style={{fontWeight: "bold", fontSize: "14px"}}>
-                          📅 {formatDateLatvian(period + '-01')}
+                          ߓ {formatDateLatvian(period + '-01')}
                         </div>
                         <button
                           onClick={() => setCopySourceMonth(copySourceMonth === period ? null : period)}
                           style={{...styles.btnSmall, fontSize: "12px", padding: "4px 8px", background: "#e0e7ff", color: "#3730a3", borderRadius: "4px", fontWeight: "500"}}
                           title="Kopēt tarifus"
                         >
-                          📋 {copySourceMonth === period ? 'Atcelt' : "Kopēt"}
+                          ߓ {copySourceMonth === period ? 'Atcelt' : "Kopēt"}
                         </button>
                       </div>
                       
@@ -2439,7 +2439,7 @@ export default function PropertyManager() {
                                   style={{...styles.btnSmall, padding: "4px 8px"}}
                                   title="Dzēst"
                                 >
-                                  🗑️
+                                  ߗ️
                                 </button>
                               </div>
                             )}
@@ -2458,7 +2458,7 @@ export default function PropertyManager() {
                 <h2 style={styles.cardTitle}>⚙️ Skaitītāju Iespējošana</h2>
                 <div style={styles.form}>
                   <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", background: "#f9fafb", borderRadius: "6px", border: "1px solid #e2e8f0"}}>
-                    <label style={{fontWeight: "500", fontSize: "14px", cursor: "pointer"}}>💧 Ūdens</label>
+                    <label style={{fontWeight: "500", fontSize: "14px", cursor: "pointer"}}>ߒ Ūdens</label>
                     <input
                       type="checkbox"
                       checked={enabledMeters.water}
@@ -2471,7 +2471,7 @@ export default function PropertyManager() {
 
               {/* Water Tariff */}
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>💧 Ūdens Tarifs</h2>
+                <h2 style={styles.cardTitle}>ߒ Ūdens Tarifs</h2>
                 <form onSubmit={saveWaterTariff} style={styles.form}>
                   <div>
                     <label style={{fontSize: "12px", color: "#666", fontWeight: "500"}}>Periods</label>
@@ -2637,7 +2637,7 @@ export default function PropertyManager() {
 
               {/* Water Consumption - from Meter Readings */}
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>💧 Patēriņš - {formatDateLatvian(tariffPeriod + '-01')}</h2>
+                <h2 style={styles.cardTitle}>ߒ Patēriņš - {formatDateLatvian(tariffPeriod + '-01')}</h2>
                 <div style={styles.list}>
                   {apartments.map(apt => {
                     // Ņem ūdens rādījumu no meter_readings (nevis water_consumption)
@@ -2674,7 +2674,7 @@ export default function PropertyManager() {
           ) : (
             <div>
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
+                <h2 style={styles.cardTitle}>ߓ Ģenerēt rēķinus</h2>
                 <div style={{background: "#f0f9ff", border: "1px solid #0ea5e9", borderRadius: "6px", padding: "12px", marginBottom: "15px", fontSize: "13px", color: "#0369a1"}}>
                   <strong>ℹ️ Vairāki rēķini per dzīvokli:</strong> Var ģenerēt vairākus rēķinus uz vienu dzīvokli vienā mēnesī.
                   <br/>Rēķini tiks numurēti kā <code style={{background: "#e0f2fe", padding: "2px 6px", borderRadius: "3px"}}>2026/03-14-1</code>, 
@@ -2721,20 +2721,20 @@ export default function PropertyManager() {
 
               <div style={styles.card}>
                 <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px"}}>
-                  <h2 style={styles.cardTitle}>💳 Rēķini ({invoices.length})</h2>
+                  <h2 style={styles.cardTitle}>ߒ Rēķini ({invoices.length})</h2>
                   <button
                     onClick={exportInvoicesToCSV}
                     style={{padding: "8px 16px", background: "#10b981", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "13px", fontWeight: "500"}}
                     title="Eksportēt uz CSV"
                   >
-                    📊 CSV Export
+                    ߓ CSV Export
                   </button>
                 </div>
                 
                 {sortedMonths.length === 0 ? (
                   <div style={{textAlign: "center", color: "#999", padding: "40px"}}>Nav rēķinu</div>
                 ) : (
-                  <div>
+            <div>
                     {sortedMonths.map(month => {
                       const monthInvoices = groupedInvoices[month];
                       const monthTotal = monthInvoices.reduce((sum, inv) => sum + inv.amount, 0);
@@ -2758,7 +2758,7 @@ export default function PropertyManager() {
                           >
                             <div>
                               <div style={{fontWeight: "bold", fontSize: "14px"}}>
-                                📅 {formatDateLatvian(month + '-01')}
+                                ߓ {formatDateLatvian(month + '-01')}
                               </div>
                               <div style={{fontSize: "12px", color: "#666"}}>
                                 €{monthTotal.toFixed(2)} • Parāds: €{monthUnpaid.toFixed(2)}
@@ -2772,7 +2772,7 @@ export default function PropertyManager() {
                               style={{...styles.btnSmall, fontSize: "12px", padding: "4px 8px", background: "#fcd34d", color: "#000", borderRadius: "4px", marginRight: "10px", fontWeight: "500"}}
                               title="Reģenerēt visus rēķinus"
                             >
-                              🔄 Regen.
+                              ߔ Regen.
                             </button>
                             <div style={{fontSize: "18px"}}>{isExpanded ? '▼' : "▶"}</div>
                           </div>
@@ -2835,7 +2835,7 @@ export default function PropertyManager() {
                                       style={{...styles.btnSmall, padding: "6px 12px"}}
                                       title="Lejupielādēt PDF"
                                     >
-                                      📥
+                                      ߓ
                                     </button>
                                     <button
                                       onClick={() => setDebtModal({
@@ -2846,7 +2846,7 @@ export default function PropertyManager() {
                                       style={{...styles.btnSmall, padding: "6px 12px", fontSize: "12px", background: "#f59e0b"}}
                                       title="Parāda paskaidrojums"
                                     >
-                                      📝 Parāds
+                                      ߓ Parāds
                                     </button>
                                     <button
                                       onClick={() => setOverpaymentModal({
@@ -2858,21 +2858,21 @@ export default function PropertyManager() {
                                       style={{...styles.btnSmall, padding: "6px 12px", fontSize: "12px", background: "#06b6d4"}}
                                       title="Pārmaksa"
                                     >
-                                      💰 Pārmaksa
+                                      ߒ Pārmaksa
                                     </button>
                                     <button
                                       onClick={() => regenerateInvoices(month, invoice.tariff_id)}
                                       style={{...styles.btnSmall, padding: "6px 12px", fontSize: "14px"}}
                                       title="Reģenerēt šo rēķinu"
                                     >
-                                      🔄
+                                      ߔ
                                     </button>
                                     <button
                                       onClick={() => deleteInvoice(invoice.id)}
                                       style={{...styles.btnSmall, padding: "6px 12px"}}
                                       title="Dzēst"
                                     >
-                                      🗑️
+                                      ߗ️
                                     </button>
                                   </div>
                                 );
@@ -2890,12 +2890,12 @@ export default function PropertyManager() {
             <div>
               <p style={{padding: "20px", textAlign: "center", color: "#999"}}>Settings feature coming soon...</p>
             </div>
-          )
+          )}
         </div>
       </div>
     </div>
   );
-}}
+}
 
 
 const styles = {
