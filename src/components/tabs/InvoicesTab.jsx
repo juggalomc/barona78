@@ -1,5 +1,6 @@
 import React from 'react';
 import { styles } from '../shared/styles';
+import { InvoiceTemplate } from '../InvoiceTemplate';
 
 export function InvoicesTab({
   invoices,
