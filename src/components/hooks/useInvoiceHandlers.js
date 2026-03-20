@@ -1475,7 +1475,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               }
               
               const pdfBlob = doc.output('blob');
-              const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\/\\:*?"<>|]/g, '_');
+              const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
               zip.file(`${safeFileName}.pdf`, pdfBlob);
               processedCount++;
               
