@@ -1,6 +1,6 @@
 import React from 'react';
 
-// Lokāli definēti stili, lai novērstu importa kļūdas
+// Lokāli definēti stili, lai novērstu importa kļūdas un nodrošinātu konsistenci
 const styles = {
   card: {
     background: '#fff',
@@ -36,14 +36,18 @@ const styles = {
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '14px',
-    textAlign: 'center'
+    textAlign: 'center',
+    transition: 'background 0.2s'
   },
   btnSmall: {
     padding: '4px 8px',
     fontSize: '12px',
     border: 'none',
     borderRadius: '4px',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   }
 };
 
@@ -105,10 +109,26 @@ export function InvoicesTab({
     return true;
   });
 
+  // Droša PDF lejupielādes funkcija
+  const handleDownloadPDF = async (invoice) => {
+    try {
+      if (typeof downloadPDF === 'function') {
+        await downloadPDF(invoice);
+      } else {
+        console.error("downloadPDF function is not provided");
+      }
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      if (typeof showToast === 'function') {
+        showToast("Kļūda PDF ģenerēšanā", "error");
+      }
+    }
+  };
+
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* ===== ĢENERĒŠANAS BLOKS ===== */}
-      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px'}}>
+      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px', marginBottom: '30px'}}>
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>📄 Ģenerēt - VISI DZĪVOKĻI</h2>
           <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
@@ -144,7 +164,7 @@ export function InvoicesTab({
       </div>
 
       {/* ===== DARBĪBAS AR RĒĶINIEM ===== */}
-      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px'}}>
+      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px', marginBottom: '30px'}}>
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>⚙️ Masu darbības</h2>
           <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
@@ -166,7 +186,7 @@ export function InvoicesTab({
             </button>
             {selectedInvoices.size > 0 && (
               <div style={{display: 'flex', gap: '8px'}}>
-                <button onClick={() => regenerateInvoices(Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, fontSize: '12px'}}>🔄 Reģenerēt</button>
+                <button onClick={() => regenerateInvoices(Array.from(selectedInvoices))} style={{...styles.btn, background: '#f59e0b', flex: 1, fontSize: '12px'}}>🔄 Reģenerēt</button>
                 <button onClick={() => deleteInvoices(Array.from(selectedInvoices))} style={{...styles.btn, background: '#ef4444', flex: 1, fontSize: '12px'}}>🗑️ Dzēst</button>
               </div>
             )}
@@ -208,7 +228,7 @@ export function InvoicesTab({
             </select>
           </div>
           <div>
-            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Statuss:</label>
+            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Kopā:</label>
             <div style={{fontSize: '13px', color: '#0369a1', fontWeight: '600', padding: '8px', background: '#dbeafe', borderRadius: '4px', textAlign: 'center'}}>
               {filteredInvoices.length} rēķini
             </div>
@@ -221,13 +241,12 @@ export function InvoicesTab({
           <div style={{overflowX: 'auto'}}>
             <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}}>
               <thead>
-                <tr style={{background: '#f0f4f8', borderBottom: '2px solid #cbd5e1'}}>
-                  <th style={{padding: '12px', textAlign: 'left', fontWeight: '600'}}>Rēķins</th>
-                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Dzīvoklis</th>
+                <tr style={{background: '#f8fafc', borderBottom: '2px solid #e2e8f0'}}>
+                  <th style={{padding: '12px', textAlign: 'left', fontWeight: '600'}}>Nr.</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Dzīv.</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Periods</th>
                   <th style={{padding: '12px', textAlign: 'right', fontWeight: '600'}}>Summa</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Pārmaksa</th>
-                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Termiņš</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Statuss</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Darbības</th>
                 </tr>
@@ -239,13 +258,11 @@ export function InvoicesTab({
                   const isEditingThis = editingOverpaymentId === invoice.id;
 
                   return (
-                    <tr key={invoice.id} style={{borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#fafbfc' : '#fff'}}>
-                      <td style={{padding: '12px', fontWeight: '600'}}>
-                        <div style={{fontSize: '12px'}}>{invoice.invoice_number}</div>
-                      </td>
-                      <td style={{padding: '12px', textAlign: 'center'}}>Dzīv. {apt?.number}</td>
+                    <tr key={invoice.id} style={{borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fff' : '#f8fafc'}}>
+                      <td style={{padding: '12px', fontWeight: '600'}}>{invoice.invoice_number}</td>
+                      <td style={{padding: '12px', textAlign: 'center'}}>{apt?.number}</td>
                       <td style={{padding: '12px', textAlign: 'center'}}>{invoice.period}</td>
-                      <td style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#003399'}}>€{invoice.amount.toFixed(2)}</td>
+                      <td style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1e40af'}}>€{invoice.amount.toFixed(2)}</td>
                       
                       <td style={{padding: '12px', textAlign: 'center'}}>
                         {isEditingThis ? (
@@ -255,18 +272,18 @@ export function InvoicesTab({
                               step="0.01" 
                               value={editingOverpaymentAmount} 
                               onChange={(e) => setEditingOverpaymentAmount(e.target.value)} 
-                              style={{width: '60px', padding: '4px', border: '1px solid #0369a1', borderRadius: '3px', fontSize: '11px'}} 
+                              style={{width: '65px', padding: '4px', border: '1px solid #3b82f6', borderRadius: '4px', fontSize: '11px'}} 
                               autoFocus
                             />
                             <button onClick={() => {
                               updateOverpayment(invoice.id, parseFloat(editingOverpaymentAmount) || 0);
                               setEditingOverpaymentId(null);
                             }} style={{...styles.btnSmall, background: '#10b981', color: 'white'}}>✓</button>
-                            <button onClick={() => setEditingOverpaymentId(null)} style={{...styles.btnSmall, background: '#6b7280', color: 'white'}}>✕</button>
+                            <button onClick={() => setEditingOverpaymentId(null)} style={{...styles.btnSmall, background: '#64748b', color: 'white'}}>✕</button>
                           </div>
                         ) : (
                           <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'}}>
-                            <span style={{color: invoice.overpayment_amount > 0 ? '#10b981' : '#94a3b8', fontWeight: invoice.overpayment_amount > 0 ? '600' : '400'}}>
+                            <span style={{color: invoice.overpayment_amount > 0 ? '#059669' : '#94a3b8', fontWeight: invoice.overpayment_amount > 0 ? '600' : '400'}}>
                               €{invoice.overpayment_amount?.toFixed(2) || '0.00'}
                             </span>
                             <button 
@@ -274,7 +291,7 @@ export function InvoicesTab({
                                 setEditingOverpaymentId(invoice.id);
                                 setEditingOverpaymentAmount(invoice.overpayment_amount || 0);
                               }} 
-                              style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', padding: '0', opacity: '0.6'}}
+                              style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', opacity: '0.4', padding: '4px'}}
                               title="Labot pārmaksu"
                             >
                               ✎
@@ -283,22 +300,19 @@ export function InvoicesTab({
                         )}
                       </td>
 
-                      <td style={{padding: '12px', textAlign: 'center', fontSize: '12px'}}>
-                        {new Date(invoice.due_date).toLocaleDateString('lv-LV')}
-                      </td>
                       <td style={{padding: '12px', textAlign: 'center'}}>
                         <span style={{fontSize: '11px', fontWeight: '600', padding: '4px 8px', borderRadius: '4px', backgroundColor: status.color, color: 'white'}}>
                           {status.emoji} {status.status}
                         </span>
                       </td>
                       <td style={{padding: '12px', textAlign: 'center'}}>
-                        <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>
-                          <button onClick={() => toggleInvoicePaid(invoice.id, invoice.paid)} style={{...styles.btnSmall, padding: '4px 6px', background: invoice.paid ? '#10b981' : '#f59e0b', borderRadius: '3px', color: 'white', fontWeight: '600'}} title={invoice.paid ? 'Neapmaksāts' : 'Apmaksāts'}>
+                        <div style={{display: 'flex', gap: '6px', justifyContent: 'center'}}>
+                          <button onClick={() => toggleInvoicePaid(invoice.id, invoice.paid)} style={{...styles.btnSmall, background: invoice.paid ? '#10b981' : '#f59e0b', color: 'white'}} title={invoice.paid ? 'Iezīmēt kā nemaksātu' : 'Iezīmēt kā apmaksātu'}>
                             {invoice.paid ? '✓' : '○'}
                           </button>
-                          <button onClick={() => downloadPDF(invoice)} style={{...styles.btnSmall, padding: '4px 6px'}} title="PDF">📥</button>
-                          <button onClick={() => regenerateInvoice(invoice)} style={{...styles.btnSmall, padding: '4px 6px'}} title="Reģenerēt">🔄</button>
-                          <button onClick={() => deleteInvoice(invoice.id)} style={{...styles.btnSmall, padding: '4px 6px'}} title="Dzēst">🗑️</button>
+                          <button onClick={() => handleDownloadPDF(invoice)} style={{...styles.btnSmall, background: '#334155', color: 'white'}} title="Lejupielādēt PDF">📥</button>
+                          <button onClick={() => regenerateInvoice(invoice)} style={{...styles.btnSmall, background: '#6366f1', color: 'white'}} title="Pārrēķināt">🔄</button>
+                          <button onClick={() => deleteInvoice(invoice.id)} style={{...styles.btnSmall, background: '#ef4444', color: 'white'}} title="Dzēst">🗑️</button>
                         </div>
                       </td>
                     </tr>
@@ -310,28 +324,30 @@ export function InvoicesTab({
         )}
       </div>
 
-      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '30px'}}>
+      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px', marginTop: '30px'}}>
+        {/* PARĀDA PASKAIDROJUMS */}
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>📝 Parāda Paskaidrojums</h2>
+          <h2 style={styles.cardTitle}>📝 Parāda Paskaidrojumi</h2>
           {invoices.filter(inv => inv.previous_debt_amount > 0).length === 0 ? (
-            <div style={{color: '#999', padding: '20px', textAlign: 'center'}}>Nav rēķinu ar parādu</div>
+            <div style={{color: '#94a3b8', padding: '20px', textAlign: 'center', fontSize: '14px'}}>Nav rēķinu ar parādu</div>
           ) : (
             <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
               {invoices.filter(inv => inv.previous_debt_amount > 0).slice(0, 5).map(invoice => {
                 const apt = apartments.find(a => a.id === invoice.apartment_id);
                 return (
-                  <div key={invoice.id} style={{padding: '10px', background: '#fee2e2', borderRadius: '6px', border: '1px solid #fca5a5'}}>
-                    <div style={{fontSize: '12px', fontWeight: '600', color: '#991b1b', marginBottom: '6px'}}>
-                      Dzīv. {apt?.number} - €{invoice.previous_debt_amount.toFixed(2)}
+                  <div key={invoice.id} style={{padding: '12px', background: '#fff1f2', borderRadius: '6px', border: '1px solid #fecaca'}}>
+                    <div style={{fontSize: '12px', fontWeight: '600', color: '#991b1b', marginBottom: '8px', display: 'flex', justifyContent: 'space-between'}}>
+                      <span>Dzīv. {apt?.number} ({invoice.period})</span>
+                      <span>€{invoice.previous_debt_amount.toFixed(2)}</span>
                     </div>
                     {debtNoteForm.invoiceId === invoice.id ? (
                       <div style={{display: 'flex', gap: '4px'}}>
-                        <input type="text" placeholder="Paskaidrojums..." value={debtNoteForm.note} onChange={(e) => setDebtNoteForm({...debtNoteForm, note: e.target.value})} style={{...styles.input, flex: 1, fontSize: '12px'}} />
-                        <button onClick={() => saveDebtNote(invoice.id, debtNoteForm.note)} style={{...styles.btn, padding: '4px 8px', fontSize: '11px', background: '#10b981'}}>✓</button>
+                        <input type="text" placeholder="Paskaidrojums..." value={debtNoteForm.note} onChange={(e) => setDebtNoteForm({...debtNoteForm, note: e.target.value})} style={{...styles.input, flex: 1, fontSize: '12px', padding: '6px'}} />
+                        <button onClick={() => saveDebtNote(invoice.id, debtNoteForm.note)} style={{...styles.btnSmall, background: '#10b981', color: 'white', padding: '0 10px'}}>✓</button>
                       </div>
                     ) : (
-                      <button onClick={() => setDebtNoteForm({invoiceId: invoice.id, note: invoice.previous_debt_note || ''})} style={{width: '100%', padding: '6px', fontSize: '12px', background: '#fed7aa', border: '1px solid #fdba74', borderRadius: '4px', cursor: 'pointer', color: '#92400e', fontWeight: '600'}}>
-                        ✎ {invoice.previous_debt_note ? 'Labot' : 'Pievienot'}
+                      <button onClick={() => setDebtNoteForm({invoiceId: invoice.id, note: invoice.previous_debt_note || ''})} style={{width: '100%', padding: '6px', fontSize: '12px', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer', color: '#991b1b', textAlign: 'left'}}>
+                        {invoice.previous_debt_note ? `💬 ${invoice.previous_debt_note}` : '✎ Pievienot paskaidrojumu'}
                       </button>
                     )}
                   </div>
@@ -341,35 +357,36 @@ export function InvoicesTab({
           )}
         </div>
 
+        {/* PĀRMAKSU KOPSAVILKUMS */}
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>💰 Pārmaksa (Kopsavilkums)</h2>
+          <h2 style={styles.cardTitle}>💰 Pārmaksu Kopsavilkums</h2>
           {invoices.filter(inv => inv.overpayment_amount > 0).length === 0 ? (
-            <div style={{color: '#999', padding: '20px', textAlign: 'center'}}>Nav rēķinu ar pārmaksu</div>
+            <div style={{color: '#94a3b8', padding: '20px', textAlign: 'center', fontSize: '14px'}}>Nav rēķinu ar pārmaksu</div>
           ) : (
             <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
               {invoices.filter(inv => inv.overpayment_amount > 0).slice(0, 5).map(invoice => {
                 const apt = apartments.find(a => a.id === invoice.apartment_id);
                 return (
-                  <div key={invoice.id} style={{padding: '10px', background: '#dbeafe', borderRadius: '6px', border: '1px solid #bfdbfe'}}>
-                    <div style={{fontSize: '12px', fontWeight: '600', color: '#0369a1', marginBottom: '6px'}}>
-                      Dzīv. {apt?.number} - €{invoice.overpayment_amount.toFixed(2)}
+                  <div key={invoice.id} style={{padding: '12px', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0'}}>
+                    <div style={{fontSize: '12px', fontWeight: '600', color: '#166534', marginBottom: '8px', display: 'flex', justifyContent: 'space-between'}}>
+                      <span>Dzīv. {apt?.number} ({invoice.period})</span>
+                      <span>€{invoice.overpayment_amount.toFixed(2)}</span>
                     </div>
                     {editingOverpaymentId === invoice.id ? (
                       <div style={{display: 'flex', gap: '4px'}}>
-                        <input type="number" step="0.01" value={editingOverpaymentAmount} onChange={(e) => setEditingOverpaymentAmount(e.target.value)} style={{flex: 1, padding: '6px', border: '1px solid #0369a1', borderRadius: '3px', fontSize: '12px'}} />
+                        <input type="number" step="0.01" value={editingOverpaymentAmount} onChange={(e) => setEditingOverpaymentAmount(e.target.value)} style={{flex: 1, padding: '6px', border: '1px solid #22c55e', borderRadius: '4px', fontSize: '12px'}} />
                         <button onClick={() => {
                           updateOverpayment(invoice.id, parseFloat(editingOverpaymentAmount) || 0);
                           setEditingOverpaymentId(null);
-                        }} style={{...styles.btn, padding: '4px 8px', fontSize: '11px', background: '#10b981'}}>✓</button>
-                        <button onClick={() => setEditingOverpaymentId(null)} style={{...styles.btn, padding: '4px 8px', fontSize: '11px', background: '#6b7280'}}>✕</button>
+                        }} style={{...styles.btnSmall, background: '#10b981', color: 'white', padding: '0 10px'}}>✓</button>
                       </div>
                     ) : (
-                      <div style={{display: 'flex', gap: '4px'}}>
+                      <div style={{display: 'flex', gap: '6px'}}>
                         <button onClick={() => {
                           setEditingOverpaymentId(invoice.id);
                           setEditingOverpaymentAmount(invoice.overpayment_amount);
-                        }} style={{flex: 1, padding: '6px', fontSize: '12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: '600'}}>✎ Labot</button>
-                        <button onClick={() => deleteOverpayment(invoice.id)} style={{padding: '6px 8px', fontSize: '12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: '600'}}>🗑️</button>
+                        }} style={{flex: 1, padding: '6px', fontSize: '12px', background: '#dcfce7', color: '#166534', border: '1px solid #86efac', borderRadius: '4px', cursor: 'pointer', fontWeight: '600'}}>✎ Labot</button>
+                        <button onClick={() => deleteOverpayment(invoice.id)} style={{padding: '6px 10px', background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer'}}>🗑️</button>
                       </div>
                     )}
                   </div>
