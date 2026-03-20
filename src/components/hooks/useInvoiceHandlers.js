@@ -28,15 +28,19 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       ? `${currentYear - 1}-12` 
       : `${currentYear}-${String(currentMonth - 1).padStart(2, '0')}`;
     
-    // FIKSĒTS: Meklējam apartment_overpayments tabulā
-    const { data } = await supabase
-      .from('apartment_overpayments')
-      .select('amount')
-      .eq('apartment_id', apartmentId)
-      .eq('period', previousMonth)
-      .single();
-    
-    return data?.amount || 0;
+    try {
+      const { data } = await supabase
+        .from('apartment_overpayments')
+        .select('amount')
+        .eq('apartment_id', apartmentId)
+        .eq('period', previousMonth);
+      
+      if (!data || data.length === 0) return 0;
+      return data[0].amount || 0;
+    } catch (err) {
+      console.error('Kļūda aprēķinot pārmaksu:', err);
+      return 0;
+    }
   };
 
   const saveDebtNote = async (invoiceId, note) => {
@@ -74,15 +78,14 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         .from('apartment_overpayments')
         .select('id')
         .eq('apartment_id', overpaymentForm.apartmentId)
-        .eq('period', overpaymentForm.month)
-        .single();
+        .eq('period', overpaymentForm.month);
 
-      if (existing) {
+      if (existing && existing.length > 0) {
         // Atjaunot esošo
         await supabase
           .from('apartment_overpayments')
           .update({ amount: amount })
-          .eq('id', existing.id);
+          .eq('id', existing[0].id);
       } else {
         // Pievienot jaunu
         await supabase
@@ -219,7 +222,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           });
         }
 
-        // Pārmaksa - FIKSĒTA LOĢIKA
+        // Pārmaksa
         const overpayment = await calculateOverpayment(apt.id, currentInvoiceMonth);
         if (overpayment > 0) {
           totalAmountWithoutVat -= overpayment;
@@ -279,7 +282,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
   };
 
-  // JAUNAIS - Reģenerēt individuālo rēķinu
   const regenerateInvoice = async (invoice) => {
     if (!window.confirm(`Reģenerēt rēķinu ${invoice.invoice_number}?`)) return;
 
@@ -292,10 +294,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         return;
       }
 
-      // Dzēst veco rēķinu
       await supabase.from('invoices').delete().eq('id', invoice.id);
 
-      // Ģenerēt jaunu rēķinu ar tiem pašiem datumiem
       let totalAmountWithoutVat = 0;
       let totalVatAmount = 0;
       let invoiceDetails = [];
@@ -402,7 +402,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
 
-      // Pievienot jaunu rēķinu
       const { error: insertError } = await supabase.from('invoices').insert([{
         apartment_id: apt.id,
         tariff_id: periodTariffs[0].id,
@@ -482,6 +481,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
     const rowsWithoutVat = generateRows(invoiceDetails, d => (d.type === 'tariff' || d.type === 'water' || d.type === 'waste') && (d.vat_rate === 0 || d.vat_rate === undefined));
     const rowsWithVat = generateRows(invoiceDetails, d => (d.type === 'tariff' || d.type === 'water' || d.type === 'waste') && d.vat_rate > 0);
+    const debtRows = generateRows(invoiceDetails, d => d.type === 'debt');
+    const overpaymentRows = generateRows(invoiceDetails, d => d.type === 'overpayment');
 
     const htmlContent = `
       <html>
@@ -534,7 +535,15 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             </tr>
             ${rowsWithoutVat}
             ${rowsWithVat}
+            ${debtRows}
+            ${overpaymentRows}
           </table>
+
+          ${invoice.previous_debt_note ? `
+            <div style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; padding: 12px; color: #991b1b; font-size: 12px; margin: 15px 0;">
+              <strong>💬 Parāda paskaidrojums:</strong> ${invoice.previous_debt_note}
+            </div>
+          ` : ''}
 
           <div style="text-align: right; margin: 20px 0; border-top: 2px solid #000; padding-top: 15px;">
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px;">
