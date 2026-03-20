@@ -108,12 +108,18 @@ export function InvoicesTab({
     return true;
   });
 
+  // Funkcija, kas atlasa visus rēķinus konkrētā mēnesī
+  const handleSelectAllInMonth = (month) => {
+    const monthInvoices = invoices.filter(inv => inv.period === month);
+    setSelectedInvoices(new Set(monthInvoices.map(inv => inv.id)));
+  };
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* ===== ĢENERĒŠANAS UN DARBĪBU SEKCIJA ===== */}
       <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px', marginBottom: '30px'}}>
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
+          <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus (Visiem)</h2>
           <form onSubmit={(e) => generateInvoices(e, tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice === true), invoiceMonth, { water: true })} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
             <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(e.target.value)} style={styles.input}>
               <option value="">-- Izvēlieties mēnesi --</option>
@@ -128,18 +134,48 @@ export function InvoicesTab({
         </div>
 
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>⚙️ Masu darbības ({batchMonth})</h2>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-            <select value={batchMonth} onChange={(e) => setBatchMonth(e.target.value)} style={styles.input}>
-              <option value="">-- Izvēlieties mēnesi --</option>
-              {sortedMonths.map(p => <option key={p} value={p}>{p}</option>)}
+          <h2 style={styles.cardTitle}>🏠 Atsevišķam dzīvoklim</h2>
+          <form onSubmit={(e) => generateInvoiceForApartment(e, selectedApartmentForGen, invoiceMonth, tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice === true), invoiceFromDate, invoiceToDate)} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+            <select value={selectedApartmentForGen} onChange={(e) => setSelectedApartmentForGen(e.target.value)} style={styles.input}>
+              <option value="">-- Izvēlieties dzīvokli --</option>
+              {apartments.sort((a,b) => a.number.localeCompare(b.number, undefined, {numeric: true})).map(apt => (
+                <option key={apt.id} value={apt.id}>Dzīv. {apt.number} - {apt.owner_name}</option>
+              ))}
             </select>
+            <button type="submit" style={{...styles.btn, background: '#0ea5e9'}}>✓ Ģenerēt DZĪVOKLIM</button>
+          </form>
+        </div>
+      </div>
+
+      {/* ===== MASU DARBĪBAS ===== */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>⚙️ Masu darbības un eksports</h2>
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px'}}>
+          <select value={batchMonth} onChange={(e) => setBatchMonth(e.target.value)} style={styles.input}>
+            <option value="">-- Izvēlieties mēnesi --</option>
+            {sortedMonths.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <button onClick={() => handleSelectAllInMonth(batchMonth)} style={{...styles.btn, background: '#64748b'}} disabled={!batchMonth}>
+            Atlasīt mēnesi
+          </button>
+          <button onClick={() => downloadMonthAsZip(batchMonth)} style={{...styles.btn, background: '#8b5cf6'}} disabled={!batchMonth}>
+            📦 ZIP Lejuplāde
+          </button>
+          <button onClick={exportInvoicesToCSV} style={{...styles.btn, background: '#10b981'}}>
+            📊 CSV Eksports
+          </button>
+        </div>
+        
+        {selectedInvoices.size > 0 && (
+          <div style={{marginTop: '15px', padding: '10px', background: '#fef3c7', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+            <span style={{fontSize: '13px', fontWeight: '600'}}>Izvēlēti {selectedInvoices.size} rēķini:</span>
             <div style={{display: 'flex', gap: '8px'}}>
-              <button onClick={() => downloadMonthAsZip(batchMonth)} style={{...styles.btn, background: '#8b5cf6', flex: 1, fontSize: '12px'}}>📦 Lejupielādēt ZIP</button>
-              <button onClick={exportInvoicesToCSV} style={{...styles.btn, background: '#10b981', flex: 1, fontSize: '12px'}}>📊 Eksportēt CSV</button>
+              <button onClick={() => regenerateInvoices(Array.from(selectedInvoices))} style={{...styles.btnSmall, background: '#f59e0b', color: 'white'}}>🔄 Reģenerēt</button>
+              <button onClick={() => deleteInvoices(Array.from(selectedInvoices))} style={{...styles.btnSmall, background: '#ef4444', color: 'white'}}>🗑️ Dzēst</button>
+              <button onClick={() => setSelectedInvoices(new Set())} style={{...styles.btnSmall, background: '#6b7280', color: 'white'}}>Atcelt</button>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ===== RĒĶINU SARAKSTS ===== */}
@@ -180,8 +216,21 @@ export function InvoicesTab({
                 const isEditingOverpayment = editingOverpaymentId === invoice.id;
 
                 return (
-                  <tr key={invoice.id} style={{borderBottom: '1px solid #f1f5f9'}}>
-                    <td style={{padding: '12px'}}>{invoice.invoice_number}</td>
+                  <tr key={invoice.id} style={{borderBottom: '1px solid #f1f5f9', background: selectedInvoices.has(invoice.id) ? '#eff6ff' : 'transparent'}}>
+                    <td style={{padding: '12px'}}>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedInvoices.has(invoice.id)}
+                        onChange={(e) => {
+                          const newSet = new Set(selectedInvoices);
+                          if (e.target.checked) newSet.add(invoice.id);
+                          else newSet.delete(invoice.id);
+                          setSelectedInvoices(newSet);
+                        }}
+                        style={{marginRight: '8px'}}
+                      />
+                      {invoice.invoice_number}
+                    </td>
                     <td style={{padding: '12px', textAlign: 'center'}}>{apt?.number}</td>
                     <td style={{padding: '12px', textAlign: 'right', fontWeight: 'bold'}}>€{invoice.amount.toFixed(2)}</td>
                     
@@ -228,6 +277,7 @@ export function InvoicesTab({
                           {invoice.paid ? 'Apmaksāts' : 'Atzīmēt'}
                         </button>
                         <button onClick={() => downloadPDF(invoice)} style={{...styles.btnSmall, background: '#334155', color: 'white'}} title="Lejupielādēt PDF">📥</button>
+                        <button onClick={() => regenerateInvoice(invoice)} style={{...styles.btnSmall, background: '#6366f1', color: 'white'}} title="Reģenerēt">🔄</button>
                         <button onClick={() => deleteInvoice(invoice.id)} style={{...styles.btnSmall, background: '#ef4444', color: 'white'}}>🗑️</button>
                       </div>
                     </td>
@@ -244,17 +294,25 @@ export function InvoicesTab({
           <div style={styles.card}>
             <h3 style={styles.cardTitle}>📝 Parādu piezīmes</h3>
             {invoices.filter(i => i.previous_debt_amount > 0).slice(0, 5).map(inv => (
-              <div key={inv.id} style={{padding: '8px', borderBottom: '1px solid #eee', fontSize: '12px'}}>
-                <strong>Dz. {apartments.find(a => a.id === inv.apartment_id)?.number}:</strong> {inv.previous_debt_note || 'Nav piezīmju'}
+              <div key={inv.id} style={{padding: '12px', borderBottom: '1px solid #eee', fontSize: '12px', display: 'flex', justifyContent: 'space-between'}}>
+                <div>
+                  <strong>Dz. {apartments.find(a => a.id === inv.apartment_id)?.number}:</strong> {inv.previous_debt_note || 'Nav piezīmju'}
+                </div>
+                <button 
+                  onClick={() => setDebtNoteForm({ invoiceId: inv.id, note: inv.previous_debt_note || '' })}
+                  style={{background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer'}}
+                >
+                  Labot
+                </button>
               </div>
             ))}
           </div>
 
           <div style={styles.card}>
-            <h3 style={styles.cardTitle}>💰 Pārmaksu labošana</h3>
+            <h3 style={styles.cardTitle}>💰 Pārmaksu kontrole</h3>
             {invoices.filter(i => i.overpayment_amount > 0).slice(0, 5).map(inv => (
               <div key={inv.id} style={{padding: '8px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px'}}>
-                <span>Dz. {apartments.find(a => a.id === inv.apartment_id)?.number}</span>
+                <span>Dz. {apartments.find(a => a.id === inv.apartment_id)?.number} ({inv.period})</span>
                 <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
                   <span style={{fontWeight: 'bold', color: '#10b981'}}>€{inv.overpayment_amount.toFixed(2)}</span>
                   <button onClick={() => deleteOverpayment(inv.id)} style={{...styles.btnSmall, background: '#fee2e2', color: '#ef4444'}}>Dzēst</button>
