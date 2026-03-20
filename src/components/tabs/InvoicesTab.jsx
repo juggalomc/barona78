@@ -1,8 +1,24 @@
 import React from 'react';
 import { styles } from '../shared/styles';
-import { InvoiceTemplate } from '../InvoiceTemplate';
+import React from 'react';
+// import { InvoiceTemplate } from '../InvoiceTemplate';  ❌ NOŅEMTS
+import { styles } from '../shared/styles';
 
 export function InvoicesTab({
+  invoices,
+  apartments,
+  // ... pārējie props ...
+}) {
+  // Tikai standarta rēķinu tabula bez priekšskatījuma
+  
+  return (
+    <div>
+      <table>
+        {/* ... jūsu rēķinu tabula ... */}
+      </table>
+    </div>
+  );
+}export function InvoicesTab({
   invoices,
   apartments,
   tariffs,
