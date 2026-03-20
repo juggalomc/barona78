@@ -1347,7 +1347,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
               // Teksta slānis (ne redzams, bet select-able)
               const mmPerPx = (imgWidth / (canvas.width / scale));
-              const pageTotal = Math.ceil(imgHeight / pageHeight);
 
               pdf.setTextRenderingMode(3);
               pdf.setFont('helvetica', 'normal');
