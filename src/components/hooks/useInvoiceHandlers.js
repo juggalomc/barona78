@@ -1463,8 +1463,14 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           yPos += 4;
           pdf.setFontSize(10);
           pdf.setTextColor(51, 51, 51);
-          if (apt.owner_name) pdf.text(`Vārds: ${apt.owner_name}`, leftMargin + 3, yPos), (yPos += 4);
-          if (apt.email) pdf.text(`E-pasts: ${apt.email}`, leftMargin + 3, yPos), (yPos += 4);
+          if (apt.owner_name) {
+            pdf.text(`Vārds: ${apt.owner_name}`, leftMargin + 3, yPos);
+            yPos += 4;
+          }
+          if (apt.email) {
+            pdf.text(`E-pasts: ${apt.email}`, leftMargin + 3, yPos);
+            yPos += 4;
+          }
           pdf.text(`Platība: ${apt.area} m²`, leftMargin + 3, yPos);
           yPos += 10;
 
