@@ -1295,29 +1295,34 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const jsPDF = window.jspdf.jsPDF;
 
         try {
-          // Izveido jaunu logu ar rēķina HTML
-          const printWindow = window.open('about:blank', '_blank', 'width=800,height=1200');
+          // Izveido jaunu slēptu konteineru ar rēķina HTML (nav pop-up)
           const htmlContent = generateInvoicePdfHtml(invoice, apt);
-          printWindow.document.write(htmlContent);
-          printWindow.document.close();
+          const hiddenContainer = document.createElement('div');
+          hiddenContainer.style.position = 'fixed';
+          hiddenContainer.style.left = '-9999px';
+          hiddenContainer.style.top = '-9999px';
+          hiddenContainer.style.width = '210mm';
+          hiddenContainer.style.minHeight = '297mm';
+          hiddenContainer.style.background = '#fff';
+          hiddenContainer.innerHTML = htmlContent;
+          document.body.appendChild(hiddenContainer);
 
-          // Gaidīsim ielādi un renderēšanu
-          printWindow.onload = async () => {
-            await new Promise(resolve => setTimeout(resolve, 800));
+          // Gaidām, lai stili ielādētos
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-            try {
-              // Ņem screenshot no loga
-              const scale = 1.5;
-              const canvas = await html2canvas(printWindow.document.body, {
-                scale,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                windowWidth: printWindow.document.body.scrollWidth,
-                windowHeight: printWindow.document.body.scrollHeight,
-                allowTaint: true,
-                foreignObjectRendering: false
-              });
+          try {
+            // Ņem screenshot no slēptā konteinera
+            const scale = 1.5;
+            const canvas = await html2canvas(hiddenContainer, {
+              scale,
+              useCORS: true,
+              logging: false,
+              backgroundColor: '#ffffff',
+              windowWidth: hiddenContainer.scrollWidth,
+              windowHeight: hiddenContainer.scrollHeight,
+              allowTaint: true,
+              foreignObjectRendering: false
+            });
 
               // Sagatavo PDF ar attēlu lapu(s)
               const pdf = new jsPDF({
@@ -1352,8 +1357,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 pdf.setTextRenderingMode(3);
                 pdf.setFont('helvetica', 'normal');
 
-                const walker = printWindow.document.createTreeWalker(
-                  printWindow.document.body,
+                const walker = hiddenContainer.ownerDocument.createTreeWalker(
+                  hiddenContainer,
                   NodeFilter.SHOW_TEXT,
                   {
                     acceptNode(node) {
@@ -1368,12 +1373,12 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                   const rawText = textNode.nodeValue.replace(/\s+/g, ' ').trim();
                   if (!rawText || !parentEl) continue;
 
-                  const range = printWindow.document.createRange();
+                  const range = hiddenContainer.ownerDocument.createRange();
                   range.selectNodeContents(textNode);
                   const rect = range.getBoundingClientRect();
                   if (rect.width === 0 || rect.height === 0) continue;
 
-                  const absoluteY = rect.top + (printWindow.scrollY || 0);
+                  const absoluteY = rect.top + (window.scrollY || 0);
                   const pageIndex = Math.floor((absoluteY * mmPerPx) / pageHeight);
                   while (pdf.getNumberOfPages() < pageIndex + 1) {
                     pdf.addPage();
@@ -1382,7 +1387,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                   pdf.setPage(pageIndex + 1);
                   const x = rect.left * mmPerPx;
                   const y = (absoluteY * mmPerPx) - pageIndex * pageHeight;
-                  const fontSizePx = parseFloat(printWindow.getComputedStyle(parentEl).fontSize) || 11;
+                  const fontSizePx = parseFloat(window.getComputedStyle(parentEl).fontSize) || 11;
                   pdf.setFontSize(fontSizePx * 0.75);
 
                   try {
@@ -1401,27 +1406,14 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 pdf.setTextRenderingMode(0);
               }
 
-              printWindow.close();
-
               // Saglabā
               pdf.save(`recins_${invoice.invoice_number}.pdf`);
               showToast(`✓ PDF lejuplādēts: recins_${invoice.invoice_number}.pdf`);
 
             } catch (err) {
               console.error('PDF ģenerēšanas kļūda:', err);
-              if (printWindow && !printWindow.closed) {
-                printWindow.close();
-              }
               showToast('Kļūda PDF ģenerēšanā', 'error');
             }
-          };
-
-          // Timeout, ja loga ielāde neizdodas
-          setTimeout(() => {
-            if (printWindow && !printWindow.closed) {
-              printWindow.close();
-            }
-          }, 5000);
 
         } catch (error) {
           console.error('PDF kļūda:', error);
