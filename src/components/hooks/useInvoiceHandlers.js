@@ -1289,223 +1289,88 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       Promise.all([
         loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js')
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
       ]).then(async () => {
         const { jsPDF } = window.jspdf;
 
         try {
+          showToast('⏳ Ģenerē PDF...', 'info');
+
+          const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
+          const amountWithoutVat = invoice.amount_without_vat || 0;
+          const vatAmount = invoice.vat_amount || 0;
+          const amountWithVat = invoice.amount_with_vat || invoice.amount;
+
+          // Veidot HTML rēķinu ar tīru struktūru un CSS
+          let detailsHtml = '';
+          invoiceDetails.forEach(detail => {
+            let quantity = '';
+            let unitPrice = '';
+
+            if (detail.type === 'water') {
+              quantity = detail.consumption_m3 + ' m³';
+              unitPrice = '€' + detail.price_per_m3.toFixed(4);
+            } else if (detail.type === 'waste') {
+              quantity = detail.declared_persons + ' pers.';
+              unitPrice = '€' + (detail.amount_without_vat / detail.declared_persons).toFixed(4);
+            } else {
+              quantity = apt.area + ' m²';
+              unitPrice = '€' + (detail.amount_without_vat / apt.area).toFixed(4);
+            }
+
+            detailsHtml += '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd;">' + detail.tariff_name + '</td><td style="padding: 8px; text-align: center; border-bottom: 1px solid #ddd;">' + quantity + '</td><td style="padding: 8px; text-align: right; border-bottom: 1px solid #ddd;">' + unitPrice + '</td><td style="padding: 8px; text-align: right; border-bottom: 1px solid #ddd;">€' + detail.amount_without_vat.toFixed(2) + '</td></tr>';
+          });
+
+          const htmlContent = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: white; } .header { display: flex; justify-content: space-between; margin-bottom: 20px; } .title { font-size: 32px; font-weight: bold; } .company-info { font-size: 12px; text-align: right; } .section { margin-bottom: 20px; } .label { font-weight: bold; margin-bottom: 5px; } .info-row { padding: 4px 0; font-size: 12px; } table { width: 100%; border-collapse: collapse; margin: 20px 0; } th { background: #f5f5f5; padding: 10px; text-align: left; font-weight: bold; border: 1px solid #ddd; } td { padding: 10px; border: 1px solid #ddd; } .total-row { background: #f9f9f9; font-weight: bold; } .final-amount { font-size: 24px; color: #003399; font-weight: bold; text-align: right; padding: 20px 0; } .payment-section { margin-top: 30px; border-top: 2px solid #000; padding-top: 20px; } .payment-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 11px; } .payment-label { font-weight: bold; min-width: 120px; } .payment-value { flex: 1; } </style></head><body><div class="header"><div class="title">RĒĶINS</div><div class="company-info"><strong>' + (settings.building_name || 'BIEDRĪBA "BARONA 78"') + '</strong><br>' + (settings.building_code || '40008325768') + '<br>' + (settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001') + '</div></div><div class="section"><div class="label">Rēķina numurs:</div><div class="info-row">' + invoice.invoice_number + '</div><div class="label" style="margin-top: 10px;">Periods:</div><div class="info-row">' + invoice.period + '</div><div class="label" style="margin-top: 10px;">Termiņš:</div><div class="info-row">' + new Date(invoice.due_date).toLocaleDateString('lv-LV') + '</div></div><div class="section"><div class="label">Saņēmējs:</div><div class="info-row"><strong>Dzīvoklis Nr. ' + apt.number + '</strong></div>' + (apt.owner_name ? '<div class="info-row">Vārds: ' + apt.owner_name + '</div>' : '') + (apt.owner_surname ? '<div class="info-row">Uzvārds: ' + apt.owner_surname + '</div>' : '') + (apt.email ? '<div class="info-row">E-pasts: ' + apt.email + '</div>' : '') + (apt.declared_persons ? '<div class="info-row">Deklarēto personu skaits: ' + apt.declared_persons + '</div>' : '') + (apt.registration_number ? '<div class="info-row">Reģ. numurs: ' + apt.registration_number + '</div>' : '') + (apt.apartment_address ? '<div class="info-row">Adrese: ' + apt.apartment_address + '</div>' : '') + '<div class="info-row">Platība: ' + apt.area + ' m²</div></div><table><thead><tr><th>Pakalpojums</th><th style="text-align: center; width: 100px;">Daudzums</th><th style="text-align: right; width: 100px;">Cena</th><th style="text-align: right; width: 100px;">Summa</th></tr></thead><tbody>' + detailsHtml + '</tbody></table><div style="margin-top: 20px; text-align: right;"><div style="margin-bottom: 10px;"><strong>Summa bez PVN:</strong> €' + amountWithoutVat.toFixed(2) + '</div>' + (vatAmount > 0 ? '<div style="margin-bottom: 10px;"><strong>PVN:</strong> €' + vatAmount.toFixed(2) + '</div>' : '') + '<div class="final-amount">KOPĀ: €' + amountWithVat.toFixed(2) + '</div></div><div class="payment-section"><div style="font-size: 14px; font-weight: bold; margin-bottom: 15px;">MAKSĀJUMA REKVIZĪTI</div><div class="payment-row"><div class="payment-label">Nosaukums:</div><div class="payment-value">' + (settings.building_name || 'BIEDRĪBA "BARONA 78"') + '</div></div><div class="payment-row"><div class="payment-label">Reģ. kods:</div><div class="payment-value">' + (settings.building_code || '40008325768') + '</div></div><div class="payment-row"><div class="payment-label">Adrese:</div><div class="payment-value">' + (settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001') + '</div></div><div class="payment-row"><div class="payment-label">Banka:</div><div class="payment-value">' + (settings.payment_bank || 'Habib Bank') + '</div></div><div class="payment-row"><div class="payment-label">IBAN:</div><div class="payment-value">' + (settings.payment_iban || 'LV62HABA0551064112797') + '</div></div><div class="payment-row"><div class="payment-label">E-pasts:</div><div class="payment-value">' + (settings.payment_email || 'info@barona78.lv') + '</div></div><div class="payment-row"><div class="payment-label">Tālrunis:</div><div class="payment-value">' + (settings.payment_phone || '+371 67800000') + '</div></div></div></body></html>';
+
+          // Izveidot slēptu konteineri HTML rederēšanai
+          const container = document.createElement('div');
+          container.style.position = 'fixed';
+          container.style.left = '-9999px';
+          container.style.top = '-9999px';
+          container.style.width = '210mm';
+          container.style.background = 'white';
+          container.innerHTML = htmlContent;
+          document.body.appendChild(container);
+
+          // Gaidīt, līdz stili ielādējas
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
           const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
             format: 'a4'
           });
 
-          // Pievienot DejaVu fontu, kas atbalsta UTF-8 un latviešu burtus
-          pdf.setFont('helvetica');
-
-          const pageWidth = pdf.internal.pageSize.getWidth();
-          const pageHeight = pdf.internal.pageSize.getHeight();
-          const margin = 12;
-          let yPos = margin;
-
-          // ===== GALVENE =====
-          pdf.setFontSize(28);
-          pdf.setFont('courier', 'bold');
-          pdf.text('R E K I N S', margin, yPos);
-          yPos += 3;
-
-          // Kumpanijas info labajā pusē
-          pdf.setFontSize(9);
-          pdf.setFont('courier', 'normal');
-          const rightAlign = pageWidth - margin - 50;
-          pdf.text(settings.building_name || 'BIEDRI BA "BARONA 78"', rightAlign, yPos);
-          yPos += 4;
-          pdf.text(settings.building_code || '40008325768', rightAlign, yPos);
-          yPos += 4;
-          pdf.text(settings.building_address || 'Kr. Barona iela 78-14, Riga, LV-1001', rightAlign, yPos, { maxWidth: 50 });
-
-          yPos = margin + 16;
-
-          // ===== RĒĶINA NUMURS UN PERIODS =====
-          pdf.setFontSize(11);
-          pdf.setFont('courier', 'normal');
-          pdf.text('Nr: ' + invoice.invoice_number, margin, yPos);
-          yPos += 5;
-
-          pdf.text('PERIODS: ' + invoice.period, margin, yPos);
-          yPos += 5;
-
-          pdf.text('TERMINS: ' + new Date(invoice.due_date).toLocaleDateString('lv-LV'), margin, yPos);
-          yPos += 7;
-
-          // ===== SAŅĒMĒJS SEKCIJA =====
-          pdf.setFontSize(10);
-          pdf.setFont('courier', 'bold');
-          pdf.text('S A E M J U S:', margin, yPos);
-          yPos += 5;
-
-          pdf.setFontSize(10);
-          pdf.setFont('courier', 'normal');
-          pdf.text('Dzivoklis Nr. ' + apt.number, margin, yPos);
-          yPos += 4;
-
-          if (apt.owner_name) {
-            pdf.text('V a r d s: ' + apt.owner_name, margin, yPos);
-            yPos += 4;
-          }
-          if (apt.owner_surname) {
-            pdf.text('U z v a r d s: ' + apt.owner_surname, margin, yPos);
-            yPos += 4;
-          }
-          if (apt.email) {
-            pdf.text('E - p a s t s: ' + apt.email, margin, yPos);
-            yPos += 4;
-          }
-          if (apt.declared_persons) {
-            pdf.text('Deklareto personu skaits: ' + apt.declared_persons, margin, yPos);
-            yPos += 4;
-          }
-          if (apt.registration_number) {
-            pdf.text('Reg. numurs: ' + apt.registration_number, margin, yPos);
-            yPos += 4;
-          }
-          if (apt.apartment_address) {
-            pdf.text('Adrese: ' + apt.apartment_address, margin, yPos, { maxWidth: pageWidth - 2 * margin });
-            yPos += 4;
-          }
-          pdf.text('P l a t i b a: ' + apt.area + ' m2', margin, yPos);
-          yPos += 6;
-
-          // ===== PAKALPOJUMI TABULA =====
-          pdf.setFontSize(10);
-          pdf.setFont('courier', 'bold');
-          const col1 = margin;
-          const col2 = margin + 70;
-          const col3 = margin + 100;
-          const col4 = margin + 135;
-
-          pdf.text('PAKALPOJUMS', col1, yPos);
-          pdf.text('DAUDZ.', col2, yPos, { align: 'center' });
-          pdf.text('CENA', col3, yPos, { align: 'right' });
-          pdf.text('SUMMA', col4, yPos, { align: 'right' });
-          yPos += 4;
-
-          // Līnija
-          pdf.line(margin, yPos, pageWidth - margin, yPos);
-          yPos += 3;
-
-          // Pakalpojumi
-          const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
-          pdf.setFontSize(9);
-          pdf.setFont('courier', 'normal');
-
-          invoiceDetails.forEach(detail => {
-            if (yPos > pageHeight - margin - 25) {
-              pdf.addPage();
-              yPos = margin;
+          // Konvertēt HTML uz PDF
+          await pdf.html(container, {
+            x: 0,
+            y: 0,
+            width: 210,
+            windowHeight: container.scrollHeight,
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              backgroundColor: '#ffffff'
             }
-
-            let quantity = '';
-            let unitPrice = '';
-
-            if (detail.type === 'water') {
-              quantity = detail.consumption_m3 + ' m3';
-              unitPrice = 'EUR' + detail.price_per_m3.toFixed(4);
-            } else if (detail.type === 'waste') {
-              quantity = detail.declared_persons + ' pers.';
-              unitPrice = 'EUR' + (detail.amount_without_vat / detail.declared_persons).toFixed(4);
-            } else {
-              quantity = apt.area + ' m2';
-              unitPrice = 'EUR' + (detail.amount_without_vat / apt.area).toFixed(4);
-            }
-
-            const serviceName = detail.tariff_name.substring(0, 35);
-            pdf.text(serviceName, col1, yPos);
-            pdf.text(quantity, col2, yPos, { align: 'center' });
-            pdf.text(unitPrice, col3, yPos, { align: 'right' });
-            pdf.text('EUR' + detail.amount_without_vat.toFixed(2), col4, yPos, { align: 'right' });
-
-            yPos += 4;
           });
 
-          // Līnija
-          pdf.line(margin, yPos, pageWidth - margin, yPos);
-          yPos += 4;
+          // Notīrīt konteineri
+          document.body.removeChild(container);
 
-          // ===== KOPSUMMAS =====
-          pdf.setFontSize(10);
-          pdf.setFont('courier', 'normal');
-
-          const amountWithoutVat = invoice.amount_without_vat || 0;
-          const vatAmount = invoice.vat_amount || 0;
-          const amountWithVat = invoice.amount_with_vat || invoice.amount;
-
-          pdf.text('Summa bez PVN:', col1, yPos);
-          pdf.text('EUR' + amountWithoutVat.toFixed(2), col4, yPos, { align: 'right' });
-          yPos += 4;
-
-          if (vatAmount > 0) {
-            pdf.text('PVN kopa:', col1, yPos);
-            pdf.text('EUR' + vatAmount.toFixed(2), col4, yPos, { align: 'right' });
-            yPos += 4;
-          }
-
-          // Līnija
-          pdf.line(margin, yPos, pageWidth - margin, yPos);
-          yPos += 4;
-
-          // Galīgā summa
-          pdf.setFontSize(12);
-          pdf.setFont('courier', 'bold');
-          pdf.text('KOP A APMAKAS AI (EUR):', col1, yPos);
-          pdf.setTextColor(0, 51, 153);
-          pdf.text('EUR' + amountWithVat.toFixed(2), col4, yPos, { align: 'right' });
-          pdf.setTextColor(0, 0, 0);
-
-          yPos += 8;
-
-          // ===== MAKSĀJUMA REKVIZĪTI =====
-          pdf.setFontSize(10);
-          pdf.setFont('courier', 'bold');
-          pdf.text('M A K S J U M A R E K V I Z I T I', margin, yPos);
-          yPos += 5;
-
-          pdf.setFontSize(9);
-          pdf.setFont('courier', 'normal');
-
-          const paymentDetails = [
-            { label: 'NOSAUKUMS:', value: settings.building_name || 'BIEDRI BA "BARONA 78"' },
-            { label: 'REG. KODS:', value: settings.building_code || '40008325768' },
-            { label: 'ADRESE:', value: settings.building_address || 'Kr. Barona iela 78-14, Riga, LV-1001' },
-            { label: 'BANKA:', value: settings.payment_bank || 'Habib Bank' },
-            { label: 'IBAN:', value: settings.payment_iban || 'LV62HABA0551064112797' },
-            { label: 'E-PASTS:', value: settings.payment_email || 'info@barona78.lv' },
-            { label: 'TALRUNIS:', value: settings.payment_phone || '+371 67800000' }
-          ];
-
-          paymentDetails.forEach(detail => {
-            if (yPos > pageHeight - margin - 5) {
-              pdf.addPage();
-              yPos = margin;
-            }
-            pdf.setFont('courier', 'bold');
-            pdf.text(detail.label, margin, yPos);
-            pdf.setFont('courier', 'normal');
-            pdf.text(detail.value, margin + 35, yPos, { maxWidth: pageWidth - margin - 40 });
-            yPos += 4;
-          });
-
+          // Saglabāt PDF
           pdf.save('recins_' + invoice.invoice_number + '.pdf');
-          showToast('EUR PDF lejupladets: recins_' + invoice.invoice_number + '.pdf');
+          showToast('✓ PDF lejuplādēts: recins_' + invoice.invoice_number + '.pdf');
 
         } catch (error) {
-          console.error('PDF generesanas kludas:', error);
-          showToast('Kludas PDF generesana: ' + error.message, 'error');
+          console.error('PDF ģenerēšanas kļūda:', error);
+          showToast('Kļūda PDF ģenerēšanā: ' + error.message, 'error');
         }
 
       }).catch(err => {
-        console.error('Biblioteku iladesis kludas:', err);
-        showToast('Kludas iladet bibliotek', 'error');
+        console.error('Bibliotēku ielādes kļūda:', err);
+        showToast('Kļūda ielādējot bibliotēkas', 'error');
       });
 
     } catch (error) {
