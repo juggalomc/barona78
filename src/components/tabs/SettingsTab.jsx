@@ -10,14 +10,14 @@ export function SettingsTab({
 }) {
   const [editingField, setEditingField] = useState(null);
 
-  const handleSave = async (key) => {
-    const value = editForm[key];
+  const handleSave = async (prop) => {
+    const value = editForm[prop];
     if (!value || value.trim() === '') {
       showToast('Lauks nedrīkst būt tukšs', 'error');
       return;
     }
 
-    const success = await updateSetting(key, value);
+    const success = await updateSetting(prop, value);
     if (success) {
       setEditingField(null);
       showToast('✓ Iestatījums saglabāts');
@@ -26,28 +26,32 @@ export function SettingsTab({
     }
   };
 
-  const SettingField = ({ label, key, icon }) => (
+  const SettingField = ({ label, prop, icon }) => (
     <div style={{...styles.listItem, marginBottom: '12px'}}>
       <div style={{flex: 1}}>
         <div style={{fontSize: '14px', fontWeight: '600', marginBottom: '4px'}}>
           {icon} {label}
         </div>
-        {editingField === key ? (
+        {editingField === prop ? (
           <div style={{display: 'flex', gap: '8px'}}>
             <input
               type="text"
-              value={editForm[key] || ''}
-              onChange={(e) => setEditForm({...editForm, [key]: e.target.value})}
+              value={editForm[prop] !== undefined ? editForm[prop] : (settings[prop] || '')}
+              onChange={(e) => setEditForm({...editForm, [prop]: e.target.value})}
               style={{...styles.input, flex: 1}}
+              placeholder={settings[prop] || ''}
             />
             <button
-              onClick={() => handleSave(key)}
+              onClick={() => handleSave(prop)}
               style={{padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}
             >
               ✓
             </button>
             <button
-              onClick={() => setEditingField(null)}
+              onClick={() => {
+                setEditingField(null);
+                setEditForm({...editForm, [prop]: settings[prop] || ''});
+              }}
               style={{padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '4px', cursor: 'pointer'}}
             >
               ✕
@@ -55,9 +59,12 @@ export function SettingsTab({
           </div>
         ) : (
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <div style={{fontSize: '13px', color: '#666', wordBreak: 'break-word'}}>{settings[key]}</div>
+            <div style={{fontSize: '13px', color: '#666', wordBreak: 'break-word'}}>{settings[prop] || '(tukšs)'}</div>
             <button
-              onClick={() => setEditingField(key)}
+              onClick={() => {
+                setEditingField(prop);
+                setEditForm({...editForm, [prop]: settings[prop] || ''});
+              }}
               style={{padding: '6px 12px', background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500', color: '#0369a1'}}
             >
               ✏️ Rediģēt
@@ -73,9 +80,9 @@ export function SettingsTab({
       {/* ĒKAS INFORMĀCIJA */}
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>🏢 Ēkas Informācija</h2>
-        <SettingField label="Ēkas Nosaukums" key="building_name" icon="🏠" />
-        <SettingField label="Reģistrācijas Kods" key="building_code" icon="📋" />
-        <SettingField label="Adrese" key="building_address" icon="📍" />
+        <SettingField label="Ēkas Nosaukums" prop="building_name" icon="🏠" />
+        <SettingField label="Reģistrācijas Kods" prop="building_code" icon="📋" />
+        <SettingField label="Adrese" prop="building_address" icon="📍" />
       </div>
 
       {/* MAKSĀJUMA INFORMĀCIJA */}
@@ -84,10 +91,46 @@ export function SettingsTab({
         <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
           <strong>ℹ️ Šī informācija tiks parādīta rēķinu apakšā</strong>
         </div>
-        <SettingField label="IBAN" key="payment_iban" icon="🏦" />
-        <SettingField label="Banka" key="payment_bank" icon="🏛️" />
-        <SettingField label="E-pasts" key="payment_email" icon="📧" />
-        <SettingField label="Tālrunis" key="payment_phone" icon="☎️" />
+        <SettingField label="IBAN" prop="payment_iban" icon="🏦" />
+        <SettingField label="Banka" prop="payment_bank" icon="🏛️" />
+        <SettingField label="E-pasts" prop="payment_email" icon="📧" />
+        <SettingField label="Tālrunis" prop="payment_phone" icon="☎️" />
+      </div>
+
+      {/* GMAIL INTEGRACIJA */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>📧 Gmail - E-pastu Nosūtīšana</h2>
+        <div style={{fontSize: '12px', lineHeight: '1.8', color: '#666', marginBottom: '15px'}}>
+          <p><strong>Lai sūtītu rēķinus pa e-pastu:</strong></p>
+          <p>1. Nospiediet "Pierakstīties ar Google"</p>
+          <p>2. Atļaujiet piekļuvi Gmail kontam</p>
+          <p>3. Rēķini tiks sūtīti uz dzīvokļu e-pasta adresēm</p>
+        </div>
+        <button
+          onClick={() => {
+            // Google OAuth flow
+            const clientId = 'YOUR_GOOGLE_CLIENT_ID'; // Jāpievienō
+            const redirectUri = window.location.origin + '/oauth-callback';
+            const scope = 'https://www.googleapis.com/auth/gmail.send';
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+            window.location.href = authUrl;
+          }}
+          style={{
+            padding: '12px 24px',
+            background: '#4285f4',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}
+        >
+          🔐 Pierakstīties ar Google
+        </button>
+        <div style={{marginTop: '12px', fontSize: '12px', color: '#0369a1', background: '#f0f9ff', padding: '8px', borderRadius: '4px'}}>
+          ℹ️ Šobrīd nepieciešams manuāli konfigurēt Google OAuth Client ID
+        </div>
       </div>
 
       {/* PĀRBAUDE */}

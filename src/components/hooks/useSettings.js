@@ -20,15 +20,21 @@ export function useSettings(supabase) {
         .from('settings')
         .select('setting_key, setting_value');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Kļūda ielādējot iestatījumus:', error);
+        return;
+      }
 
       if (data && data.length > 0) {
         const settingsObj = {};
         data.forEach(item => {
           settingsObj[item.setting_key] = item.setting_value;
         });
-        setSettings(prev => ({ ...prev, ...settingsObj }));
+        console.log('✓ Iestatījumi ielādēti:', settingsObj);
+        setSettings(settingsObj);
         setEditForm(settingsObj);
+      } else {
+        console.log('ℹ️ Nav iestatījumu datubāzē');
       }
     } catch (error) {
       console.error('Kļūda ielādējot iestatījumus:', error);
