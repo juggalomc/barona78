@@ -7,7 +7,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
   const [invoiceToDate, setInvoiceToDate] = useState('');
   const [expandedInvoiceMonth, setExpandedInvoiceMonth] = useState(null);
   const [debtNoteForm, setDebtNoteForm] = useState({ invoiceId: null, note: '' });
-  const [overpaymentForm, setOverpaymentForm] = useState({ apartmentId: null, amount: '', month: '' });
+  const [overpaymentForm, setOverpaymentForm] = useState({ invoiceId: '', amount: '' });
 
   const calculatePreviousDebt = (apartmentId, currentPeriod) => {
     const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
@@ -31,24 +31,22 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       : `${currentYear}-${String(currentMonth - 1).padStart(2, '0')}`;
     
     try {
-      const { data, error } = await supabase
-        .from('apartment_overpayments')
-        .select('amount')
-        .eq('apartment_id', apartmentId)
-        .eq('period', previousMonth);
+      // Meklē iepriekšējā mēneša rēķinu šim dzīvoklim
+      const previousInvoice = invoices.find(inv => 
+        inv.apartment_id === apartmentId && 
+        inv.period === previousMonth
+      );
       
-      if (error) {
-        console.error('Pārmaksas ielādes kļūda:', error);
+      if (!previousInvoice) {
+        console.log(`ℹ️ Nav iepriekšējā mēneša rēķina dzīv. ${apartments.find(a => a.id === apartmentId)?.number} par ${previousMonth}`);
         return 0;
       }
 
-      if (!data || data.length === 0) {
-        console.log(`ℹ️ Nav pārmaksas dzīv. ${apartments.find(a => a.id === apartmentId)?.number} par ${previousMonth}`);
-        return 0;
+      // Ja rēķinā ir overpayment_amount, tā ir pārmaksa
+      const overpay = parseFloat(previousInvoice.overpayment_amount) || 0;
+      if (overpay > 0) {
+        console.log(`💰 Pārmaksa dzīv. ${apartments.find(a => a.id === apartmentId)?.number} par ${previousMonth}: €${overpay}`);
       }
-
-      const overpay = parseFloat(data[0].amount) || 0;
-      console.log(`💰 Pārmaksa dzīv. ${apartments.find(a => a.id === apartmentId)?.number} par ${previousMonth}: €${overpay}`);
       return overpay;
     } catch (err) {
       console.error('Kļūda aprēķinot pārmaksu:', err);
@@ -74,8 +72,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
   const saveOverpayment = async (e) => {
     e.preventDefault();
-    if (!overpaymentForm.apartmentId || !overpaymentForm.amount || !overpaymentForm.month) {
-      showToast('Aizpildiet visus laukus', 'error');
+    if (!overpaymentForm.invoiceId || !overpaymentForm.amount) {
+      showToast('Izvēlieties rēķinu un ievadiet summu', 'error');
       return;
     }
 
@@ -86,32 +84,67 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         return;
       }
 
-      const { data: existing } = await supabase
-        .from('apartment_overpayments')
-        .select('id')
-        .eq('apartment_id', overpaymentForm.apartmentId)
-        .eq('period', overpaymentForm.month);
-
-      if (existing && existing.length > 0) {
-        await supabase
-          .from('apartment_overpayments')
-          .update({ amount: amount })
-          .eq('id', existing[0].id);
-        console.log(`✓ Pārmaksa atjaunināta: ${amount}`);
-      } else {
-        await supabase
-          .from('apartment_overpayments')
-          .insert([{
-            apartment_id: overpaymentForm.apartmentId,
-            period: overpaymentForm.month,
-            amount: amount
-          }]);
-        console.log(`✓ Pārmaksa saglabāta: ${amount}`);
+      const invoice = invoices.find(inv => inv.id === overpaymentForm.invoiceId);
+      if (!invoice) {
+        showToast('Rēķins nav atrasts', 'error');
+        return;
       }
 
-      setOverpaymentForm({ apartmentId: null, amount: '', month: '' });
+      // Parsē esošos rēķina detaļus
+      let invoiceDetails = [];
+      if (invoice.invoice_details) {
+        try {
+          invoiceDetails = JSON.parse(invoice.invoice_details);
+        } catch (e) {
+          invoiceDetails = [];
+        }
+      }
+
+      // Noņem vecāko pārmaksu detaļu, ja tāda pastāv
+      invoiceDetails = invoiceDetails.filter(d => d.type !== 'overpayment');
+
+      // Pievieno jauno pārmaksu detaļu
+      invoiceDetails.push({
+        tariff_id: null,
+        tariff_name: '💰 Pārmaksa',
+        amount_without_vat: -amount,
+        vat_rate: 0,
+        vat_amount: 0,
+        type: 'overpayment'
+      });
+
+      // Pārrēķina kopējo summu
+      let newAmountWithoutVat = 0;
+      let newVatAmount = 0;
+      
+      invoiceDetails.forEach(detail => {
+        if (detail.type !== 'overpayment') {
+          newAmountWithoutVat += parseFloat(detail.amount_without_vat) || 0;
+          newVatAmount += parseFloat(detail.vat_amount) || 0;
+        } else {
+          newAmountWithoutVat -= amount;
+        }
+      });
+
+      const newAmountWithVat = Math.round((newAmountWithoutVat + newVatAmount) * 100) / 100;
+
+      // Atjaunina rēķinu
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          amount: newAmountWithVat,
+          amount_without_vat: newAmountWithoutVat,
+          amount_with_vat: newAmountWithVat,
+          overpayment_amount: amount,
+          invoice_details: JSON.stringify(invoiceDetails)
+        })
+        .eq('id', overpaymentForm.invoiceId);
+
+      if (error) throw error;
+
+      setOverpaymentForm({ invoiceId: '', amount: '' });
       fetchData();
-      showToast('✓ Pārmaksa saglabāta');
+      showToast('✓ Pārmaksa saglabāta uz rēķina');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -844,6 +877,177 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
   };
 
+  const deleteInvoices = async (ids) => {
+    if (!window.confirm(`Izdzēst ${ids.length} rēķinus?`)) return;
+    try {
+      for (const id of ids) {
+        await supabase.from('invoices').delete().eq('id', id);
+      }
+      fetchData();
+      showToast(`✓ Izdzēsti ${ids.length} rēķini`);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const regenerateInvoices = async (ids) => {
+    if (!window.confirm(`Reģenerēt ${ids.length} rēķinus?`)) return;
+    try {
+      let regeneratedCount = 0;
+      for (const id of ids) {
+        const invoice = invoices.find(i => i.id === id);
+        if (!invoice) continue;
+
+        const apt = apartments.find(a => a.id === invoice.apartment_id);
+        const periodTariffs = tariffs.filter(t => t.period === invoice.period && t.include_in_invoice === true);
+        
+        if (periodTariffs.length === 0) {
+          console.warn(`Nav atzīmētu tarifū periodam ${invoice.period}`);
+          continue;
+        }
+
+        // Izdzēst veco rēķinu
+        await supabase.from('invoices').delete().eq('id', invoice.id);
+
+        let totalAmountWithoutVat = 0;
+        let totalVatAmount = 0;
+        let invoiceDetails = [];
+        const [year, month] = invoice.period.split('-');
+
+        // Tarifi
+        for (const tariff of periodTariffs) {
+          const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
+          const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
+          const vatRate = parseFloat(tariff.vat_rate) || 0;
+          const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
+
+          totalAmountWithoutVat += amountWithoutVat;
+          totalVatAmount += vatAmount;
+
+          invoiceDetails.push({
+            tariff_id: tariff.id,
+            tariff_name: tariff.name,
+            amount_without_vat: amountWithoutVat,
+            vat_rate: vatRate,
+            vat_amount: vatAmount,
+            type: 'tariff'
+          });
+        }
+
+        // Ūdens
+        const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === invoice.period);
+        const waterTariff = waterTariffs.find(w => w.period === invoice.period);
+
+        if (waterReading && waterTariff && waterTariff.include_in_invoice !== false) {
+          const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
+          const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
+          const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
+          const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
+          const waterVatAmount = Math.round(waterAmountWithoutVat * waterVatRate / 100 * 100) / 100;
+
+          totalAmountWithoutVat += waterAmountWithoutVat;
+          totalVatAmount += waterVatAmount;
+
+          invoiceDetails.push({
+            tariff_id: waterTariff.id,
+            tariff_name: `Ūdens (${waterConsumptionM3} m³)`,
+            consumption_m3: waterConsumptionM3,
+            price_per_m3: waterPricePerM3,
+            amount_without_vat: waterAmountWithoutVat,
+            vat_rate: waterVatRate,
+            vat_amount: waterVatAmount,
+            type: 'water'
+          });
+        }
+
+        // Atkritumi
+        const wasteTariff = wasteTariffs.find(w => w.period === invoice.period);
+        if (wasteTariff && wasteTariff.include_in_invoice !== false) {
+          const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
+          if (totalDeclaredPersons > 0) {
+            const declaredPersonsInApt = parseInt(apt.declared_persons) || 1;
+            const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
+            const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
+            const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
+
+            totalAmountWithoutVat += wasteAmountWithoutVat;
+            totalVatAmount += wasteVatAmount;
+
+            invoiceDetails.push({
+              tariff_id: wasteTariff.id,
+              tariff_name: `♻️ Atkritumu izvešana (${declaredPersonsInApt} pers.)`,
+              declared_persons: declaredPersonsInApt,
+              total_persons: totalDeclaredPersons,
+              amount_without_vat: wasteAmountWithoutVat,
+              vat_rate: wasteVatRate,
+              vat_amount: wasteVatAmount,
+              type: 'waste'
+            });
+          }
+        }
+
+        // Parāds
+        const previousDebt = calculatePreviousDebt(apt.id, invoice.period);
+        if (previousDebt > 0) {
+          totalAmountWithoutVat += previousDebt;
+          invoiceDetails.push({
+            tariff_id: null,
+            tariff_name: '⚠️ Parāds no iepriekšējiem mēnešiem',
+            amount_without_vat: previousDebt,
+            vat_rate: 0,
+            vat_amount: 0,
+            type: 'debt'
+          });
+        }
+
+        // Pārmaksa
+        const overpayment = await calculateOverpayment(apt.id, invoice.period);
+        if (overpayment > 0) {
+          totalAmountWithoutVat -= overpayment;
+          invoiceDetails.push({
+            tariff_id: null,
+            tariff_name: '💰 Pārmaksa no iepriekšējā mēneša',
+            amount_without_vat: -overpayment,
+            vat_rate: 0,
+            vat_amount: 0,
+            type: 'overpayment'
+          });
+        }
+
+        const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
+        const timestamp = Math.floor(Date.now() / 1000);
+        const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
+        const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+
+        const { error } = await supabase.from('invoices').insert([{
+          apartment_id: apt.id,
+          tariff_id: periodTariffs[0].id,
+          invoice_number: invoiceNumber,
+          period: invoice.period,
+          amount: totalAmountWithVat,
+          amount_without_vat: totalAmountWithoutVat,
+          amount_with_vat: totalAmountWithVat,
+          vat_amount: totalVatAmount,
+          vat_rate: 0,
+          due_date: dueDate,
+          date_from: invoice.date_from,
+          date_to: invoice.date_to,
+          paid: false,
+          invoice_details: JSON.stringify(invoiceDetails),
+          previous_debt_amount: previousDebt,
+          previous_debt_note: invoice.previous_debt_note || '',
+          overpayment_amount: overpayment
+        }]);
+
+        if (!error) regeneratedCount++;
+      }
+      fetchData();
+      showToast(`✓ Reģenerēti ${regeneratedCount} rēķini`);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
   const downloadPDF = (invoice) => {
     const apt = apartments.find(a => a.id === invoice.apartment_id);
     const htmlContent = generateInvoicePdfHtml(invoice, apt);
@@ -895,8 +1099,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     generateInvoiceForApartment,
     sendInvoicesByEmail,
     regenerateInvoice,
+    regenerateInvoices,
     toggleInvoicePaid,
     deleteInvoice,
+    deleteInvoices,
     downloadPDF,
     exportInvoicesToCSV
   };
