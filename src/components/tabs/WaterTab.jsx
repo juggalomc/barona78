@@ -24,8 +24,15 @@ export function WaterTab({
 }) {
   const [editingReadingId, setEditingReadingId] = React.useState(null);
   const [editValues, setEditValues] = React.useState({});
+  const [selectedPeriod, setSelectedPeriod] = React.useState(tariffPeriod);
+  const [adminEditMonth, setAdminEditMonth] = React.useState(null);
+  const [adminEditApt, setAdminEditApt] = React.useState(null);
+
+  // Filtrēt rādījumus pēc perioda
+  const periodReadings = meterReadings.filter(mr => mr.period === selectedPeriod);
+
   return (
-    <div style={styles.twoCol}>
+    <div>
       {/* SKAITĪTĀJU IESPĒJOŠANA */}
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>⚙️ Skaitītāju Iespējošana</h2>
@@ -43,7 +50,7 @@ export function WaterTab({
 
       {/* AUKSTAIS ŪDENS TARIFS */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}>❄️ Aukstais ūdens</h2>
+        <h2 style={styles.cardTitle}>❄️ Aukstais ūdens - Tarifs</h2>
         <form onSubmit={saveWaterTariff} style={styles.form}>
           <div>
             <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
@@ -70,7 +77,7 @@ export function WaterTab({
 
       {/* SILTAIS ŪDENS TARIFS */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}>🔥 Siltais ūdens</h2>
+        <h2 style={styles.cardTitle}>🔥 Siltais ūdens - Tarifs</h2>
         <form onSubmit={saveHotWaterTariff} style={styles.form}>
           <div>
             <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
@@ -154,163 +161,264 @@ export function WaterTab({
         </div>
       </div>
 
-      {/* AUKSTAIS ŪDENS PATĒRIŅŠ */}
-      <div style={styles.card}>
-        <h2 style={styles.cardTitle}>❄️ Skaitītāja Rādījumi - {new Date(tariffPeriod + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</h2>
-        <div style={styles.list}>
-          {apartments.map(apt => {
-            const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === tariffPeriod);
-            const waterTariff = waterTariffs.find(w => w.period === tariffPeriod);
-            const consumptionValue = waterReading?.reading_value || '';
-            const amount = consumptionValue ? parseFloat(consumptionValue) * parseFloat(waterTariff?.price_per_m3 || 0) : 0;
-            const vatAmount = amount * parseFloat(waterTariff?.vat_rate || 0) / 100;
-            const totalAmount = amount + vatAmount;
-
-            return (
-              <div key={apt.id} style={{...styles.listItem, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap'}}>
-                <div style={{marginBottom: '8px', flex: '0 0 100%'}}>
-                  <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
-                  <div style={{fontSize: '12px', color: '#666'}}>€{totalAmount.toFixed(2)}</div>
-                </div>
-                <div style={{display: 'flex', gap: '8px', alignItems: 'center', flex: '1 1 auto'}}>
-                  <input type="number" step="0.01" placeholder="Skaitītāja rādījums" value={consumptionValue} onChange={(e) => saveWaterMeterReading(apt.id, e.target.value, tariffPeriod)} style={{...styles.input, flex: 1, padding: '8px'}} />
-                  <span style={{fontSize: '12px', color: '#666', minWidth: '50px'}}>m³</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* SILTAIS ŪDENS SKAITĪTĀJA RĀDĪJUMI */}
-      <div style={styles.card}>
-        <h2 style={styles.cardTitle}>🔥 Skaitītāja Rādījumi - {new Date(tariffPeriod + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</h2>
-        <div style={styles.list}>
-          {apartments.map(apt => {
-            const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === tariffPeriod);
-            const hotWaterTariff = hotWaterTariffs.find(w => w.period === tariffPeriod);
-            const consumptionValue = hotWaterReading?.reading_value || '';
-            const amount = consumptionValue ? parseFloat(consumptionValue) * parseFloat(hotWaterTariff?.price_per_m3 || 0) : 0;
-            const vatAmount = amount * parseFloat(hotWaterTariff?.vat_rate || 0) / 100;
-            const totalAmount = amount + vatAmount;
-
-            return (
-              <div key={apt.id + '-hot'} style={{...styles.listItem, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap'}}>
-                <div style={{marginBottom: '8px', flex: '0 0 100%'}}>
-                  <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
-                  <div style={{fontSize: '12px', color: '#666'}}>€{totalAmount.toFixed(2)}</div>
-                </div>
-                <div style={{display: 'flex', gap: '8px', alignItems: 'center', flex: '1 1 auto'}}>
-                  <input type="number" step="0.01" placeholder="Skaitītāja rādījums" value={consumptionValue} onChange={(e) => saveHotWaterMeterReading(apt.id, e.target.value, tariffPeriod)} style={{...styles.input, flex: 1, padding: '8px'}} />
-                  <span style={{fontSize: '12px', color: '#666', minWidth: '50px'}}>m³</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* SKAITĪTĀJA RĀDĪJUMU PĀRVALDĪŠANA */}
+      {/* ===== SKAITĪTĀJU PĀRVALDĪŠANA ===== */}
       <div style={{...styles.card, gridColumn: '1 / -1'}}>
-        <h2 style={styles.cardTitle}>⚙️ Skaitītāja Rādījumu Pārvaldīšana</h2>
-        <div style={{overflowX: 'auto'}}>
-          <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}}>
-            <thead>
-              <tr style={{background: '#f0f4f8', borderBottom: '2px solid #cbd5e1'}}>
-                <th style={{padding: '10px', textAlign: 'left', fontWeight: '600'}}>Dzīvojamā Vienība</th>
-                <th style={{padding: '10px', textAlign: 'left', fontWeight: '600'}}>Tips</th>
-                <th style={{padding: '10px', textAlign: 'left', fontWeight: '600'}}>Periods</th>
-                <th style={{padding: '10px', textAlign: 'center', fontWeight: '600'}}>Rādījums (m³)</th>
-                <th style={{padding: '10px', textAlign: 'center', fontWeight: '600'}}>Darbības</th>
-              </tr>
-            </thead>
-            <tbody>
-              {meterReadings.filter(mr => mr.meter_type === 'water' || mr.meter_type === 'hot_water').length === 0 ? (
-                <tr>
-                  <td colSpan="5" style={{padding: '20px', textAlign: 'center', color: '#999'}}>
-                    Nav reģistrētu skaitītāja rādījumu
-                  </td>
-                </tr>
-              ) : (
-                meterReadings.filter(mr => mr.meter_type === 'water' || mr.meter_type === 'hot_water').map((reading) => {
-                  const apartment = apartments.find(a => a.id === reading.apartment_id);
-                  const meterTypeLabel = reading.meter_type === 'water' ? '❄️ Aukstais' : '🔥 Siltais';
-                  const isEditing = editingReadingId === reading.id;
-                  const editValue = editValues[reading.id] || reading.reading_value;
+        <h2 style={styles.cardTitle}>📊 Skaitītāju Rādījumi - Pārvaldīšana</h2>
+        
+        <div style={{display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'flex-end', marginBottom: '20px'}}>
+          <div>
+            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Izvēlēties mēnesi:</label>
+            <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} style={styles.input}>
+              {uniqueTariffPeriods.map(period => (
+                <option key={period} value={period}>
+                  {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{fontSize: '12px', color: '#0369a1', background: '#f0f9ff', padding: '8px 12px', borderRadius: '4px', fontWeight: '500'}}>
+            {periodReadings.length} rādījumi
+          </div>
+        </div>
 
-                  return (
-                    <tr key={reading.id} style={{borderBottom: '1px solid #e2e8f0', background: reading.id % 2 === 0 ? '#fafbfc' : '#fff'}}>
-                      <td style={{padding: '10px'}}>
-                        <strong>Dzīv. {apartment?.number || 'N/A'}</strong>
-                        {apartment && <div style={{fontSize: '11px', color: '#666'}}>{apartment.owner_name} {apartment.owner_surname}</div>}
-                      </td>
-                      <td style={{padding: '10px'}}>
-                        <span style={{fontSize: '12px', fontWeight: '500'}}>{meterTypeLabel}</span>
-                      </td>
-                      <td style={{padding: '10px'}}>
-                        {new Date(reading.period + '-01').toLocaleDateString('lv-LV', {month: 'short', year: 'numeric'})}
-                      </td>
-                      <td style={{padding: '10px', textAlign: 'center'}}>
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={editValue}
-                            onChange={(e) => setEditValues({...editValues, [reading.id]: e.target.value})}
-                            style={{width: '80px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center'}}
-                          />
-                        ) : (
-                          <strong>{reading.reading_value}</strong>
-                        )}
-                      </td>
-                      <td style={{padding: '10px', textAlign: 'center'}}>
-                        {isEditing ? (
-                          <>
-                            <button
-                              onClick={() => {
-                                editMeterReading(reading.id, editValue);
-                                setEditingReadingId(null);
-                              }}
-                              style={{...styles.btn, background: '#10b981', padding: '4px 8px', fontSize: '11px', marginRight: '4px'}}
-                            >
-                              ✓ Saglabāt
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingReadingId(null);
-                                setEditValues({...editValues, [reading.id]: undefined});
-                              }}
-                              style={{...styles.btn, background: '#6b7280', padding: '4px 8px', fontSize: '11px'}}
-                            >
-                              ✕ Atcelt
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => {
-                                setEditingReadingId(reading.id);
-                                setEditValues({...editValues, [reading.id]: reading.reading_value});
-                              }}
-                              style={{...styles.btn, background: '#0ea5e9', padding: '4px 8px', fontSize: '11px', marginRight: '4px'}}
-                            >
-                              ✎ Labot
-                            </button>
-                            <button
-                              onClick={() => deleteMeterReading(reading.id)}
-                              style={{...styles.btn, background: '#ef4444', padding: '4px 8px', fontSize: '11px'}}
-                            >
-                              🗑️ Dzēst
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+        {/* AUKSTAIS ŪDENS */}
+        <div style={{marginBottom: '30px'}}>
+          <h3 style={{fontSize: '16px', fontWeight: '600', color: '#003399', marginBottom: '15px', paddingBottom: '10px', borderBottom: '2px solid #e2e8f0'}}>❄️ Aukstais ūdens</h3>
+          
+          <div style={{overflowX: 'auto'}}>
+            <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}}>
+              <thead>
+                <tr style={{background: '#f0f4f8', borderBottom: '2px solid #cbd5e1'}}>
+                  <th style={{padding: '12px', textAlign: 'left', fontWeight: '600'}}>Dzīvoklis</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Vārds</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Iepriekšējais (m³)</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Pašreizējais (m³)</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Patēriņš (m³)</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Darbības</th>
+                </tr>
+              </thead>
+              <tbody>
+                {apartments.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{padding: '20px', textAlign: 'center', color: '#999'}}>Nav dzīvokļu</td>
+                  </tr>
+                ) : (
+                  apartments.map((apt, idx) => {
+                    const currentReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === selectedPeriod);
+                    
+                    // Aprēķināt iepriekšējo mēnesi
+                    const [year, month] = selectedPeriod.split('-');
+                    let prevMonth = parseInt(month) - 1;
+                    let prevYear = parseInt(year);
+                    if (prevMonth === 0) {
+                      prevMonth = 12;
+                      prevYear -= 1;
+                    }
+                    const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+                    const previousReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === previousPeriod);
+                    
+                    const currentValue = currentReading?.reading_value ? parseFloat(currentReading.reading_value) : 0;
+                    const previousValue = previousReading?.reading_value ? parseFloat(previousReading.reading_value) : 0;
+                    const consumption = currentValue - previousValue;
+
+                    return (
+                      <tr key={apt.id} style={{borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#fafbfc' : '#fff'}}>
+                        <td style={{padding: '12px', fontWeight: '600'}}>Dzīv. {apt.number}</td>
+                        <td style={{padding: '12px', textAlign: 'center'}}>{apt.owner_name}</td>
+                        <td style={{padding: '12px', textAlign: 'center', color: '#666'}}>
+                          {previousValue > 0 ? previousValue.toFixed(2) : '-'}
+                        </td>
+                        <td style={{padding: '12px', textAlign: 'center'}}>
+                          {adminEditApt === apt.id ? (
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editValues[apt.id] || currentValue || ''}
+                              onChange={(e) => setEditValues({...editValues, [apt.id]: e.target.value})}
+                              style={{width: '80px', padding: '6px', border: '2px solid #0ea5e9', borderRadius: '4px', textAlign: 'center'}}
+                              autoFocus
+                            />
+                          ) : (
+                            <span style={{fontWeight: '600'}}>{currentValue > 0 ? currentValue.toFixed(2) : '-'}</span>
+                          )}
+                        </td>
+                        <td style={{padding: '12px', textAlign: 'center', fontWeight: '600', color: consumption > 0 ? '#0369a1' : '#999'}}>
+                          {consumption > 0 ? consumption.toFixed(2) : '-'}
+                        </td>
+                        <td style={{padding: '12px', textAlign: 'center'}}>
+                          {adminEditApt === apt.id ? (
+                            <>
+                              <button
+                                onClick={() => {
+                                  if (editValues[apt.id] !== undefined) {
+                                    editMeterReading(currentReading?.id, editValues[apt.id]);
+                                  }
+                                  setAdminEditApt(null);
+                                  setEditValues({...editValues, [apt.id]: undefined});
+                                }}
+                                style={{...styles.btn, background: '#10b981', padding: '4px 8px', fontSize: '11px', marginRight: '4px'}}
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setAdminEditApt(null);
+                                  setEditValues({...editValues, [apt.id]: undefined});
+                                }}
+                                style={{...styles.btn, background: '#6b7280', padding: '4px 8px', fontSize: '11px'}}
+                              >
+                                ✕
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setAdminEditApt(apt.id);
+                                  setEditValues({...editValues, [apt.id]: currentValue});
+                                }}
+                                style={{...styles.btn, background: '#0ea5e9', padding: '4px 8px', fontSize: '11px', marginRight: '4px'}}
+                              >
+                                ✎
+                              </button>
+                              {currentReading && (
+                                <button
+                                  onClick={() => deleteMeterReading(currentReading.id)}
+                                  style={{...styles.btn, background: '#ef4444', padding: '4px 8px', fontSize: '11px'}}
+                                >
+                                  🗑️
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* SILTAIS ŪDENS */}
+        <div>
+          <h3 style={{fontSize: '16px', fontWeight: '600', color: '#d97706', marginBottom: '15px', paddingBottom: '10px', borderBottom: '2px solid #e2e8f0'}}>🔥 Siltais ūdens</h3>
+          
+          <div style={{overflowX: 'auto'}}>
+            <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}}>
+              <thead>
+                <tr style={{background: '#f0f4f8', borderBottom: '2px solid #cbd5e1'}}>
+                  <th style={{padding: '12px', textAlign: 'left', fontWeight: '600'}}>Dzīvoklis</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Vārds</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Iepriekšējais (m³)</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Pašreizējais (m³)</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Patēriņš (m³)</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Darbības</th>
+                </tr>
+              </thead>
+              <tbody>
+                {apartments.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{padding: '20px', textAlign: 'center', color: '#999'}}>Nav dzīvokļu</td>
+                  </tr>
+                ) : (
+                  apartments.map((apt, idx) => {
+                    const currentReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === selectedPeriod);
+                    
+                    // Aprēķināt iepriekšējo mēnesi
+                    const [year, month] = selectedPeriod.split('-');
+                    let prevMonth = parseInt(month) - 1;
+                    let prevYear = parseInt(year);
+                    if (prevMonth === 0) {
+                      prevMonth = 12;
+                      prevYear -= 1;
+                    }
+                    const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+                    const previousReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === previousPeriod);
+                    
+                    const currentValue = currentReading?.reading_value ? parseFloat(currentReading.reading_value) : 0;
+                    const previousValue = previousReading?.reading_value ? parseFloat(previousReading.reading_value) : 0;
+                    const consumption = currentValue - previousValue;
+
+                    return (
+                      <tr key={apt.id + '-hot'} style={{borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#fafbfc' : '#fff'}}>
+                        <td style={{padding: '12px', fontWeight: '600'}}>Dzīv. {apt.number}</td>
+                        <td style={{padding: '12px', textAlign: 'center'}}>{apt.owner_name}</td>
+                        <td style={{padding: '12px', textAlign: 'center', color: '#666'}}>
+                          {previousValue > 0 ? previousValue.toFixed(2) : '-'}
+                        </td>
+                        <td style={{padding: '12px', textAlign: 'center'}}>
+                          {adminEditApt === apt.id + '-hot' ? (
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editValues[apt.id + '-hot'] || currentValue || ''}
+                              onChange={(e) => setEditValues({...editValues, [apt.id + '-hot']: e.target.value})}
+                              style={{width: '80px', padding: '6px', border: '2px solid #0ea5e9', borderRadius: '4px', textAlign: 'center'}}
+                              autoFocus
+                            />
+                          ) : (
+                            <span style={{fontWeight: '600'}}>{currentValue > 0 ? currentValue.toFixed(2) : '-'}</span>
+                          )}
+                        </td>
+                        <td style={{padding: '12px', textAlign: 'center', fontWeight: '600', color: consumption > 0 ? '#d97706' : '#999'}}>
+                          {consumption > 0 ? consumption.toFixed(2) : '-'}
+                        </td>
+                        <td style={{padding: '12px', textAlign: 'center'}}>
+                          {adminEditApt === apt.id + '-hot' ? (
+                            <>
+                              <button
+                                onClick={() => {
+                                  if (editValues[apt.id + '-hot'] !== undefined) {
+                                    editMeterReading(currentReading?.id, editValues[apt.id + '-hot']);
+                                  }
+                                  setAdminEditApt(null);
+                                  setEditValues({...editValues, [apt.id + '-hot']: undefined});
+                                }}
+                                style={{...styles.btn, background: '#10b981', padding: '4px 8px', fontSize: '11px', marginRight: '4px'}}
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setAdminEditApt(null);
+                                  setEditValues({...editValues, [apt.id + '-hot']: undefined});
+                                }}
+                                style={{...styles.btn, background: '#6b7280', padding: '4px 8px', fontSize: '11px'}}
+                              >
+                                ✕
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setAdminEditApt(apt.id + '-hot');
+                                  setEditValues({...editValues, [apt.id + '-hot']: currentValue});
+                                }}
+                                style={{...styles.btn, background: '#f59e0b', padding: '4px 8px', fontSize: '11px', marginRight: '4px'}}
+                              >
+                                ✎
+                              </button>
+                              {currentReading && (
+                                <button
+                                  onClick={() => deleteMeterReading(currentReading.id)}
+                                  style={{...styles.btn, background: '#ef4444', padding: '4px 8px', fontSize: '11px'}}
+                                >
+                                  🗑️
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
