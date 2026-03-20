@@ -1423,8 +1423,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const pageHeight = pdf.internal.pageSize.getHeight();
           let yPos = 15;
           const leftMargin = 15;
-          const lineHeight = 5;
-          const color = { primary: '#003d7a', text: '#333' };
 
           // VIRSRAKSTS
           pdf.setFontSize(18);
