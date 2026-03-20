@@ -1476,7 +1476,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           };
 
           // Ģenerēt PDF
-          pdfMake.createPdf(docDefinition).download('recins_' + invoice.invoice_number + '.pdf');
+          window.pdfMake.createPdf(docDefinition).download('recins_' + invoice.invoice_number + '.pdf');
           showToast('✓ PDF lejuplādēts: recins_' + invoice.invoice_number + '.pdf');
 
         } catch (error) {
