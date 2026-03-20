@@ -30,7 +30,8 @@ export function InvoicesTab({
   deleteInvoices,
   regenerateInvoices,
   updateOverpayment,
-  deleteOverpayment
+  deleteOverpayment,
+  downloadMonthAsZip
 }) {
   const [selectedApartmentForGen, setSelectedApartmentForGen] = React.useState('');
   const [selectedInvoiceForEmail, setSelectedInvoiceForEmail] = React.useState('');
@@ -159,6 +160,31 @@ export function InvoicesTab({
             </button>
           </div>
         )}
+      </div>
+
+      {/* LEJUPLĀDES MĒNEŠA RĒĶINI KĀ ZIP */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>📥 Lejuplādes Mēneša Rēķinus ZIP Formātā</h2>
+        <div style={{display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'flex-end'}}>
+          <select 
+            value={batchMonth} 
+            onChange={(e) => setBatchMonth(e.target.value)} 
+            style={styles.input}
+          >
+            <option value="">-- Izvēlieties mēnesi --</option>
+            {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
+          </select>
+          <button 
+            onClick={() => downloadMonthAsZip(batchMonth)}
+            style={{padding: '10px 20px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap'}}
+          >
+            📦 ZIP Lejuplāde
+          </button>
+        </div>
+        <div style={{marginTop: '10px', fontSize: '12px', color: '#666'}}>
+          <p>✓ Visi mēneša rēķini tiks pievienoti ZIP failā PDF formātā</p>
+          <p>✓ Failu nosaukumi satur rēķina numuru un dzīvokļa numuru</p>
+        </div>
       </div>
 
       {/* RĒĶINU SARAKSTS */}

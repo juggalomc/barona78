@@ -34,6 +34,8 @@ export function ApartmentsTab({
           <div style={styles.formRow}>
             <input type="number" placeholder="Deklarēto personu skaits" min="1" value={apartmentForm.declared_persons} onChange={(e) => setApartmentForm({...apartmentForm, declared_persons: e.target.value})} style={styles.input} />
           </div>
+          <input type="text" placeholder="Reģistrācijas numurs" value={apartmentForm.registration_number} onChange={(e) => setApartmentForm({...apartmentForm, registration_number: e.target.value})} style={styles.input} />
+          <input type="text" placeholder="Dzīvokļa adrese" value={apartmentForm.apartment_address} onChange={(e) => setApartmentForm({...apartmentForm, apartment_address: e.target.value})} style={styles.input} />
           <button type="submit" style={styles.btn}>Pievienot</button>
         </form>
       </div>
@@ -51,6 +53,8 @@ export function ApartmentsTab({
                   <input type="text" value={editApartmentForm.owner_name} onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="email" placeholder="E-pasts" value={editApartmentForm.email || ''} onChange={(e) => setEditApartmentForm({...editApartmentForm, email: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="number" placeholder="Deklarēto personu skaits" min="1" value={editApartmentForm.declared_persons} onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                  <input type="text" placeholder="Reģistrācijas numurs" value={editApartmentForm.registration_number || ''} onChange={(e) => setEditApartmentForm({...editApartmentForm, registration_number: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                  <input type="text" placeholder="Dzīvokļa adrese" value={editApartmentForm.apartment_address || ''} onChange={(e) => setEditApartmentForm({...editApartmentForm, apartment_address: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <div style={{display: 'flex', gap: '8px'}}>
                     <button onClick={() => saveEditApartment(apt.id)} style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}>✓ Saglabāt</button>
                     <button onClick={() => setEditingApartment(null)} style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}>Atcelt</button>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TOTAL_AREA } from '../shared/constants';
+import jsPDF from 'jspdf';
 
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
@@ -518,8 +519,15 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           <div class="divider"></div>
 
           <div style="background: #f5f5f5; padding: 20px; margin: 20px 0;">
+            <div style="font-weight: bold; margin-bottom: 10px; font-size: 13px;">SAŅĒMĒJS:</div>
             <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">Dzīvoklis Nr. ${apt.number}</div>
-            <div style="font-size: 14px;">Platība: ${apt.area} m²</div>
+            ${apt.owner_name ? `<div style="font-size: 12px;">Vārds/Nosaukums: ${apt.owner_name}</div>` : ''}
+            ${apt.owner_surname ? `<div style="font-size: 12px;">Uzvārds: ${apt.owner_surname}</div>` : ''}
+            ${apt.email ? `<div style="font-size: 12px;">E-pasts: ${apt.email}</div>` : ''}
+            ${apt.declared_persons ? `<div style="font-size: 12px;">Deklarēto personu skaits: ${apt.declared_persons}</div>` : ''}
+            ${apt.registration_number ? `<div style="font-size: 12px; margin-top: 8px; font-weight: bold;">Reģ. numurs: ${apt.registration_number}</div>` : ''}
+            ${apt.apartment_address ? `<div style="font-size: 12px;">Adrese: ${apt.apartment_address}</div>` : ''}
+            <div style="font-size: 12px; margin-top: 8px;">Platība: ${apt.area} m²</div>
           </div>
 
           <table>
@@ -1162,6 +1170,95 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     showToast(`✓ Eksportēti ${invoices.length} rēķini`);
   };
 
+  const downloadMonthAsZip = async (period) => {
+    if (!period) {
+      showToast('Izvēlieties periodu', 'error');
+      return;
+    }
+
+    try {
+      showToast('⏳ Sagatavo PDF rēķinus ZIP failā...', 'info');
+      
+      // Dinamiski ielodē jszip no CDN
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      
+      script.onload = async () => {
+        const JSZip = window.JSZip;
+        const zip = new JSZip();
+        
+        const monthInvoices = invoices.filter(inv => inv.period === period);
+        
+        if (monthInvoices.length === 0) {
+          showToast('Nav šī perioda rēķinu', 'error');
+          return;
+        }
+
+        let processedCount = 0;
+
+        for (const invoice of monthInvoices) {
+          const apt = apartments.find(a => a.id === invoice.apartment_id);
+          if (!apt) continue;
+
+          try {
+            const htmlContent = generateInvoicePdfHtml(invoice, apt);
+            
+            // Izveido PDF no HTML satura
+            const doc = new jsPDF({
+              orientation: 'portrait',
+              unit: 'mm',
+              format: 'a4'
+            });
+
+            // Izmanto jsPDF html() metodi, ja tā ir pieejama
+            if (doc.html) {
+              await doc.html(htmlContent, {
+                x: 0,
+                y: 0,
+                width: 210,
+                windowWidth: 1200
+              });
+            } else {
+              // Fallback: vienkārši pievienot tekstu
+              doc.text('Rēķins: ' + invoice.invoice_number, 10, 10);
+              doc.text('Dzīvoklis: ' + apt.number, 10, 20);
+              doc.text('Summa: €' + invoice.amount.toFixed(2), 10, 30);
+            }
+
+            const pdfBlob = doc.output('blob');
+            zip.file(`${invoice.invoice_number}_dziv_${apt.number}.pdf`, pdfBlob);
+            processedCount++;
+          } catch (err) {
+            console.error(`Kļūda ģenerējot PDF rēķinam ${invoice.invoice_number}:`, err);
+          }
+        }
+
+        try {
+          const zipContent = await zip.generateAsync({ type: 'blob' });
+          const zipUrl = URL.createObjectURL(zipContent);
+          const link = document.createElement('a');
+          link.href = zipUrl;
+          link.download = `recini_${period}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(zipUrl);
+          showToast(`✓ Lejuplādes ${processedCount} PDF rēķini ZIP failā`);
+        } catch (zipErr) {
+          showToast('Kļūda: ' + zipErr.message, 'error');
+        }
+      };
+      
+      script.onerror = () => {
+        showToast('Kļūda ielādes JSZip bibliotēku', 'error');
+      };
+      
+      document.head.appendChild(script);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
   return {
     invoiceMonth, setInvoiceMonth,
     invoiceFromDate, setInvoiceFromDate,
@@ -1184,6 +1281,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     deleteInvoice,
     deleteInvoices,
     downloadPDF,
-    exportInvoicesToCSV
+    exportInvoicesToCSV,
+    downloadMonthAsZip
   };
 }

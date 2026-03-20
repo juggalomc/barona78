@@ -11,7 +11,9 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
     phone: '',
     email: '',
     share: '',
-    declared_persons: 1
+    declared_persons: 1,
+    registration_number: '',
+    apartment_address: ''
   });
   const [editingApartment, setEditingApartment] = useState(null);
   const [editApartmentForm, setEditApartmentForm] = useState({});
@@ -34,7 +36,9 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
         phone: apartmentForm.phone || null,
         email: apartmentForm.email || null,
         share: apartmentForm.share ? parseFloat(apartmentForm.share) : null,
-        declared_persons: parseInt(apartmentForm.declared_persons) || 1
+        declared_persons: parseInt(apartmentForm.declared_persons) || 1,
+        registration_number: apartmentForm.registration_number || null,
+        apartment_address: apartmentForm.apartment_address || null
       };
 
       const { error } = await supabase.from('apartments').insert([dataToInsert]);
@@ -50,7 +54,9 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
         phone: '',
         email: '',
         share: '',
-        declared_persons: 1
+        declared_persons: 1,
+        registration_number: '',
+        apartment_address: ''
       });
       fetchData();
       showToast('✓ Dzīvoklis pievienots');
@@ -71,7 +77,9 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
       phone: apt.phone || '',
       email: apt.email || '',
       share: apt.share || '',
-      declared_persons: apt.declared_persons || 1
+      declared_persons: apt.declared_persons || 1,
+      registration_number: apt.registration_number || '',
+      apartment_address: apt.apartment_address || ''
     });
   };
 
@@ -89,7 +97,9 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
           phone: editApartmentForm.phone || null,
           email: editApartmentForm.email || null,
           share: editApartmentForm.share ? parseFloat(editApartmentForm.share) : null,
-          declared_persons: parseInt(editApartmentForm.declared_persons) || 1
+          declared_persons: parseInt(editApartmentForm.declared_persons) || 1,
+          registration_number: editApartmentForm.registration_number || null,
+          apartment_address: editApartmentForm.apartment_address || null
         })
         .eq('id', id);
       
