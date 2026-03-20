@@ -1379,7 +1379,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     try {
       showToast('⏳ Ģenerē PDF...', 'info');
       
-      // Ielādē bibliotēkas
       const loadScript = (src) => new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = src;
@@ -1388,96 +1387,209 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         document.head.appendChild(script);
       });
 
-      Promise.all([
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
-      ]).then(async () => {
-        const html2canvas = window.html2canvas;
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(() => {
         const jsPDF = window.jspdf.jsPDF;
-
+        
         try {
-          // Izveido jaunu logu ar rēķina HTML
-          const printWindow = window.open('about:blank', '_blank', 'width=800,height=1200');
-          const htmlContent = generateInvoicePdfHtml(invoice, apt);
-          printWindow.document.write(htmlContent);
-          printWindow.document.close();
+          const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
+          const amountWithoutVat = invoice.amount_without_vat || 0;
+          const vatAmount = invoice.vat_amount || 0;
+          const amountWithVat = invoice.amount_with_vat || invoice.amount;
 
-          // Gaidīsim ielādi un renderēšanu
-          printWindow.onload = async () => {
-            await new Promise(resolve => setTimeout(resolve, 800));
+          const buildingName = settings.building_name || 'BIEDRĪBA "BARONA 78"';
+          const buildingCode = settings.building_code || '40008325768';
+          const buildingAddress = settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001';
+          const paymentIban = settings.payment_iban || 'LV62HABA0551064112797';
+          const paymentBank = settings.payment_bank || 'Swedbank';
+          const paymentEmail = settings.payment_email || 'info@barona78.lv';
+          const paymentPhone = settings.payment_phone || '+371 67800000';
 
-            try {
-              // Ņem screenshot no loga
-              const canvas = await html2canvas(printWindow.document.body, {
-                scale: 1.5,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                windowWidth: printWindow.document.body.scrollWidth,
-                windowHeight: printWindow.document.body.scrollHeight,
-                allowTaint: true,
-                foreignObjectRendering: false
-              });
+          // Aprēķināt perioda datumnus
+          const [year, month] = invoice.period.split('-');
+          const periodStart = new Date(year, parseInt(month) - 1, 1);
+          const periodEnd = new Date(year, parseInt(month), 0);
+          const periodStartStr = periodStart.toLocaleDateString('lv-LV');
+          const periodEndStr = periodEnd.toLocaleDateString('lv-LV');
 
-              printWindow.close();
+          // Izveidot PDF
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4',
+            compress: true
+          });
 
-              // Izveido PDF
-              const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-                compress: true
-              });
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const pageHeight = pdf.internal.pageSize.getHeight();
+          let yPos = 15;
+          const leftMargin = 15;
+          const lineHeight = 5;
+          const color = { primary: '#003d7a', text: '#333' };
 
-              const imgWidth = 210;
-              const imgHeight = (canvas.height * imgWidth) / canvas.width;
-              const pageHeight = 297;
-              let heightLeft = imgHeight;
-              let position = 0;
+          // VIRSRAKSTS
+          pdf.setFontSize(18);
+          pdf.setTextColor(0, 61, 122);
+          pdf.text('RĒĶINS', leftMargin, yPos);
+          pdf.setFontSize(10);
+          pdf.setTextColor(102, 102, 102);
+          pdf.text(buildingName, pageWidth - leftMargin - 60, yPos);
+          pdf.text(buildingCode, pageWidth - leftMargin - 60, yPos + 5);
+          pdf.text(buildingAddress, pageWidth - leftMargin - 60, yPos + 10);
+          
+          yPos += 20;
+          pdf.setDrawColor(0, 61, 122);
+          pdf.line(leftMargin, yPos, pageWidth - leftMargin, yPos);
+          
+          // RĒĶINA DETAĻAS
+          yPos += 8;
+          pdf.setFontSize(11);
+          pdf.setTextColor(51, 51, 51);
+          pdf.text(`Nr: ${invoice.invoice_number}`, leftMargin, yPos);
+          yPos += 5;
+          pdf.text(`PERIODS: ${periodStartStr} - ${periodEndStr}`, leftMargin, yPos);
+          yPos += 5;
+          pdf.text(`TERMIŅŠ: ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}`, leftMargin, yPos);
+          
+          // SAŅĒMĒJS
+          yPos += 12;
+          pdf.setFillColor(245, 247, 250);
+          pdf.rect(leftMargin, yPos - 2, pageWidth - 2 * leftMargin, 30, 'F');
+          pdf.setTextColor(0, 61, 122);
+          pdf.setFontSize(10);
+          pdf.text('SAŅĒMĒJS:', leftMargin + 3, yPos);
+          yPos += 5;
+          pdf.setFontSize(11);
+          pdf.text(`Dzīvoklis Nr. ${apt.number}`, leftMargin + 3, yPos);
+          yPos += 4;
+          pdf.setFontSize(10);
+          pdf.setTextColor(51, 51, 51);
+          if (apt.owner_name) pdf.text(`Vārds: ${apt.owner_name}`, leftMargin + 3, yPos), (yPos += 4);
+          if (apt.email) pdf.text(`E-pasts: ${apt.email}`, leftMargin + 3, yPos), (yPos += 4);
+          pdf.text(`Platība: ${apt.area} m²`, leftMargin + 3, yPos);
+          yPos += 10;
 
-              // Konvertē uz JPEG
-              const imgData = canvas.toDataURL('image/jpeg', 0.92);
+          // TABULA - PAKALPOJUMI
+          yPos += 3;
+          pdf.setFontSize(10);
+          pdf.setTextColor(0, 61, 122);
+          pdf.setFillColor(245, 247, 250);
+          pdf.rect(leftMargin, yPos - 4, pageWidth - 2 * leftMargin, 6, 'F');
+          pdf.text('PAKALPOJUMS', leftMargin + 2, yPos);
+          pdf.text('DAUDZ.', pageWidth - leftMargin - 45, yPos);
+          pdf.text('CENA', pageWidth - leftMargin - 25, yPos);
+          pdf.text('SUMMA', pageWidth - leftMargin - 10, yPos);
 
-              // Pirmā lappa
-              pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-              heightLeft -= pageHeight;
+          yPos += 6;
+          pdf.setDrawColor(0, 61, 122);
+          pdf.line(leftMargin, yPos, pageWidth - leftMargin, yPos);
+          yPos += 4;
 
-              // Pārējās lapas
-              while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-              }
+          pdf.setFontSize(10);
+          pdf.setTextColor(51, 51, 51);
 
-              // Saglabā
-              pdf.save(`recins_${invoice.invoice_number}.pdf`);
-              showToast(`✓ PDF lejuplādēts: recins_${invoice.invoice_number}.pdf`);
-
-            } catch (err) {
-              console.error('PDF ģenerēšanas kļūda:', err);
-              if (printWindow && !printWindow.closed) {
-                printWindow.close();
-              }
-              showToast('Kļūda PDF ģenerēšanā', 'error');
+          // Pakalpojumi
+          invoiceDetails.forEach(detail => {
+            if (yPos > pageHeight - 20) {
+              pdf.addPage();
+              yPos = 15;
             }
-          };
 
-          // Timeout, ja loga ielāde neizdodas
-          setTimeout(() => {
-            if (printWindow && !printWindow.closed) {
-              printWindow.close();
+            let daudz = '';
+            let cena = '';
+            if (detail.type === 'water' || detail.type === 'hot_water') {
+              daudz = `${detail.consumption_m3} m³`;
+              cena = `€${detail.price_per_m3.toFixed(4)}`;
+            } else if (detail.type === 'waste') {
+              daudz = `${detail.declared_persons} pers.`;
+              cena = `€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}`;
+            } else if (detail.type === 'tariff') {
+              daudz = `${apt.area} m²`;
+              cena = `€${(detail.amount_without_vat / apt.area).toFixed(4)}`;
             }
-          }, 5000);
+
+            if (detail.type === 'debt' || detail.type === 'overpayment') {
+              pdf.setTextColor(0, 61, 122);
+            }
+
+            pdf.text(detail.tariff_name, leftMargin + 2, yPos);
+            if (daudz) pdf.text(daudz, pageWidth - leftMargin - 45, yPos);
+            if (cena) pdf.text(cena, pageWidth - leftMargin - 25, yPos);
+            pdf.text(`€${detail.amount_without_vat.toFixed(2)}`, pageWidth - leftMargin - 10, yPos);
+            pdf.setTextColor(51, 51, 51);
+            yPos += 5;
+          });
+
+          // SUMMAS
+          yPos += 4;
+          pdf.setDrawColor(0, 61, 122);
+          pdf.line(leftMargin, yPos, pageWidth - leftMargin, yPos);
+          yPos += 6;
+
+          pdf.setFontSize(10);
+          pdf.setTextColor(51, 51, 51);
+          pdf.text('Summa bez PVN:', leftMargin + 2, yPos);
+          pdf.setTextColor(0, 61, 122);
+          pdf.text(`€${amountWithoutVat.toFixed(2)}`, pageWidth - leftMargin - 10, yPos);
+          
+          yPos += 5;
+          pdf.setTextColor(51, 51, 51);
+          if (vatAmount > 0) {
+            pdf.text('PVN kopā:', leftMargin + 2, yPos);
+            pdf.setTextColor(0, 61, 122);
+            pdf.text(`€${vatAmount.toFixed(2)}`, pageWidth - leftMargin - 10, yPos);
+            yPos += 5;
+          }
+
+          // GALĪGĀ SUMMA - LIELS LODZIŅŠ
+          yPos += 3;
+          pdf.setFillColor(245, 247, 250);
+          pdf.rect(leftMargin, yPos, pageWidth - 2 * leftMargin, 12, 'F');
+          pdf.setDrawColor(0, 61, 122);
+          pdf.setLineWidth(0.8);
+          pdf.rect(leftMargin, yPos, pageWidth - 2 * leftMargin, 12);
+          pdf.setFontSize(14);
+          pdf.setTextColor(0, 61, 122);
+          pdf.text('KOPĀ APMAKSAI:', leftMargin + 3, yPos + 8);
+          pdf.setFontSize(16);
+          pdf.text(`€${amountWithVat.toFixed(2)}`, pageWidth - leftMargin - 15, yPos + 8);
+
+          yPos += 18;
+
+          // MAKSĀJUMA REKVIZĪTI
+          pdf.setFillColor(245, 247, 250);
+          pdf.rect(leftMargin, yPos, pageWidth - 2 * leftMargin, 28, 'F');
+          pdf.setTextColor(0, 61, 122);
+          pdf.setFontSize(10);
+          pdf.text('MAKSĀJUMA REKVIZĪTI', leftMargin + 3, yPos + 4);
+          
+          yPos += 7;
+          pdf.setTextColor(51, 51, 51);
+          pdf.setFontSize(9);
+          pdf.text(`NOSAUKUMS: ${buildingName}`, leftMargin + 3, yPos);
+          yPos += 4;
+          pdf.text(`REĢ. KODS: ${buildingCode}`, leftMargin + 3, yPos);
+          yPos += 4;
+          pdf.text(`ADRESE: ${buildingAddress}`, leftMargin + 3, yPos);
+          yPos += 4;
+          pdf.text(`BANKA: ${paymentBank}`, leftMargin + 3, yPos);
+          yPos += 4;
+          pdf.text(`IBAN: ${paymentIban}`, leftMargin + 3, yPos);
+          yPos += 4;
+          pdf.text(`E-PASTS: ${paymentEmail}`, leftMargin + 3, yPos);
+          yPos += 4;
+          pdf.text(`TĀLRUNIS: ${paymentPhone}`, leftMargin + 3, yPos);
+
+          pdf.save(`recins_${invoice.invoice_number}.pdf`);
+          showToast(`✓ PDF lejuplādes: recins_${invoice.invoice_number}.pdf`);
 
         } catch (error) {
-          console.error('PDF kļūda:', error);
+          console.error('PDF ģenerēšanas kļūda:', error);
           showToast('Kļūda PDF ģenerēšanā: ' + error.message, 'error');
         }
 
       }).catch(err => {
         console.error('Bibliotēku ielādes kļūda:', err);
-        showToast('Kļūda ielādējot bibliotēkas', 'error');
+        showToast('Kļūda ielādējot jsPDF bibliotēku', 'error');
       });
 
     } catch (error) {
