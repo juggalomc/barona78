@@ -22,6 +22,8 @@ export function WaterTab({
   deleteMeterReading,
   calculateWasteDistribution
 }) {
+  const [editingReadingId, setEditingReadingId] = React.useState(null);
+  const [editValues, setEditValues] = React.useState({});
   return (
     <div style={styles.twoCol}>
       {/* SKAITĪTĀJU IESPĒJOŠANA */}
@@ -232,9 +234,9 @@ export function WaterTab({
               ) : (
                 meterReadings.filter(mr => mr.meter_type === 'water' || mr.meter_type === 'hot_water').map((reading) => {
                   const apartment = apartments.find(a => a.id === reading.apartment_id);
-                  const [isEditing, setIsEditing] = React.useState(false);
-                  const [editValue, setEditValue] = React.useState(reading.reading_value);
                   const meterTypeLabel = reading.meter_type === 'water' ? '❄️ Aukstais' : '🔥 Siltais';
+                  const isEditing = editingReadingId === reading.id;
+                  const editValue = editValues[reading.id] || reading.reading_value;
 
                   return (
                     <tr key={reading.id} style={{borderBottom: '1px solid #e2e8f0', background: reading.id % 2 === 0 ? '#fafbfc' : '#fff'}}>
@@ -254,7 +256,7 @@ export function WaterTab({
                             type="number"
                             step="0.01"
                             value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
+                            onChange={(e) => setEditValues({...editValues, [reading.id]: e.target.value})}
                             style={{width: '80px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center'}}
                           />
                         ) : (
@@ -267,14 +269,17 @@ export function WaterTab({
                             <button
                               onClick={() => {
                                 editMeterReading(reading.id, editValue);
-                                setIsEditing(false);
+                                setEditingReadingId(null);
                               }}
                               style={{...styles.btn, background: '#10b981', padding: '4px 8px', fontSize: '11px', marginRight: '4px'}}
                             >
                               ✓ Saglabāt
                             </button>
                             <button
-                              onClick={() => setIsEditing(false)}
+                              onClick={() => {
+                                setEditingReadingId(null);
+                                setEditValues({...editValues, [reading.id]: undefined});
+                              }}
                               style={{...styles.btn, background: '#6b7280', padding: '4px 8px', fontSize: '11px'}}
                             >
                               ✕ Atcelt
@@ -283,7 +288,10 @@ export function WaterTab({
                         ) : (
                           <>
                             <button
-                              onClick={() => setIsEditing(true)}
+                              onClick={() => {
+                                setEditingReadingId(reading.id);
+                                setEditValues({...editValues, [reading.id]: reading.reading_value});
+                              }}
                               style={{...styles.btn, background: '#0ea5e9', padding: '4px 8px', fontSize: '11px', marginRight: '4px'}}
                             >
                               ✎ Labot
