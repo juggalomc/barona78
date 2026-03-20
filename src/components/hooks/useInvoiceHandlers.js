@@ -1288,65 +1288,201 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       });
 
       Promise.all([
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
         loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
       ]).then(async () => {
         const jsPDF = window.jspdf.jsPDF;
 
         try {
-          // Izveido jaunu slēptu konteineru ar rēķina HTML (nav pop-up)
-          const htmlContent = generateInvoicePdfHtml(invoice, apt);
-          const hiddenContainer = document.createElement('div');
-          hiddenContainer.style.position = 'fixed';
-          hiddenContainer.style.left = '-9999px';
-          hiddenContainer.style.top = '-9999px';
-          hiddenContainer.style.width = '210mm';
-          hiddenContainer.style.minHeight = '297mm';
-          hiddenContainer.style.background = '#fff';
-          hiddenContainer.innerHTML = htmlContent;
-          document.body.appendChild(hiddenContainer);
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          });
 
-          // Gaidām, lai stili ielādētos
-          await new Promise(resolve => setTimeout(resolve, 500));
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const pageHeight = pdf.internal.pageSize.getHeight();
+          const margins = { top: 15, left: 15, right: 15, bottom: 15 };
+          const contentWidth = pageWidth - margins.left - margins.right;
 
-          try {
-            // Izmanto jsPDF html() tieši no DOM (teksts būs PDF teksta slānī un selectable)
-            const pdf = new jsPDF({
-              orientation: 'portrait',
-              unit: 'mm',
-              format: 'a4',
-              compress: true
-            });
+          let yPos = margins.top;
 
-            await pdf.html(hiddenContainer, {
-              callback: (pdfOutput) => {
-                if (hiddenContainer && hiddenContainer.parentNode) {
-                  hiddenContainer.parentNode.removeChild(hiddenContainer);
-                }
-                pdfOutput.save(`recins_${invoice.invoice_number}.pdf`);
-                showToast(`✓ PDF lejuplādēts: recins_${invoice.invoice_number}.pdf`);
-              },
-              x: 0,
-              y: 0,
-              html2canvas: {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                allowTaint: true,
-                foreignObjectRendering: false
-              },
-              autoPaging: 'text',
-              margin: [10, 10, 10, 10]
-            });
+          // Header
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(24);
+          pdf.text('RĒĶINS', margins.left, yPos);
 
-          } catch (err) {
-            console.error('PDF ģenerēšanas kļūda:', err);
-            if (hiddenContainer && hiddenContainer.parentNode) {
-              hiddenContainer.parentNode.removeChild(hiddenContainer);
-            }
-            showToast('Kļūda PDF ģenerēšanā', 'error');
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10);
+          const companyInfo = `${settings.building_name || 'BIEDRĪBA "BARONA 78"'}
+${settings.building_code || '40008325768'}
+${settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001'}`;
+          
+          pdf.text(companyInfo, pageWidth - margins.right - 60, margins.top + 2, { align: 'left', maxWidth: 55 });
+
+          yPos += 25;
+
+          // Invoice details
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(11);
+          pdf.text(`Nr: ${invoice.invoice_number}`, margins.left, yPos);
+          yPos += 7;
+          pdf.text(`PERIODS: ${invoice.period}`, margins.left, yPos);
+          yPos += 7;
+          pdf.text(`TERMIŅŠ: ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}`, margins.left, yPos);
+
+          yPos += 12;
+
+          // Recipient section
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(11);
+          pdf.text('SAŅĒMĒJS:', margins.left, yPos);
+          yPos += 6;
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(11);
+          pdf.text(`Dzīvoklis Nr. ${apt.number}`, margins.left, yPos, { maxWidth: contentWidth });
+          yPos += 6;
+
+          if (apt.owner_name) {
+            pdf.text(`Vārds: ${apt.owner_name}`, margins.left, yPos, { maxWidth: contentWidth });
+            yPos += 5;
           }
+          if (apt.owner_surname) {
+            pdf.text(`Uzvārds: ${apt.owner_surname}`, margins.left, yPos, { maxWidth: contentWidth });
+            yPos += 5;
+          }
+          if (apt.email) {
+            pdf.text(`E-pasts: ${apt.email}`, margins.left, yPos, { maxWidth: contentWidth });
+            yPos += 5;
+          }
+          if (apt.declared_persons) {
+            pdf.text(`Deklarēto personu skaits: ${apt.declared_persons}`, margins.left, yPos, { maxWidth: contentWidth });
+            yPos += 5;
+          }
+          if (apt.registration_number) {
+            pdf.text(`Reģ. numurs: ${apt.registration_number}`, margins.left, yPos, { maxWidth: contentWidth });
+            yPos += 5;
+          }
+          if (apt.apartment_address) {
+            pdf.text(`Adrese: ${apt.apartment_address}`, margins.left, yPos, { maxWidth: contentWidth });
+            yPos += 5;
+          }
+          pdf.text(`Platība: ${apt.area} m²`, margins.left, yPos, { maxWidth: contentWidth });
+
+          yPos += 10;
+
+          // Services table header
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(10);
+          const colX = [margins.left, margins.left + 80, margins.left + 110, margins.left + 145];
+          pdf.text('PAKALPOJUMS', colX[0], yPos);
+          pdf.text('DAUDZ.', colX[1], yPos);
+          pdf.text('CENA', colX[2], yPos);
+          pdf.text('SUMMA', colX[3], yPos);
+
+          yPos += 6;
+          pdf.line(margins.left, yPos, pageWidth - margins.right, yPos);
+          yPos += 2;
+
+          // Invoice details parsing
+          const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10);
+
+          invoiceDetails.forEach(detail => {
+            if (yPos > pageHeight - margins.bottom - 20) {
+              pdf.addPage();
+              yPos = margins.top;
+            }
+
+            let quantity = '';
+            let unitPrice = '';
+
+            if (detail.type === 'water') {
+              quantity = `${detail.consumption_m3} m³`;
+              unitPrice = `€${detail.price_per_m3.toFixed(4)}`;
+            } else if (detail.type === 'waste') {
+              quantity = `${detail.declared_persons} pers.`;
+              unitPrice = `€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}`;
+            } else if (detail.type === 'debt' || detail.type === 'overpayment') {
+              quantity = '';
+              unitPrice = '';
+            } else {
+              quantity = `${apt.area} m²`;
+              unitPrice = `€${(detail.amount_without_vat / apt.area).toFixed(4)}`;
+            }
+
+            pdf.text(detail.tariff_name, colX[0], yPos, { maxWidth: 70 });
+            pdf.text(quantity, colX[1], yPos, { align: 'center' });
+            pdf.text(unitPrice, colX[2], yPos, { align: 'right' });
+            pdf.text(`€${detail.amount_without_vat.toFixed(2)}`, colX[3], yPos, { align: 'right' });
+
+            yPos += 6;
+          });
+
+          yPos += 2;
+          pdf.line(margins.left, yPos, pageWidth - margins.right, yPos);
+          yPos += 6;
+
+          // Totals
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10);
+          const amountWithoutVat = invoice.amount_without_vat || 0;
+          const vatAmount = invoice.vat_amount || 0;
+          const amountWithVat = invoice.amount_with_vat || invoice.amount;
+
+          pdf.text('Summa bez PVN:', colX[0], yPos);
+          pdf.text(`€${amountWithoutVat.toFixed(2)}`, colX[3], yPos, { align: 'right' });
+          yPos += 6;
+
+          if (vatAmount > 0) {
+            pdf.text('PVN kopā:', colX[0], yPos);
+            pdf.text(`€${vatAmount.toFixed(2)}`, colX[3], yPos, { align: 'right' });
+            yPos += 6;
+          }
+
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(12);
+          pdf.text('KOPĀ APMAKSAI (EUR):', colX[0], yPos);
+          pdf.setTextColor(0, 51, 153);
+          pdf.setFontSize(16);
+          pdf.text(`€${amountWithVat.toFixed(2)}`, colX[3], yPos, { align: 'right' });
+          pdf.setTextColor(0, 0, 0);
+
+          yPos += 15;
+
+          // Payment info
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('MAKSĀJUMA REKVIZĪTI', margins.left, yPos);
+          yPos += 6;
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+          const paymentInfo = [
+            { label: 'NOSAUKUMS', value: settings.building_name || 'BIEDRĪBA "BARONA 78"' },
+            { label: 'REĢ. KODS', value: settings.building_code || '40008325768' },
+            { label: 'ADRESE', value: settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001' },
+            { label: 'BANKA', value: settings.payment_bank || 'Habib Bank' },
+            { label: 'IBAN', value: settings.payment_iban || 'LV62HABA0551064112797' },
+            { label: 'E-PASTS', value: settings.payment_email || 'info@barona78.lv' },
+            { label: 'TĀLRUNIS', value: settings.payment_phone || '+371 67800000' }
+          ];
+
+          paymentInfo.forEach(item => {
+            if (yPos > pageHeight - margins.bottom - 10) {
+              pdf.addPage();
+              yPos = margins.top;
+            }
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${item.label}:`, margins.left, yPos);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(item.value, margins.left + 50, yPos, { maxWidth: contentWidth - 50 });
+            yPos += 6;
+          });
+
+          pdf.save(`recins_${invoice.invoice_number}.pdf`);
+          showToast(`✓ PDF lejuplādēts: recins_${invoice.invoice_number}.pdf`);
 
         } catch (error) {
           console.error('PDF kļūda:', error);
