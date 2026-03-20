@@ -183,16 +183,15 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
       const value = parseFloat(readingValue);
       
       if (readingValue === '' || readingValue === null) {
-        const existing = await supabase
+        const { data: existing } = await supabase
           .from('meter_readings')
           .select('*')
           .eq('apartment_id', apartmentId)
           .eq('meter_type', 'water')
-          .eq('period', period)
-          .single();
+          .eq('period', period);
         
-        if (existing.data) {
-          await supabase.from('meter_readings').delete().eq('id', existing.data.id);
+        if (existing && existing.length > 0) {
+          await supabase.from('meter_readings').delete().eq('id', existing[0].id);
           fetchData();
         }
         return;
@@ -208,19 +207,18 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
         return;
       }
 
-      const existing = await supabase
+      const { data: existing } = await supabase
         .from('meter_readings')
         .select('*')
         .eq('apartment_id', apartmentId)
         .eq('meter_type', 'water')
-        .eq('period', period)
-        .single();
+        .eq('period', period);
 
-      if (existing.data) {
+      if (existing && existing.length > 0) {
         const { error } = await supabase
           .from('meter_readings')
           .update({ reading_value: value })
-          .eq('id', existing.data.id);
+          .eq('id', existing[0].id);
         if (error) throw error;
       } else {
         const today = new Date().toISOString().split('T')[0];
@@ -248,16 +246,15 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
       const value = parseFloat(readingValue);
       
       if (readingValue === '' || readingValue === null) {
-        const existing = await supabase
+        const { data: existing } = await supabase
           .from('meter_readings')
           .select('*')
           .eq('apartment_id', apartmentId)
           .eq('meter_type', 'hot_water')
-          .eq('period', period)
-          .single();
+          .eq('period', period);
         
-        if (existing.data) {
-          await supabase.from('meter_readings').delete().eq('id', existing.data.id);
+        if (existing && existing.length > 0) {
+          await supabase.from('meter_readings').delete().eq('id', existing[0].id);
           fetchData();
         }
         return;
@@ -273,19 +270,18 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
         return;
       }
 
-      const existing = await supabase
+      const { data: existing } = await supabase
         .from('meter_readings')
         .select('*')
         .eq('apartment_id', apartmentId)
         .eq('meter_type', 'hot_water')
-        .eq('period', period)
-        .single();
+        .eq('period', period);
 
-      if (existing.data) {
+      if (existing && existing.length > 0) {
         const { error } = await supabase
           .from('meter_readings')
           .update({ reading_value: value })
-          .eq('id', existing.data.id);
+          .eq('id', existing[0].id);
         if (error) throw error;
       } else {
         const today = new Date().toISOString().split('T')[0];

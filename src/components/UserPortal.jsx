@@ -15,6 +15,17 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
     }
   };
 
+  const [year, month] = currentPeriod.split('-');
+  let prevMonth = parseInt(month, 10) - 1;
+  let prevYear = parseInt(year, 10);
+  if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
+  const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+
+  const coldCurrent = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'water' && mr.period === currentPeriod)?.reading_value || '';
+  const coldPrevious = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'water' && mr.period === previousPeriod)?.reading_value || '';
+  const hotCurrent = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'hot_water' && mr.period === currentPeriod)?.reading_value || '';
+  const hotPrevious = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'hot_water' && mr.period === previousPeriod)?.reading_value || '';
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', background: '#f8fafc' }}>
       <div style={{ background: '#003399', color: 'white', padding: '30px', borderRadius: '8px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
