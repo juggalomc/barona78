@@ -1273,10 +1273,84 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     const apt = apartments.find(a => a.id === invoice.apartment_id);
     const htmlContent = generateInvoicePdfHtml(invoice, apt);
 
-    const printWindow = window.open('', '', 'height=800,width=800');
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    printWindow.print();
+    // Ielādē html2canvas bibliotēku
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    
+    script.onload = async () => {
+      try {
+        const html2canvas = window.html2canvas;
+        
+        // Izveido temp div ar HTML saturu
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.width = '210mm';
+        tempDiv.style.padding = '20mm';
+        tempDiv.style.backgroundColor = 'white';
+        tempDiv.style.fontSize = '12px';
+        tempDiv.style.fontFamily = '"DejaVu Sans", Arial, sans-serif';
+        document.body.appendChild(tempDiv);
+        
+        // Gaidīsim renderēšanu
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Ģenerē canvas
+        const canvas = await html2canvas(tempDiv, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 1200,
+          windowHeight: 1600
+        });
+        
+        // Dzēš temp div
+        document.body.removeChild(tempDiv);
+        
+        // Izveido PDF
+        const imgData = canvas.toDataURL('image/png');
+        const doc = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        const imgWidth = 210; // A4 platums
+        const pageHeight = 297; // A4 augstums
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+        
+        // Pirmā lappa
+        doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        
+        // Nākamās lapas ja nepieciešams
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          doc.addPage();
+          doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+        
+        // Saglabā un lejuplādē
+        doc.save(`recins_${invoice.invoice_number}.pdf`);
+        
+      } catch (error) {
+        console.error('PDF ģenerēšanas kļūda:', error);
+        showToast('Kļūda ģenerējot PDF: ' + error.message, 'error');
+      }
+      
+      document.head.removeChild(script);
+    };
+    
+    script.onerror = () => {
+      showToast('Kļūda ielādes html2canvas', 'error');
+    };
+    
+    document.head.appendChild(script);
   };
 
   const exportInvoicesToCSV = () => {
@@ -1314,81 +1388,133 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     try {
       showToast('⏳ Sagatavo PDF rēķinus ZIP failā...', 'info');
       
-      // Dinamiski ielodē jszip no CDN
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      // Dinamiski ielodē html2canvas un jszip
+      const html2canvasScript = document.createElement('script');
+      html2canvasScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
       
-      script.onload = async () => {
-        const JSZip = window.JSZip;
-        const zip = new JSZip();
-        
-        const monthInvoices = invoices.filter(inv => inv.period === period);
-        
-        if (monthInvoices.length === 0) {
-          showToast('Nav šī perioda rēķinu', 'error');
-          return;
-        }
+      const jszipScript = document.createElement('script');
+      jszipScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      
+      let scriptsLoaded = 0;
+      const onScriptLoad = async () => {
+        scriptsLoaded++;
+        if (scriptsLoaded === 2) {
+          // Abi skripti ielādēti
+          const html2canvas = window.html2canvas;
+          const JSZip = window.JSZip;
+          const zip = new JSZip();
+          
+          const monthInvoices = invoices.filter(inv => inv.period === period);
+          
+          if (monthInvoices.length === 0) {
+            showToast('Nav šī perioda rēķinu', 'error');
+            return;
+          }
 
-        let processedCount = 0;
+          let processedCount = 0;
 
-        for (const invoice of monthInvoices) {
-          const apt = apartments.find(a => a.id === invoice.apartment_id);
-          if (!apt) continue;
+          for (const invoice of monthInvoices) {
+            const apt = apartments.find(a => a.id === invoice.apartment_id);
+            if (!apt) continue;
+
+            try {
+              const htmlContent = generateInvoicePdfHtml(invoice, apt);
+              
+              // Izveido div ar HTML saturu
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = htmlContent;
+              tempDiv.style.position = 'absolute';
+              tempDiv.style.left = '-9999px';
+              tempDiv.style.width = '210mm';
+              tempDiv.style.padding = '20mm';
+              tempDiv.style.margin = '0';
+              tempDiv.style.backgroundColor = 'white';
+              tempDiv.style.fontSize = '12px';
+              tempDiv.style.fontFamily = '"DejaVu Sans", Arial, sans-serif';
+              document.body.appendChild(tempDiv);
+              
+              // Gaidīsim, līdz saturs ir renderēts
+              await new Promise(resolve => setTimeout(resolve, 300));
+              
+              // Ģenerē canvas no HTML
+              const canvas = await html2canvas(tempDiv, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                windowWidth: 1200,
+                windowHeight: 1600
+              });
+              
+              // Izdzēš temp div
+              document.body.removeChild(tempDiv);
+              
+              // Izveido PDF no canvas
+              const imgData = canvas.toDataURL('image/png');
+              const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+              });
+              
+              const imgWidth = 210; // A4 platums mm
+              const pageHeight = 297; // A4 augstums mm
+              const imgHeight = (canvas.height * imgWidth) / canvas.width;
+              let heightLeft = imgHeight;
+              let position = 0;
+              
+              // Pievieno attēlu, ja nepieciešams sadalot lapās
+              doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+              heightLeft -= pageHeight;
+              
+              while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                doc.addPage();
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+              }
+              
+              const pdfBlob = doc.output('blob');
+              const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\/\\:*?"<>|]/g, '_');
+              zip.file(`${safeFileName}.pdf`, pdfBlob);
+              processedCount++;
+              
+            } catch (err) {
+              console.error(`Kļūda ģenerējot PDF rēķinam ${invoice.invoice_number}:`, err);
+            }
+          }
 
           try {
-            const htmlContent = generateInvoicePdfHtml(invoice, apt);
-            
-            // Izveido PDF no HTML satura
-            const doc = new jsPDF({
-              orientation: 'portrait',
-              unit: 'mm',
-              format: 'a4'
-            });
-
-            // Izmanto jsPDF html() metodi, ja tā ir pieejama
-            if (doc.html) {
-              await doc.html(htmlContent, {
-                x: 0,
-                y: 0,
-                width: 210,
-                windowWidth: 1200
-              });
-            } else {
-              // Fallback: vienkārši pievienot tekstu
-              doc.text('Rēķins: ' + invoice.invoice_number, 10, 10);
-              doc.text('Dzīvoklis: ' + apt.number, 10, 20);
-              doc.text('Summa: €' + invoice.amount.toFixed(2), 10, 30);
-            }
-
-            const pdfBlob = doc.output('blob');
-            zip.file(`${invoice.invoice_number}_dziv_${apt.number}.pdf`, pdfBlob);
-            processedCount++;
-          } catch (err) {
-            console.error(`Kļūda ģenerējot PDF rēķinam ${invoice.invoice_number}:`, err);
+            const zipContent = await zip.generateAsync({ type: 'blob' });
+            const zipUrl = URL.createObjectURL(zipContent);
+            const link = document.createElement('a');
+            link.href = zipUrl;
+            link.download = `recini_${period}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(zipUrl);
+            showToast(`✓ Lejuplādes ${processedCount} PDF rēķini ZIP failā`);
+          } catch (zipErr) {
+            showToast('Kļūda: ' + zipErr.message, 'error');
           }
-        }
-
-        try {
-          const zipContent = await zip.generateAsync({ type: 'blob' });
-          const zipUrl = URL.createObjectURL(zipContent);
-          const link = document.createElement('a');
-          link.href = zipUrl;
-          link.download = `recini_${period}.zip`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(zipUrl);
-          showToast(`✓ Lejuplādes ${processedCount} PDF rēķini ZIP failā`);
-        } catch (zipErr) {
-          showToast('Kļūda: ' + zipErr.message, 'error');
         }
       };
       
-      script.onerror = () => {
+      html2canvasScript.onerror = () => {
+        showToast('Kļūda ielādes html2canvas bibliotēku', 'error');
+      };
+      
+      jszipScript.onerror = () => {
         showToast('Kļūda ielādes JSZip bibliotēku', 'error');
       };
       
-      document.head.appendChild(script);
+      html2canvasScript.onload = onScriptLoad;
+      jszipScript.onload = onScriptLoad;
+      
+      document.head.appendChild(html2canvasScript);
+      document.head.appendChild(jszipScript);
+      
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
