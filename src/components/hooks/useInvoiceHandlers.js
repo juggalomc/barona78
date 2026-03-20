@@ -1411,36 +1411,44 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const periodStartStr = periodStart.toLocaleDateString('lv-LV');
           const periodEndStr = periodEnd.toLocaleDateString('lv-LV');
 
-          // Izveidot PDF
+          // Izveidot PDF ar UTF-8 atbalstu
           const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
             format: 'a4',
-            compress: true
+            compress: false
           });
+
+          // Uzstādīt fontu ar UTF-8 atbalstu
+          pdf.setFont('helvetica');
 
           const pageWidth = pdf.internal.pageSize.getWidth();
           const pageHeight = pdf.internal.pageSize.getHeight();
-          let yPos = 15;
-          const leftMargin = 15;
+          let yPos = 12;
+          const leftMargin = 12;
+          const rightMargin = 12;
+          const contentWidth = pageWidth - leftMargin - rightMargin;
 
           // VIRSRAKSTS
-          pdf.setFontSize(18);
+          pdf.setFontSize(20);
           pdf.setTextColor(0, 61, 122);
           pdf.text('RĒĶINS', leftMargin, yPos);
-          pdf.setFontSize(10);
-          pdf.setTextColor(102, 102, 102);
-          pdf.text(buildingName, pageWidth - leftMargin - 60, yPos);
-          pdf.text(buildingCode, pageWidth - leftMargin - 60, yPos + 5);
-          pdf.text(buildingAddress, pageWidth - leftMargin - 60, yPos + 10);
           
-          yPos += 20;
+          // Biedrības info labajā pusē
+          pdf.setFontSize(9);
+          pdf.setTextColor(100, 100, 100);
+          pdf.text(buildingName, pageWidth - rightMargin, yPos, { align: 'right' });
+          pdf.text(buildingCode, pageWidth - rightMargin, yPos + 5, { align: 'right' });
+          pdf.text(buildingAddress, pageWidth - rightMargin, yPos + 10, { align: 'right' });
+          
+          yPos += 18;
           pdf.setDrawColor(0, 61, 122);
-          pdf.line(leftMargin, yPos, pageWidth - leftMargin, yPos);
+          pdf.setLineWidth(0.5);
+          pdf.line(leftMargin, yPos, pageWidth - rightMargin, yPos);
           
           // RĒĶINA DETAĻAS
-          yPos += 8;
-          pdf.setFontSize(11);
+          yPos += 6;
+          pdf.setFontSize(10);
           pdf.setTextColor(51, 51, 51);
           pdf.text(`Nr: ${invoice.invoice_number}`, leftMargin, yPos);
           yPos += 5;
@@ -1449,53 +1457,55 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           pdf.text(`TERMIŅŠ: ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}`, leftMargin, yPos);
           
           // SAŅĒMĒJS
-          yPos += 12;
-          pdf.setFillColor(245, 247, 250);
-          pdf.rect(leftMargin, yPos - 2, pageWidth - 2 * leftMargin, 30, 'F');
+          yPos += 9;
+          pdf.setFillColor(240, 244, 248);
+          pdf.rect(leftMargin, yPos - 2, contentWidth, 22, 'F');
           pdf.setTextColor(0, 61, 122);
-          pdf.setFontSize(10);
-          pdf.text('SAŅĒMĒJS:', leftMargin + 3, yPos);
-          yPos += 5;
-          pdf.setFontSize(11);
-          pdf.text(`Dzīvoklis Nr. ${apt.number}`, leftMargin + 3, yPos);
+          pdf.setFontSize(9);
+          pdf.text('SAŅĒMĒJS:', leftMargin + 2, yPos);
           yPos += 4;
           pdf.setFontSize(10);
+          pdf.text(`Dzīvoklis Nr. ${apt.number}`, leftMargin + 2, yPos);
+          yPos += 4;
+          pdf.setFontSize(9);
           pdf.setTextColor(51, 51, 51);
           if (apt.owner_name) {
-            pdf.text(`Vārds: ${apt.owner_name}`, leftMargin + 3, yPos);
+            pdf.text(`Vārds: ${apt.owner_name}`, leftMargin + 2, yPos);
             yPos += 4;
           }
           if (apt.email) {
-            pdf.text(`E-pasts: ${apt.email}`, leftMargin + 3, yPos);
+            pdf.text(`E-pasts: ${apt.email}`, leftMargin + 2, yPos);
             yPos += 4;
           }
-          pdf.text(`Platība: ${apt.area} m²`, leftMargin + 3, yPos);
+          pdf.text(`Platība: ${apt.area} m²`, leftMargin + 2, yPos);
           yPos += 10;
 
           // TABULA - PAKALPOJUMI
-          yPos += 3;
-          pdf.setFontSize(10);
+          yPos += 2;
+          pdf.setFontSize(9);
           pdf.setTextColor(0, 61, 122);
-          pdf.setFillColor(245, 247, 250);
-          pdf.rect(leftMargin, yPos - 4, pageWidth - 2 * leftMargin, 6, 'F');
-          pdf.text('PAKALPOJUMS', leftMargin + 2, yPos);
-          pdf.text('DAUDZ.', pageWidth - leftMargin - 45, yPos);
-          pdf.text('CENA', pageWidth - leftMargin - 25, yPos);
-          pdf.text('SUMMA', pageWidth - leftMargin - 10, yPos);
+          pdf.setFillColor(240, 244, 248);
+          pdf.rect(leftMargin, yPos - 3, contentWidth, 5, 'F');
+          pdf.text('PAKALPOJUMS', leftMargin + 1, yPos);
+          pdf.text('DAUDZ.', leftMargin + 95, yPos);
+          pdf.text('CENA', leftMargin + 125, yPos);
+          pdf.text('SUMMA', leftMargin + 160, yPos);
 
-          yPos += 6;
+          yPos += 5;
           pdf.setDrawColor(0, 61, 122);
-          pdf.line(leftMargin, yPos, pageWidth - leftMargin, yPos);
+          pdf.setLineWidth(0.3);
+          pdf.line(leftMargin, yPos, pageWidth - rightMargin, yPos);
           yPos += 4;
 
-          pdf.setFontSize(10);
+          pdf.setFontSize(9);
           pdf.setTextColor(51, 51, 51);
 
           // Pakalpojumi
           invoiceDetails.forEach(detail => {
-            if (yPos > pageHeight - 20) {
+            if (yPos > pageHeight - 25) {
               pdf.addPage();
-              yPos = 15;
+              pdf.setFont('helvetica');
+              yPos = 12;
             }
 
             let daudz = '';
@@ -1515,73 +1525,72 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               pdf.setTextColor(0, 61, 122);
             }
 
-            pdf.text(detail.tariff_name, leftMargin + 2, yPos);
-            if (daudz) pdf.text(daudz, pageWidth - leftMargin - 45, yPos);
-            if (cena) pdf.text(cena, pageWidth - leftMargin - 25, yPos);
-            pdf.text(`€${detail.amount_without_vat.toFixed(2)}`, pageWidth - leftMargin - 10, yPos);
+            pdf.text(detail.tariff_name, leftMargin + 1, yPos);
+            pdf.text(daudz, leftMargin + 95, yPos);
+            pdf.text(cena, leftMargin + 125, yPos);
+            pdf.text(`€${detail.amount_without_vat.toFixed(2)}`, leftMargin + 160, yPos);
             pdf.setTextColor(51, 51, 51);
-            yPos += 5;
+            yPos += 4;
           });
 
           // SUMMAS
-          yPos += 4;
+          yPos += 3;
           pdf.setDrawColor(0, 61, 122);
-          pdf.line(leftMargin, yPos, pageWidth - leftMargin, yPos);
-          yPos += 6;
-
-          pdf.setFontSize(10);
-          pdf.setTextColor(51, 51, 51);
-          pdf.text('Summa bez PVN:', leftMargin + 2, yPos);
-          pdf.setTextColor(0, 61, 122);
-          pdf.text(`€${amountWithoutVat.toFixed(2)}`, pageWidth - leftMargin - 10, yPos);
-          
+          pdf.line(leftMargin, yPos, pageWidth - rightMargin, yPos);
           yPos += 5;
+
+          pdf.setFontSize(9);
+          pdf.setTextColor(51, 51, 51);
+          pdf.text('Summa bez PVN:', leftMargin + 1, yPos);
+          pdf.setTextColor(0, 61, 122);
+          pdf.text(`€${amountWithoutVat.toFixed(2)}`, pageWidth - rightMargin - 1, yPos, { align: 'right' });
+          
+          yPos += 4;
           pdf.setTextColor(51, 51, 51);
           if (vatAmount > 0) {
-            pdf.text('PVN kopā:', leftMargin + 2, yPos);
+            pdf.text('PVN kopā:', leftMargin + 1, yPos);
             pdf.setTextColor(0, 61, 122);
-            pdf.text(`€${vatAmount.toFixed(2)}`, pageWidth - leftMargin - 10, yPos);
-            yPos += 5;
+            pdf.text(`€${vatAmount.toFixed(2)}`, pageWidth - rightMargin - 1, yPos, { align: 'right' });
+            yPos += 4;
           }
 
           // GALĪGĀ SUMMA - LIELS LODZIŅŠ
-          yPos += 3;
-          pdf.setFillColor(245, 247, 250);
-          pdf.rect(leftMargin, yPos, pageWidth - 2 * leftMargin, 12, 'F');
+          yPos += 2;
+          pdf.setFillColor(240, 244, 248);
+          pdf.rect(leftMargin, yPos, contentWidth, 9, 'F');
           pdf.setDrawColor(0, 61, 122);
-          pdf.setLineWidth(0.8);
-          pdf.rect(leftMargin, yPos, pageWidth - 2 * leftMargin, 12);
-          pdf.setFontSize(14);
+          pdf.setLineWidth(0.7);
+          pdf.rect(leftMargin, yPos, contentWidth, 9);
+          pdf.setFontSize(12);
           pdf.setTextColor(0, 61, 122);
-          pdf.text('KOPĀ APMAKSAI:', leftMargin + 3, yPos + 8);
-          pdf.setFontSize(16);
-          pdf.text(`€${amountWithVat.toFixed(2)}`, pageWidth - leftMargin - 15, yPos + 8);
+          pdf.text('KOPĀ APMAKSAI:', leftMargin + 2, yPos + 6);
+          pdf.text(`€${amountWithVat.toFixed(2)}`, pageWidth - rightMargin - 1, yPos + 6, { align: 'right' });
 
-          yPos += 18;
+          yPos += 14;
 
           // MAKSĀJUMA REKVIZĪTI
-          pdf.setFillColor(245, 247, 250);
-          pdf.rect(leftMargin, yPos, pageWidth - 2 * leftMargin, 28, 'F');
+          pdf.setFillColor(240, 244, 248);
+          pdf.rect(leftMargin, yPos, contentWidth, 32, 'F');
           pdf.setTextColor(0, 61, 122);
-          pdf.setFontSize(10);
-          pdf.text('MAKSĀJUMA REKVIZĪTI', leftMargin + 3, yPos + 4);
+          pdf.setFontSize(9);
+          pdf.text('MAKSĀJUMA REKVIZĪTI', leftMargin + 2, yPos + 4);
           
           yPos += 7;
           pdf.setTextColor(51, 51, 51);
-          pdf.setFontSize(9);
-          pdf.text(`NOSAUKUMS: ${buildingName}`, leftMargin + 3, yPos);
-          yPos += 4;
-          pdf.text(`REĢ. KODS: ${buildingCode}`, leftMargin + 3, yPos);
-          yPos += 4;
-          pdf.text(`ADRESE: ${buildingAddress}`, leftMargin + 3, yPos);
-          yPos += 4;
-          pdf.text(`BANKA: ${paymentBank}`, leftMargin + 3, yPos);
-          yPos += 4;
-          pdf.text(`IBAN: ${paymentIban}`, leftMargin + 3, yPos);
-          yPos += 4;
-          pdf.text(`E-PASTS: ${paymentEmail}`, leftMargin + 3, yPos);
-          yPos += 4;
-          pdf.text(`TĀLRUNIS: ${paymentPhone}`, leftMargin + 3, yPos);
+          pdf.setFontSize(8);
+          pdf.text(`NOSAUKUMS: ${buildingName}`, leftMargin + 2, yPos);
+          yPos += 3.5;
+          pdf.text(`REĢ. KODS: ${buildingCode}`, leftMargin + 2, yPos);
+          yPos += 3.5;
+          pdf.text(`ADRESE: ${buildingAddress}`, leftMargin + 2, yPos);
+          yPos += 3.5;
+          pdf.text(`BANKA: ${paymentBank}`, leftMargin + 2, yPos);
+          yPos += 3.5;
+          pdf.text(`IBAN: ${paymentIban}`, leftMargin + 2, yPos);
+          yPos += 3.5;
+          pdf.text(`E-PASTS: ${paymentEmail}`, leftMargin + 2, yPos);
+          yPos += 3.5;
+          pdf.text(`TĀLRUNIS: ${paymentPhone}`, leftMargin + 2, yPos);
 
           pdf.save(`recins_${invoice.invoice_number}.pdf`);
           showToast(`✓ PDF lejuplādes: recins_${invoice.invoice_number}.pdf`);
