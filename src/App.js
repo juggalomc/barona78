@@ -1,3 +1,9 @@
+import React from 'react';
 import PropertyManager from './components/PropertyManagerWithAuth';
-
-export default PropertyManager;
+ 
+function App() {
+  return <PropertyManager />;
+}
+ 
+export default App;
+ 
