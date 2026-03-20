@@ -189,9 +189,9 @@ export function WaterTab({
 
       {/* ===== ADMIN - IEPRIEKŠĒJO MĒNEŠU IEVADE ===== */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}>⏮️ Admin - Pievienot Iepriekšējos Mēnešu Rādījumus</h2>
+        <h2 style={styles.cardTitle}>⏮️ Admin - Pievienot/Labot Rādījumus</h2>
         <div style={{background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#92400e'}}>
-          <strong>ℹ️</strong> Izmantojiet šo formu, lai pievienotu skaitītāju rādījumus iepriekšējiem mēnešiem
+          <strong>ℹ️</strong> Pievienojiet vai labojiet skaitītāju rādījumus jebkuram mēnesim (gan iepriekšējos, gan nākamos)
         </div>
         <form onSubmit={(e) => {
           e.preventDefault();
@@ -199,7 +199,11 @@ export function WaterTab({
             alert('Aizpildiet visus laukus');
             return;
           }
-          saveWaterMeterReading(adminAddApt, adminAddValue, adminAddMonth);
+          if (adminAddMeterType === 'water') {
+            saveWaterMeterReading(adminAddApt, adminAddValue, adminAddMonth);
+          } else if (adminAddMeterType === 'hot_water') {
+            saveHotWaterMeterReading(adminAddApt, adminAddValue, adminAddMonth);
+          }
           setAdminAddMonth(tariffPeriod);
           setAdminAddApt('');
           setAdminAddValue('');
@@ -225,15 +229,15 @@ export function WaterTab({
           <div>
             <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Tips:</label>
             <select value={adminAddMeterType} onChange={(e) => setAdminAddMeterType(e.target.value)} style={styles.input}>
-              <option value="water">❄️ Aukstais</option>
-              <option value="hot_water">🔥 Siltais</option>
+              <option value="water">❄️ Aukstais ūdens</option>
+              <option value="hot_water">🔥 Siltais ūdens</option>
             </select>
           </div>
           <div>
             <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Rādījums (m³):</label>
             <input type="number" step="0.01" placeholder="0.00" value={adminAddValue} onChange={(e) => setAdminAddValue(e.target.value)} style={styles.input} />
           </div>
-          <button type="submit" style={{...styles.btn, padding: '10px 20px', whiteSpace: 'nowrap'}}>Pievienot</button>
+          <button type="submit" style={{...styles.btn, padding: '10px 20px', whiteSpace: 'nowrap'}}>💾 Saglabāt</button>
         </form>
       </div>
 
@@ -245,7 +249,7 @@ export function WaterTab({
           <div>
             <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Izvēlēties mēnesi:</label>
             <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} style={styles.input}>
-              {uniqueTariffPeriods.map(period => (
+              {allAvailablePeriods.map(period => (
                 <option key={period} value={period}>
                   {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
                 </option>
