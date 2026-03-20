@@ -43,7 +43,7 @@ export default function PropertyManager() {
     fetchData, fetchUserData
   } = useDataFetching(supabase);
 
-  const { settings, editForm, setEditForm, updateSetting, fetchSettings } = useSettings(supabase);
+  const { settings, editForm, setEditForm, updateSetting } = useSettings(supabase);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });

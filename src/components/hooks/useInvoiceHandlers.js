@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BUILDING_NAME, BUILDING_CODE, BUILDING_ADDRESS, TOTAL_AREA } from '../shared/constants';
+import { TOTAL_AREA } from '../shared/constants';
 
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
