@@ -2674,7 +2674,7 @@ export default function PropertyManager() {
             <div style={{padding: "20px", textAlign: "center"}}>
               <p>Invoices section</p>
             </div>
-          )
+          )}
         </div>
       </div>
     </div>
@@ -2682,7 +2682,6 @@ export default function PropertyManager() {
 }
 
 
-}
 const styles = {
   app: {
     display: "flex",
