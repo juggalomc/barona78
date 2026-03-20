@@ -564,28 +564,30 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             body {
               font-family: Arial, sans-serif;
               margin: 0;
-              padding: 20px;
-              line-height: 1.4;
-              font-size: 11px;
+              padding: 30px;
+              line-height: 1.6;
+              font-size: 12px;
               color: #333;
+              background-color: white;
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              margin: 10px 0;
+              margin: 15px 0;
             }
             th {
               text-align: left;
-              padding: 8px;
+              padding: 10px 8px;
               border-bottom: 2px solid #003d7a;
               font-weight: bold;
-              font-size: 11px;
+              font-size: 12px;
               background-color: #f5f7fa;
               color: #003d7a;
             }
             td {
-              padding: 6px 8px;
+              padding: 8px 8px;
               border-bottom: 1px solid #ddd;
+              font-size: 12px;
             }
             tr:hover {
               background-color: #f9f9f9;
@@ -593,60 +595,70 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             .header-row {
               display: flex;
               justify-content: space-between;
-              margin-bottom: 20px;
+              margin-bottom: 25px;
               border-bottom: 3px solid #003d7a;
-              padding-bottom: 15px;
+              padding-bottom: 20px;
             }
             .title {
-              font-size: 22px;
+              font-size: 28px;
               font-weight: bold;
               color: #003d7a;
             }
             .company-info {
               text-align: right;
-              font-size: 10px;
+              font-size: 11px;
               color: #666;
+              line-height: 1.8;
             }
             .company-info strong {
               color: #003d7a;
-              font-size: 11px;
+              font-size: 12px;
+              display: block;
+              font-weight: bold;
             }
             .invoice-details {
-              margin: 15px 0;
-              font-size: 11px;
+              margin: 20px 0;
+              font-size: 12px;
               color: #333;
+              line-height: 1.8;
             }
             .invoice-details strong {
               color: #003d7a;
+              font-weight: bold;
             }
             .recipient {
               background-color: #f5f7fa;
-              padding: 12px;
-              margin: 15px 0;
-              font-size: 11px;
+              padding: 15px;
+              margin: 20px 0;
+              font-size: 12px;
               border-left: 4px solid #003d7a;
               color: #333;
+              line-height: 1.8;
             }
             .recipient strong {
               color: #003d7a;
+              font-weight: bold;
+              display: block;
+              margin-bottom: 8px;
             }
             .amount-total {
-              font-size: 16px;
+              font-size: 24px;
               font-weight: bold;
               text-align: right;
-              margin: 15px 0;
-              padding: 12px;
+              margin: 25px 0;
+              padding: 15px;
               border: 3px solid #003d7a;
               background-color: #f5f7fa;
               color: #003d7a;
             }
             .payment-info {
-              margin-top: 20px;
-              padding: 12px;
-              background-color: #f5f7fa;
-              font-size: 10px;
+              margin-top: 30px;
+              padding: 15px;
+              background-color: #003d7a;
+              font-size: 11px;
               border-left: 4px solid #003d7a;
-              color: #333;
+              color: white;
+              line-height: 1.8;
             }
             .payment-info strong {
               color: #003d7a;
@@ -660,26 +672,31 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               text-transform: uppercase;
             }
             .row {
-              margin: 4px 0;
+              margin: 6px 0;
               color: #333;
+              font-size: 12px;
+              line-height: 1.6;
             }
             .info-box {
               background-color: #f5f7fa;
-              padding: 10px;
-              margin: 10px 0;
-              font-size: 10px;
+              padding: 12px;
+              margin: 15px 0;
+              font-size: 11px;
               border-left: 4px solid #003d7a;
               color: #666;
+              line-height: 1.6;
             }
             .summary-row {
               display: flex;
               justify-content: space-between;
-              padding: 6px 0;
+              padding: 8px 0;
               border-bottom: 1px solid #ddd;
-              font-size: 11px;
+              font-size: 12px;
+              line-height: 1.6;
             }
             .summary-row strong {
               color: #003d7a;
+              font-weight: bold;
             }
           </style>
         </head>
@@ -1694,22 +1711,25 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           container.style.position = 'fixed';
           container.style.left = '-9999px';
           container.style.top = '0';
-          container.style.width = '800px';
+          container.style.width = '210mm';
+          container.style.height = 'auto';
           container.style.backgroundColor = 'white';
           container.style.zIndex = '-1000';
+          container.style.padding = '0';
+          container.style.margin = '0';
           document.body.appendChild(container);
 
           // Gaidīsim renderēšanu
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise(resolve => setTimeout(resolve, 400));
 
           // Ģenerē canvas no konteinera
           const canvas = await html2canvas(container, {
-            scale: 1.5,
+            scale: 2,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
-            windowWidth: 800,
-            windowHeight: 1200,
+            windowWidth: container.scrollWidth || 816,
+            windowHeight: container.scrollHeight || 1500,
             allowTaint: true,
             foreignObjectRendering: false,
             ignoreElements: (element) => {
