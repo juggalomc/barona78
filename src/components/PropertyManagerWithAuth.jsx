@@ -53,7 +53,7 @@ export default function PropertyManager() {
   const [userApartment, setUserApartment] = useState(null);
   const [userInvoices, setUserInvoices] = useState([]);
   
-  // ===== ADMIN STATE (PropertyManager) =====
+  // ===== ADMIN STATE =====
   const [apartments, setApartments] = useState([]);
   const [tariffs, setTariffs] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -66,12 +66,8 @@ export default function PropertyManager() {
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState(null);
   
-  // Enabled meters state - tikai ūdens
-  const [enabledMeters, setEnabledMeters] = useState({
-    water: true
-  });
+  const [enabledMeters, setEnabledMeters] = useState({ water: true });
   
-  // Users management state
   const [editingUser, setEditingUser] = useState(null);
   const [editUserForm, setEditUserForm] = useState({
     email: '',
@@ -124,7 +120,7 @@ export default function PropertyManager() {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
   const [invoiceToDate, setInvoiceToDate] = useState('');
-  const [invoiceGenerationMode, setInvoiceGenerationMode] = useState('update'); // 'update' vai 'separate'
+  const [invoiceGenerationMode, setInvoiceGenerationMode] = useState('update');
   const [expandedMonth, setExpandedMonth] = useState(null);
   const [expandedInvoiceMonth, setExpandedInvoiceMonth] = useState(null);
   const [editingTariff, setEditingTariff] = useState(null);
@@ -133,6 +129,10 @@ export default function PropertyManager() {
   const [editApartmentForm, setEditApartmentForm] = useState({});
   const [copySourceMonth, setCopySourceMonth] = useState(null);
   const [selectedTariffsToCopy, setSelectedTariffsToCopy] = useState({});
+  
+  // JAUNS: Parāds un pārmaksa
+  const [debtNoteForm, setDebtNoteForm] = useState({ invoiceId: null, note: '' });
+  const [overpaymentForm, setOverpaymentForm] = useState({ apartmentId: null, amount: '', month: '' });
 
   // ===== AUTH FUNCTIONS =====
   const handleLogin = async (e) => {
@@ -164,9 +164,9 @@ export default function PropertyManager() {
       setLoginPassword('');
       
       if (data.role === 'admin') {
-        fetchData(); // Admin ielāde datus
+        fetchData();
       } else {
-        fetchUserData(data.apartment_id); // User ielāde tikai savu datu
+        fetchUserData(data.apartment_id);
       }
       
       showToast('✓ Pierakstīts!');
@@ -239,6 +239,91 @@ export default function PropertyManager() {
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
+  };
+
+  // JAUNS: Aprēķināt parādu no iepriekšējiem mēnešiem
+  const calculatePreviousDebt = (apartmentId, currentPeriod) => {
+    const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
+    
+    const previousDebts = invoices.filter(inv => {
+      if (inv.apartment_id !== apartmentId) return false;
+      if (inv.paid) return false;
+      
+      const [invYear, invMonth] = inv.period.split('-').map(Number);
+      
+      if (invYear < currentYear) return true;
+      if (invYear === currentYear && invMonth < currentMonth) return true;
+      
+      return false;
+    });
+    
+    const totalDebt = previousDebts.reduce((sum, inv) => sum + inv.amount, 0);
+    return totalDebt;
+  };
+
+  // JAUNS: Aprēķināt pārmaksu nākamajam mēnesim
+  const calculateOverpayment = (apartmentId, currentPeriod) => {
+    const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
+    const previousMonth = currentMonth === 1 
+      ? `${currentYear - 1}-12` 
+      : `${currentYear}-${String(currentMonth - 1).padStart(2, '0')}`;
+    
+    const overpayment = invoices.find(inv => 
+      inv.apartment_id === apartmentId && 
+      inv.overpayment_month === previousMonth
+    )?.overpayment_amount || 0;
+
+    return overpayment;
+  };
+
+  // JAUNS: Saglabāt parāda paskaidrojumu
+  const saveDebtNote = async (invoiceId, note) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ previous_debt_note: note })
+        .eq('id', invoiceId);
+      
+      if (error) throw error;
+      fetchData();
+      setDebtNoteForm({ invoiceId: null, note: '' });
+      showToast('✓ Parāda paskaidrojums saglabāts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  // JAUNS: Saglabāt pārmaksu
+  const saveOverpayment = async (e) => {
+    e.preventDefault();
+    if (!overpaymentForm.apartmentId || !overpaymentForm.amount || !overpaymentForm.month) {
+      showToast('Aizpildiet visus laukus', 'error');
+      return;
+    }
+
+    try {
+      const amount = parseFloat(overpaymentForm.amount);
+      if (amount <= 0) {
+        showToast('Pārmaksa jābūt lielāka par 0', 'error');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('apartment_overpayments')
+        .insert([{
+          apartment_id: overpaymentForm.apartmentId,
+          period: overpaymentForm.month,
+          amount: amount
+        }]);
+
+      if (error) throw error;
+
+      setOverpaymentForm({ apartmentId: null, amount: '', month: '' });
+      fetchData();
+      showToast('✓ Pārmaksa saglabāta');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
   };
 
   const addApartment = async (e) => {
@@ -343,29 +428,20 @@ export default function PropertyManager() {
     if (!window.confirm('Reģenerēt rēķinus? Esošie tiks dzēsti!')) return;
     
     try {
-      // Dzēst esošos rēķinus
       await supabase.from('invoices').delete().eq('period', period);
 
       const invoicesToAdd = [];
-      let updatedCount = 0; // Skaits update operāciju (regenerate gadījumā vienmēr 0)
+      let updatedCount = 0;
       const [year, month] = period.split('-');
       
-      // Aprēķināt periode datumi
-      const monthNum = parseInt(month); // Pārvērst string uz skaitli
+      const monthNum = parseInt(month);
       const daysInMonth = new Date(year, monthNum, 0).getDate();
       const dateFrom = `${year}-${month}-01`;
       const dateTo = `${year}-${month}-${daysInMonth}`;
       
-      // Filtrer tikai atzīmētus tarifus
       const periodTariffs = tariffs.filter(t => t.period === period && t.include_in_invoice !== false);
       const waterTariff = waterTariffs.find(w => w.period === period);
       
-      // Debug: parādīt cik tarifus atrads
-      console.log(`Tarifi periodam ${period}:`, tariffs.filter(t => t.period === period).length);
-      console.log(`Atzīmēti tarifi:`, periodTariffs.length);
-      console.log(`Dzīvokļi:`, apartments.length);
-      
-      // Pārbaude vai ir kādi atzīmēti tarifi
       if (periodTariffs.length === 0) {
         const allPeriodTariffs = tariffs.filter(t => t.period === period);
         if (allPeriodTariffs.length === 0) {
@@ -400,7 +476,6 @@ export default function PropertyManager() {
           });
         }
 
-        // Pievienot ūdens patēriņu no meter_readings
         const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === period);
 
         if (waterReading && waterTariff && enabledMeters.water && waterTariff.include_in_invoice !== false) {
@@ -425,10 +500,8 @@ export default function PropertyManager() {
           });
         }
 
-        // Pievienot Atkritumu izvešanu - dalīta uz declared_persons
         const wasteTariff = wasteTariffs.find(w => w.period === period);
         if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-          // Aprēķināt kopējo declared_persons visos dzīvokļos
           const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
           
           if (totalDeclaredPersons > 0) {
@@ -453,11 +526,38 @@ export default function PropertyManager() {
           }
         }
 
+        // JAUNS: PARĀDS NO IEPRIEKŠĒJIEM MĒNEŠIEM
+        const previousDebt = calculatePreviousDebt(apt.id, period);
+        if (previousDebt > 0) {
+          totalAmountWithoutVat += previousDebt;
+          invoiceDetails.push({
+            tariff_id: null,
+            tariff_name: '⚠️ Parāds no iepriekšējiem mēnešiem',
+            amount_without_vat: previousDebt,
+            vat_rate: 0,
+            vat_amount: 0,
+            type: 'debt'
+          });
+        }
+
+        // JAUNS: PĀRMAKSA
+        const overpayment = calculateOverpayment(apt.id, period);
+        if (overpayment > 0) {
+          totalAmountWithoutVat -= overpayment;
+          invoiceDetails.push({
+            tariff_id: null,
+            tariff_name: '💰 Pārmaksa no iepriekšējā mēneša',
+            amount_without_vat: -overpayment,
+            vat_rate: 0,
+            vat_amount: 0,
+            type: 'overpayment'
+          });
+        }
+
         if (invoiceDetails.length === 0) continue;
 
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
         
-        // RĒĶINA NUMURS - Piesaistīts ģenerēšanas laikam
         const timestamp = Math.floor(Date.now() / 1000);
         const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
@@ -476,12 +576,14 @@ export default function PropertyManager() {
           date_from: dateFrom,
           date_to: dateTo,
           paid: false,
-          invoice_details: JSON.stringify(invoiceDetails)
+          invoice_details: JSON.stringify(invoiceDetails),
+          previous_debt_amount: previousDebt,
+          overpayment_amount: overpayment,
+          overpayment_month: period
         });
       }
 
       if (invoicesToAdd.length === 0 && updatedCount === 0) {
-        // Pārbaude - vai vispār ir atzīmēti tarifi?
         if (periodTariffs.length === 0) {
           showToast(`Nav atzīmētu tarifū periodam ${period}. Atzīmējiet "Iekļaut rēķinā" checkbox!`, 'error');
         } else {
@@ -507,12 +609,7 @@ export default function PropertyManager() {
       return;
     }
 
-    // Filtrer tarifus tikai ar include_in_invoice = true
     const periodTariffs = tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice === true);
-    
-    // DEBUG
-    console.log(`Tarifi periodam ${invoiceMonth}:`, tariffs.filter(t => t.period === invoiceMonth).length);
-    console.log(`Atzīmēti (include_in_invoice=true):`, periodTariffs.length);
     
     if (periodTariffs.length === 0) {
       showToast(`Nav atzīmētu tarifū periodam ${invoiceMonth}. Pārbaudiet vai tarifi ir checked "Include in invoice"`, 'error');
@@ -521,16 +618,14 @@ export default function PropertyManager() {
 
     try {
       const invoicesToAdd = [];
-      let updatedCount = 0; // Skaits update operāciju
+      let updatedCount = 0;
       const [year, month] = invoiceMonth.split('-');
       
-      // Izmantot manuālos datums vai aprēķināt default
       let dateFrom = invoiceFromDate;
       let dateTo = invoiceToDate;
       
       if (!dateFrom || !dateTo) {
-        // Default: mēneša 1. līdz pēdējais diems
-        const monthNum = parseInt(month); // Pārvērst string uz skaitli
+        const monthNum = parseInt(month);
         const daysInMonth = new Date(year, monthNum, 0).getDate();
         dateFrom = dateFrom || `${year}-${month}-01`;
         dateTo = dateTo || `${year}-${month}-${daysInMonth}`;
@@ -538,7 +633,6 @@ export default function PropertyManager() {
 
       for (const apt of apartments) {
         
-        // JAUNS RĒĶINS - aprēķināt visus tarifus šim dzīvoklim
         let totalAmountWithoutVat = 0;
         let totalVatAmount = 0;
         let invoiceDetails = [];
@@ -562,7 +656,6 @@ export default function PropertyManager() {
           });
         }
 
-        // Pievienot ūdens patēriņu no meter_readings
         const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === invoiceMonth);
         const waterTariff = waterTariffs.find(w => w.period === invoiceMonth);
 
@@ -588,10 +681,8 @@ export default function PropertyManager() {
           });
         }
 
-        // Pievienot Atkritumu izvešanu - dalīta uz declared_persons
         const wasteTariff = wasteTariffs.find(w => w.period === invoiceMonth);
         if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-          // Aprēķināt kopējo declared_persons visos dzīvokļos
           const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
           
           if (totalDeclaredPersons > 0) {
@@ -616,14 +707,40 @@ export default function PropertyManager() {
           }
         }
 
-        if (invoiceDetails.length === 0) continue; // Neskop dzīvokļus bez tarifiem
+        // JAUNS: PARĀDS NO IEPRIEKŠĒJIEM MĒNEŠIEM
+        const previousDebt = calculatePreviousDebt(apt.id, invoiceMonth);
+        if (previousDebt > 0) {
+          totalAmountWithoutVat += previousDebt;
+          invoiceDetails.push({
+            tariff_id: null,
+            tariff_name: '⚠️ Parāds no iepriekšējiem mēnešiem',
+            amount_without_vat: previousDebt,
+            vat_rate: 0,
+            vat_amount: 0,
+            type: 'debt'
+          });
+        }
+
+        // JAUNS: PĀRMAKSA
+        const overpayment = calculateOverpayment(apt.id, invoiceMonth);
+        if (overpayment > 0) {
+          totalAmountWithoutVat -= overpayment;
+          invoiceDetails.push({
+            tariff_id: null,
+            tariff_name: '💰 Pārmaksa no iepriekšējā mēneša',
+            amount_without_vat: -overpayment,
+            vat_rate: 0,
+            vat_amount: 0,
+            type: 'overpayment'
+          });
+        }
+
+        if (invoiceDetails.length === 0) continue;
 
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
         
-        // RĒĶINA NUMURS - Piesaistīts ģenerēšanas laikam, nevis mēnesim
-        // Formāts: YYYY/MM-DD-ApartmentNumber-TIMESTAMP
         const now = new Date();
-        const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp
+        const timestamp = Math.floor(Date.now() / 1000);
         const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
         
         const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
@@ -642,13 +759,14 @@ export default function PropertyManager() {
           date_from: dateFrom,
           date_to: dateTo,
           paid: false,
-          invoice_details: JSON.stringify(invoiceDetails)
+          invoice_details: JSON.stringify(invoiceDetails),
+          previous_debt_amount: previousDebt,
+          overpayment_amount: overpayment,
+          overpayment_month: invoiceMonth
         });
       }
 
       if (invoicesToAdd.length === 0 && updatedCount === 0) {
-        console.log('DEBUG: invoicesToAdd skaits:', invoicesToAdd.length, 'updatedCount:', updatedCount);
-        console.log('DEBUG: apartments skaits:', apartments.length, 'periodTariffs skaits:', periodTariffs.length);
         showToast('⚠️ Nav ko ģenerēt. Pārbaudiet:\n1. Vai ir dzīvokļi?\n2. Vai tarifiem ir checked "Include in invoice"?\n3. Vai tarifiem ir pareizs periods?', 'error');
         return;
       }
@@ -675,7 +793,6 @@ export default function PropertyManager() {
       const period = waterTariffForm.period;
       const includeInvoice = waterTariffForm.include_in_invoice;
 
-      // Validēt vērtības
       if (isNaN(priceValue) || priceValue < 0 || priceValue > 9999.99) {
         showToast('Nepareiza cena par m³', 'error');
         return;
@@ -738,14 +855,12 @@ export default function PropertyManager() {
         return;
       }
 
-      // Pārbaudīt vai jau pastāv šajā periodā
       const { data: existing } = await supabase
         .from('waste_tariffs')
         .select('*')
         .eq('period', period);
 
       if (existing && existing.length > 0) {
-        // Update esošo
         const { error } = await supabase
           .from('waste_tariffs')
           .update({
@@ -756,7 +871,6 @@ export default function PropertyManager() {
           .eq('id', existing[0].id);
         if (error) throw error;
       } else {
-        // Ievietot jaunu
         const { error } = await supabase
           .from('waste_tariffs')
           .insert([{
@@ -780,7 +894,6 @@ export default function PropertyManager() {
       const value = parseFloat(readingValue);
       
       if (readingValue === '' || readingValue === null) {
-        // Dzēst rādījumu ja ir tukšs
         const existing = meterReadings.find(mr => mr.apartment_id === apartmentId && mr.meter_type === 'water' && mr.period === period);
         if (existing) {
           await supabase.from('meter_readings').delete().eq('id', existing.id);
@@ -789,7 +902,6 @@ export default function PropertyManager() {
         return;
       }
 
-      // Validēt vērtību
       if (isNaN(value) || value < 0) {
         showToast('Nepareiza ūdens patēriņa vērtība', 'error');
         return;
@@ -800,18 +912,15 @@ export default function PropertyManager() {
         return;
       }
 
-      // Meklēt esošo rādījumu
       const existing = meterReadings.find(mr => mr.apartment_id === apartmentId && mr.meter_type === 'water' && mr.period === period);
 
       if (existing) {
-        // Update
         const { error } = await supabase
           .from('meter_readings')
           .update({ reading_value: value })
           .eq('id', existing.id);
         if (error) throw error;
       } else {
-        // Insert
         const today = new Date().toISOString().split('T')[0];
         const { error } = await supabase
           .from('meter_readings')
@@ -836,7 +945,6 @@ export default function PropertyManager() {
     try {
       const consumptionValue = parseFloat(consumption);
       
-      // Validēt vērtību
       if (isNaN(consumptionValue) || consumptionValue < 0) {
         showToast('Nepareiza ūdens patēriņa vērtība', 'error');
         return;
@@ -1000,7 +1108,6 @@ export default function PropertyManager() {
     }
   };
 
-  // ===== USERS MANAGEMENT =====
   const addUser = async (e) => {
     e.preventDefault();
     if (!newUserForm.email || !newUserForm.password || !newUserForm.apartment_id) {
@@ -1069,7 +1176,6 @@ export default function PropertyManager() {
     }
   };
 
-  // Aprēķināt rēķina statusu (Apmaksāts/Gaida/Parāds)
   const getInvoiceStatus = (invoice) => {
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
@@ -1085,7 +1191,6 @@ export default function PropertyManager() {
     }
   };
 
-  // Eksportēt rēķinus uz CSV
   const exportInvoicesToCSV = () => {
     const headers = ['Rēķina numurs', 'Dzīvoklis', 'Īpašnieks', 'Periods', 'Summa (EUR)', 'Termiņš', 'Statuss', 'Apmaksāts'];
     
@@ -1104,13 +1209,11 @@ export default function PropertyManager() {
       ];
     });
 
-    // Izveidot CSV tekstu
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');
 
-    // Lejupielādēt
     const element = document.createElement('a');
     element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent));
     element.setAttribute('download', `recini_${new Date().toISOString().split('T')[0]}.csv`);
@@ -1129,90 +1232,33 @@ export default function PropertyManager() {
     const vatAmount = invoice.vat_amount || 0;
     const amountWithVat = invoice.amount_with_vat || invoice.amount;
 
-    const tableRows = invoiceDetails.map(detail => {
+    const rowsWithoutVat = invoiceDetails.filter(d => d.type !== 'debt' && d.type !== 'overpayment' && (d.vat_rate === 0 || d.vat_rate === undefined)).map(detail => {
       if (detail.type === 'water') {
-        return `
-          <tr>
-            <td>${detail.tariff_name}</td>
-            <td style="text-align: center;">${detail.consumption_m3} m³</td>
-            <td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td>
-            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
-          </tr>
-        `;
+        return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+      } else if (detail.type === 'waste') {
+        return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.declared_persons} pers.</td><td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
       } else {
-        return `
-          <tr>
-            <td>${detail.tariff_name}</td>
-            <td style="text-align: center;">${apt.area} m²</td>
-            <td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td>
-            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
-          </tr>
-        `;
+        return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${apt.area} m²</td><td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
       }
     }).join('');
 
-    // Sadalīt rindas - bez PVN un ar PVN
-    const rowsWithoutVat = invoiceDetails.filter(d => d.vat_rate === 0 || d.vat_rate === undefined).map(detail => {
+    const rowsWithVat = invoiceDetails.filter(d => d.type !== 'debt' && d.type !== 'overpayment' && d.vat_rate > 0).map(detail => {
       if (detail.type === 'water') {
-        return `
-          <tr>
-            <td>${detail.tariff_name}</td>
-            <td style="text-align: center;">${detail.consumption_m3} m³</td>
-            <td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td>
-            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
-          </tr>
-        `;
+        return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
       } else if (detail.type === 'waste') {
-        return `
-          <tr>
-            <td>${detail.tariff_name}</td>
-            <td style="text-align: center;">${detail.declared_persons} pers.</td>
-            <td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td>
-            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
-          </tr>
-        `;
+        return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.declared_persons} pers.</td><td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
       } else {
-        return `
-          <tr>
-            <td>${detail.tariff_name}</td>
-            <td style="text-align: center;">${apt.area} m²</td>
-            <td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td>
-            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
-          </tr>
-        `;
+        return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${apt.area} m²</td><td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
       }
     }).join('');
 
-    const rowsWithVat = invoiceDetails.filter(d => d.vat_rate > 0).map(detail => {
-      if (detail.type === 'water') {
-        return `
-          <tr>
-            <td>${detail.tariff_name}</td>
-            <td style="text-align: center;">${detail.consumption_m3} m³</td>
-            <td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td>
-            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
-          </tr>
-        `;
-      } else if (detail.type === 'waste') {
-        return `
-          <tr>
-            <td>${detail.tariff_name}</td>
-            <td style="text-align: center;">${detail.declared_persons} pers.</td>
-            <td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td>
-            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
-          </tr>
-        `;
-      } else {
-        return `
-          <tr>
-            <td>${detail.tariff_name}</td>
-            <td style="text-align: center;">${apt.area} m²</td>
-            <td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td>
-            <td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td>
-          </tr>
-        `;
-      }
-    }).join('');
+    const debtRows = invoiceDetails.filter(d => d.type === 'debt').map(detail => 
+      `<tr style="background: #fee2e2;"><td style="color: #991b1b; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #991b1b; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`
+    ).join('');
+
+    const overpaymentRows = invoiceDetails.filter(d => d.type === 'overpayment').map(detail => 
+      `<tr style="background: #dbeafe;"><td style="color: #0369a1; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #0369a1; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`
+    ).join('');
 
     const htmlContent = `
       <html>
@@ -1274,44 +1320,10 @@ export default function PropertyManager() {
               <th style="text-align: right;">SUMMA</th>
             </tr>
             ${rowsWithoutVat}
-            ${invoiceDetails.filter(d => d.vat_rate === 0 || d.vat_rate === undefined).length > 0 && invoiceDetails.filter(d => d.vat_rate > 0).length > 0 ? `
-              <tr style="background: #f9fafb; height: 15px;"></tr>
-              <tr style="background: #f9fafb;">
-                <td colspan="4" style="text-align: right; font-size: 11px; padding: 8px;">
-                  Summa bez PVN: <strong>€${invoiceDetails.filter(d => d.vat_rate === 0 || d.vat_rate === undefined).reduce((sum, d) => sum + d.amount_without_vat, 0).toFixed(2)}</strong>
-                </td>
-              </tr>
-            ` : ''}
+            ${rowsWithVat}
+            ${debtRows}
+            ${overpaymentRows}
           </table>
-
-          ${rowsWithVat ? `
-            <div style="margin-top: 20px; font-weight: bold; color: #003399; padding-bottom: 10px;">Pakalpojumi ar PVN</div>
-            <table>
-              <tr>
-                <th>PAKALPOJUMS</th>
-                <th style="text-align: center;">DAUDZ.</th>
-                <th style="text-align: right;">CENA</th>
-                <th style="text-align: right;">SUMMA</th>
-              </tr>
-              ${rowsWithVat}
-              ${(() => {
-                const vatByRate = {};
-                invoiceDetails.filter(d => d.vat_rate > 0).forEach(detail => {
-                  const rate = detail.vat_rate;
-                  if (!vatByRate[rate]) {
-                    vatByRate[rate] = 0;
-                  }
-                  vatByRate[rate] += detail.vat_amount;
-                });
-                return Object.entries(vatByRate).map(([rate, totalVat]) => `
-                  <tr style="background: #f9fafb;">
-                    <td colspan="3" style="text-align: right; font-size: 11px;">PVN (${rate}%):</td>
-                    <td style="text-align: right; font-size: 11px;">€${totalVat.toFixed(2)}</td>
-                  </tr>
-                `).join('');
-              })()}
-            </table>
-          ` : ''}
 
           <div style="text-align: right; margin: 20px 0; border-top: 2px solid #000; padding-top: 15px;">
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px;">
@@ -1354,7 +1366,6 @@ export default function PropertyManager() {
     printWindow.print();
   };
 
-  // Grupēt rēķinus pa mēnešiem
   const groupedInvoices = {};
   invoices.forEach(inv => {
     if (!groupedInvoices[inv.period]) {
@@ -1366,7 +1377,6 @@ export default function PropertyManager() {
   const sortedMonths = Object.keys(groupedInvoices).sort().reverse();
   const uniqueTariffPeriods = [...new Set(tariffs.map(t => t.period))].sort().reverse();
 
-  // Aprēķināt parādu
   const totalDebt = invoices
     .filter(inv => !inv.paid)
     .reduce((sum, inv) => sum + inv.amount, 0);
@@ -1380,23 +1390,9 @@ export default function PropertyManager() {
         <div style={{ background: 'white', padding: '30px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <h1 style={{ textAlign: 'center', color: '#003399', marginBottom: '30px', fontSize: '28px' }}>🏢 BARONA 78</h1>
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <input
-              type="email"
-              placeholder="E-pasts"
-              value={loginEmail}
-              onChange={(e) => setLoginEmail(e.target.value)}
-              style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
-            />
-            <input
-              type="password"
-              placeholder="Parole"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }}
-            />
-            <button type="submit" style={{ padding: '12px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
-              Pierakstīties
-            </button>
+            <input type="email" placeholder="E-pasts" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }} />
+            <input type="password" placeholder="Parole" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px' }} />
+            <button type="submit" style={{ padding: '12px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>Pierakstīties</button>
           </form>
           {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>
@@ -1417,16 +1413,13 @@ export default function PropertyManager() {
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '12px', color: '#ccc', marginBottom: '4px' }}>Kopā apmaksāt:</div>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4ade80' }}>€{userInvoices.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
-              <div style={{ fontSize: '11px', color: '#ccc', marginTop: '4px' }}>
-                Parāds: €{userInvoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
-              </div>
+              <div style={{ fontSize: '11px', color: '#ccc', marginTop: '4px' }}>Parāds: €{userInvoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
             </div>
             <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Izrakstīties</button>
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          {/* RĒĶINU VĒSTURE */}
           <div style={{ background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <h2>📄 Rēķinu vēsture</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1438,35 +1431,13 @@ export default function PropertyManager() {
                     <div>
                       <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         Rēķins {inv.invoice_number}
-                        {(() => {
-                          const status = getInvoiceStatus(inv);
-                          return (
-                            <span style={{
-                              fontSize: '11px',
-                              fontWeight: '500',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              backgroundColor: status.color,
-                              color: 'white'
-                            }}>
-                              {status.emoji} {status.status}
-                            </span>
-                          );
-                        })()}
+                        {(() => { const status = getInvoiceStatus(inv); return <span style={{fontSize: '11px', fontWeight: '500', padding: '2px 8px', borderRadius: '4px', backgroundColor: status.color, color: 'white'}}>{status.emoji} {status.status}</span>; })()}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                        {inv.period} • Termiņš: {new Date(inv.due_date).toLocaleDateString('lv-LV')}<br/>
-                        📅 {inv.date_from ? new Date(inv.date_from).toLocaleDateString('lv-LV') : '-'} — {inv.date_to ? new Date(inv.date_to).toLocaleDateString('lv-LV') : '-'}
-                      </div>
+                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{inv.period} • Termiņš: {new Date(inv.due_date).toLocaleDateString('lv-LV')}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontWeight: 'bold', color: inv.paid ? '#10b981' : '#ef4444' }}>€{inv.amount.toFixed(2)}</div>
-                      <button
-                        onClick={() => downloadPDF(inv)}
-                        style={{ fontSize: '12px', marginTop: '8px', padding: '4px 8px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                      >
-                        📥 PDF
-                      </button>
+                      <button onClick={() => downloadPDF(inv)} style={{ fontSize: '12px', marginTop: '8px', padding: '4px 8px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>📥 PDF</button>
                     </div>
                   </div>
                 ))
@@ -1485,10 +1456,7 @@ export default function PropertyManager() {
     <div style={styles.app}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-        @keyframes slideIn {
-          from { transform: translateX(400px); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
       `}</style>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -1504,11 +1472,7 @@ export default function PropertyManager() {
             { id: 'water', label: '💧 Ūdens' },
             { id: 'invoices', label: '📄 Rēķini' }
           ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={activeTab === tab.id ? {...styles.navBtn, ...styles.navBtnActive} : styles.navBtn}
-            >
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={activeTab === tab.id ? {...styles.navBtn, ...styles.navBtnActive} : styles.navBtn}>
               {tab.label}
             </button>
           ))}
@@ -1550,21 +1514,10 @@ export default function PropertyManager() {
 
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>💳 Kopsavilkums</h2>
-                
                 {totalDebt > 0 && (
-                  <div style={{
-                    background: '#fee2e2',
-                    border: '1px solid #fca5a5',
-                    borderRadius: '8px',
-                    padding: '15px',
-                    marginBottom: '15px',
-                    color: '#991b1b'
-                  }}>
+                  <div style={{background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '15px', marginBottom: '15px', color: '#991b1b'}}>
                     <div style={{fontWeight: 'bold', marginBottom: '8px'}}>⚠️ SVARĪGI - Ir parāds!</div>
-                    <div style={{fontSize: '13px'}}>
-                      Kopā parāds: <strong>€{totalDebt.toFixed(2)}</strong><br/>
-                      Dzīvokļu skaits ar parādu: <strong>{invoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).map(i => i.apartment_id).filter((v, i, a) => a.indexOf(v) === i).length}</strong>
-                    </div>
+                    <div style={{fontSize: '13px'}}>Kopā parāds: <strong>€{totalDebt.toFixed(2)}</strong><br/>Dzīvokļu skaits ar parādu: <strong>{invoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).map(i => i.apartment_id).filter((v, i, a) => a.indexOf(v) === i).length}</strong></div>
                   </div>
                 )}
                 
@@ -1575,9 +1528,7 @@ export default function PropertyManager() {
                   </div>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>Apmaksāts</div>
-                    <div style={{fontSize: '24px', fontWeight: 'bold', color: '#10b981'}}>
-                      €{(totalAmount - totalDebt).toFixed(2)}
-                    </div>
+                    <div style={{fontSize: '24px', fontWeight: 'bold', color: '#10b981'}}>€{(totalAmount - totalDebt).toFixed(2)}</div>
                   </div>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>Parāds</div>
@@ -1591,21 +1542,15 @@ export default function PropertyManager() {
                 <div style={styles.summaryGrid}>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>✓ Apmaksāti</div>
-                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#10b981'}}>
-                      {invoices.filter(i => i.paid).length}
-                    </div>
+                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#10b981'}}>{invoices.filter(i => i.paid).length}</div>
                   </div>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>⏳ Gaida atmaksu</div>
-                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#f59e0b'}}>
-                      {invoices.filter(i => !i.paid && new Date(i.due_date) > new Date()).length}
-                    </div>
+                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#f59e0b'}}>{invoices.filter(i => !i.paid && new Date(i.due_date) > new Date()).length}</div>
                   </div>
                   <div style={styles.summaryItem}>
                     <div style={styles.summaryLabel}>⚠️ Parāds</div>
-                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#ef4444'}}>
-                      {invoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).length}
-                    </div>
+                    <div style={{fontSize: '20px', fontWeight: 'bold', color: '#ef4444'}}>{invoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).length}</div>
                   </div>
                 </div>
               </div>
@@ -1616,70 +1561,20 @@ export default function PropertyManager() {
                 <h2 style={styles.cardTitle}>➕ Pievienot dzīvokli</h2>
                 <form onSubmit={addApartment} style={styles.form}>
                   <div style={styles.formRow}>
-                    <input
-                      type="text"
-                      placeholder="Numurs *"
-                      value={apartmentForm.number}
-                      onChange={(e) => setApartmentForm({...apartmentForm, number: e.target.value})}
-                      style={styles.input}
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Platība (m²) *"
-                      value={apartmentForm.area}
-                      onChange={(e) => setApartmentForm({...apartmentForm, area: e.target.value})}
-                      style={styles.input}
-                    />
+                    <input type="text" placeholder="Numurs *" value={apartmentForm.number} onChange={(e) => setApartmentForm({...apartmentForm, number: e.target.value})} style={styles.input} />
+                    <input type="number" step="0.01" placeholder="Platība (m²) *" value={apartmentForm.area} onChange={(e) => setApartmentForm({...apartmentForm, area: e.target.value})} style={styles.input} />
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Vārds *"
-                    value={apartmentForm.owner_name}
-                    onChange={(e) => setApartmentForm({...apartmentForm, owner_name: e.target.value})}
-                    style={styles.input}
-                  />
+                  <input type="text" placeholder="Vārds *" value={apartmentForm.owner_name} onChange={(e) => setApartmentForm({...apartmentForm, owner_name: e.target.value})} style={styles.input} />
                   <div style={styles.formRow}>
-                    <input
-                      type="text"
-                      placeholder="Uzvārds"
-                      value={apartmentForm.owner_surname}
-                      onChange={(e) => setApartmentForm({...apartmentForm, owner_surname: e.target.value})}
-                      style={styles.input}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Personas kods"
-                      value={apartmentForm.personal_code}
-                      onChange={(e) => setApartmentForm({...apartmentForm, personal_code: e.target.value})}
-                      style={styles.input}
-                    />
+                    <input type="text" placeholder="Uzvārds" value={apartmentForm.owner_surname} onChange={(e) => setApartmentForm({...apartmentForm, owner_surname: e.target.value})} style={styles.input} />
+                    <input type="text" placeholder="Personas kods" value={apartmentForm.personal_code} onChange={(e) => setApartmentForm({...apartmentForm, personal_code: e.target.value})} style={styles.input} />
                   </div>
                   <div style={styles.formRow}>
-                    <input
-                      type="email"
-                      placeholder="E-pasts"
-                      value={apartmentForm.email}
-                      onChange={(e) => setApartmentForm({...apartmentForm, email: e.target.value})}
-                      style={styles.input}
-                    />
-                    <input
-                      type="tel"
-                      placeholder="Telefons"
-                      value={apartmentForm.phone}
-                      onChange={(e) => setApartmentForm({...apartmentForm, phone: e.target.value})}
-                      style={styles.input}
-                    />
+                    <input type="email" placeholder="E-pasts" value={apartmentForm.email} onChange={(e) => setApartmentForm({...apartmentForm, email: e.target.value})} style={styles.input} />
+                    <input type="tel" placeholder="Telefons" value={apartmentForm.phone} onChange={(e) => setApartmentForm({...apartmentForm, phone: e.target.value})} style={styles.input} />
                   </div>
                   <div style={styles.formRow}>
-                    <input
-                      type="number"
-                      placeholder="Deklarēto personu skaits"
-                      min="1"
-                      value={apartmentForm.declared_persons}
-                      onChange={(e) => setApartmentForm({...apartmentForm, declared_persons: e.target.value})}
-                      style={styles.input}
-                    />
+                    <input type="number" placeholder="Deklarēto personu skaits" min="1" value={apartmentForm.declared_persons} onChange={(e) => setApartmentForm({...apartmentForm, declared_persons: e.target.value})} style={styles.input} />
                   </div>
                   <button type="submit" style={styles.btn}>Pievienot</button>
                 </form>
@@ -1692,56 +1587,14 @@ export default function PropertyManager() {
                     <div key={apt.id} style={styles.listItem}>
                       {editingApartment === apt.id ? (
                         <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                          <input
-                            type="number"
-                            placeholder="Dzīvokļa numurs"
-                            value={editApartmentForm.number}
-                            onChange={(e) => setEditApartmentForm({...editApartmentForm, number: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
-                          />
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Platība (m²)"
-                            value={editApartmentForm.area}
-                            onChange={(e) => setEditApartmentForm({...editApartmentForm, area: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
-                          />
-                          <input
-                            type="text"
-                            placeholder="Īpašnieka vārds"
-                            value={editApartmentForm.owner_name}
-                            onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_name: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
-                          />
-                          <input
-                            type="text"
-                            placeholder="Uzvārds"
-                            value={editApartmentForm.owner_surname}
-                            onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_surname: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
-                          />
-                          <input
-                            type="number"
-                            placeholder="Deklarēto personu skaits"
-                            min="1"
-                            value={editApartmentForm.declared_persons}
-                            onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})}
-                            style={{...styles.input, fontSize: '12px'}}
-                          />
+                          <input type="number" placeholder="Dzīvokļa numurs" value={editApartmentForm.number} onChange={(e) => setEditApartmentForm({...editApartmentForm, number: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                          <input type="number" step="0.01" placeholder="Platība (m²)" value={editApartmentForm.area} onChange={(e) => setEditApartmentForm({...editApartmentForm, area: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                          <input type="text" placeholder="Īpašnieka vārds" value={editApartmentForm.owner_name} onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                          <input type="text" placeholder="Uzvārds" value={editApartmentForm.owner_surname} onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_surname: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                          <input type="number" placeholder="Deklarēto personu skaits" min="1" value={editApartmentForm.declared_persons} onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                           <div style={{display: 'flex', gap: '8px'}}>
-                            <button
-                              onClick={() => saveEditApartment(apt.id)}
-                              style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}
-                            >
-                              ✓ Saglabāt
-                            </button>
-                            <button
-                              onClick={() => setEditingApartment(null)}
-                              style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}
-                            >
-                              Atcelt
-                            </button>
+                            <button onClick={() => saveEditApartment(apt.id)} style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}>✓ Saglabāt</button>
+                            <button onClick={() => setEditingApartment(null)} style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}>Atcelt</button>
                           </div>
                         </div>
                       ) : (
@@ -1750,15 +1603,9 @@ export default function PropertyManager() {
                             <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
                             <div style={{fontSize: '13px', color: '#666'}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
                             {(() => {
-                              const apartmentDebt = invoices
-                                .filter(inv => inv.apartment_id === apt.id && !inv.paid && new Date(inv.due_date) <= new Date())
-                                .reduce((sum, inv) => sum + inv.amount, 0);
+                              const apartmentDebt = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid && new Date(inv.due_date) <= new Date()).reduce((sum, inv) => sum + inv.amount, 0);
                               if (apartmentDebt > 0) {
-                                return (
-                                  <div style={{fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: '500'}}>
-                                    ⚠️ Parāds: €{apartmentDebt.toFixed(2)}
-                                  </div>
-                                );
+                                return <div style={{fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: '500'}}>⚠️ Parāds: €{apartmentDebt.toFixed(2)}</div>;
                               }
                               return null;
                             })()}
@@ -1779,37 +1626,13 @@ export default function PropertyManager() {
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>➕ Pievienot lietotāju</h2>
                 <form onSubmit={addUser} style={styles.form}>
-                  <input
-                    type="email"
-                    placeholder="E-pasts *"
-                    value={newUserForm.email}
-                    onChange={(e) => setNewUserForm({...newUserForm, email: e.target.value})}
-                    style={styles.input}
-                  />
-                  <input
-                    type="password"
-                    placeholder="Parole *"
-                    value={newUserForm.password}
-                    onChange={(e) => setNewUserForm({...newUserForm, password: e.target.value})}
-                    style={styles.input}
-                  />
-                  <select
-                    value={newUserForm.apartment_id}
-                    onChange={(e) => setNewUserForm({...newUserForm, apartment_id: e.target.value})}
-                    style={styles.input}
-                  >
+                  <input type="email" placeholder="E-pasts *" value={newUserForm.email} onChange={(e) => setNewUserForm({...newUserForm, email: e.target.value})} style={styles.input} />
+                  <input type="password" placeholder="Parole *" value={newUserForm.password} onChange={(e) => setNewUserForm({...newUserForm, password: e.target.value})} style={styles.input} />
+                  <select value={newUserForm.apartment_id} onChange={(e) => setNewUserForm({...newUserForm, apartment_id: e.target.value})} style={styles.input}>
                     <option value="">-- Izvēlieties dzīvokli --</option>
-                    {apartments.map(apt => (
-                      <option key={apt.id} value={apt.id}>
-                        Dzīv. {apt.number} - {apt.owner_name}
-                      </option>
-                    ))}
+                    {apartments.map(apt => (<option key={apt.id} value={apt.id}>Dzīv. {apt.number} - {apt.owner_name}</option>))}
                   </select>
-                  <select
-                    value={newUserForm.role}
-                    onChange={(e) => setNewUserForm({...newUserForm, role: e.target.value})}
-                    style={styles.input}
-                  >
+                  <select value={newUserForm.role} onChange={(e) => setNewUserForm({...newUserForm, role: e.target.value})} style={styles.input}>
                     <option value="user">Lietotājs</option>
                     <option value="admin">Administrators</option>
                   </select>
@@ -1828,63 +1651,26 @@ export default function PropertyManager() {
                       <div key={user.id} style={styles.listItem}>
                         {isEditing ? (
                           <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                            <input
-                              type="email"
-                              placeholder="E-pasts"
-                              value={editUserForm.email}
-                              onChange={(e) => setEditUserForm({...editUserForm, email: e.target.value})}
-                              style={{...styles.input, fontSize: '12px'}}
-                            />
-                            <input
-                              type="password"
-                              placeholder="Parole"
-                              value={editUserForm.password}
-                              onChange={(e) => setEditUserForm({...editUserForm, password: e.target.value})}
-                              style={{...styles.input, fontSize: '12px'}}
-                            />
-                            <select
-                              value={editUserForm.apartment_id || ''}
-                              onChange={(e) => setEditUserForm({...editUserForm, apartment_id: e.target.value})}
-                              style={{...styles.input, fontSize: '12px'}}
-                            >
+                            <input type="email" placeholder="E-pasts" value={editUserForm.email} onChange={(e) => setEditUserForm({...editUserForm, email: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                            <input type="password" placeholder="Parole" value={editUserForm.password} onChange={(e) => setEditUserForm({...editUserForm, password: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                            <select value={editUserForm.apartment_id || ''} onChange={(e) => setEditUserForm({...editUserForm, apartment_id: e.target.value})} style={{...styles.input, fontSize: '12px'}}>
                               <option value="">-- Dzīvoklis --</option>
-                              {apartments.map(apt => (
-                                <option key={apt.id} value={apt.id}>
-                                  Dzīv. {apt.number} - {apt.owner_name}
-                                </option>
-                              ))}
+                              {apartments.map(apt => (<option key={apt.id} value={apt.id}>Dzīv. {apt.number} - {apt.owner_name}</option>))}
                             </select>
-                            <select
-                              value={editUserForm.role}
-                              onChange={(e) => setEditUserForm({...editUserForm, role: e.target.value})}
-                              style={{...styles.input, fontSize: '12px'}}
-                            >
+                            <select value={editUserForm.role} onChange={(e) => setEditUserForm({...editUserForm, role: e.target.value})} style={{...styles.input, fontSize: '12px'}}>
                               <option value="user">Lietotājs</option>
                               <option value="admin">Administrators</option>
                             </select>
                             <div style={{display: 'flex', gap: '8px'}}>
-                              <button
-                                onClick={() => saveEditUser(user.id)}
-                                style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}
-                              >
-                                ✓ Saglabāt
-                              </button>
-                              <button
-                                onClick={() => setEditingUser(null)}
-                                style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}
-                              >
-                                Atcelt
-                              </button>
+                              <button onClick={() => saveEditUser(user.id)} style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}>✓ Saglabāt</button>
+                              <button onClick={() => setEditingUser(null)} style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}>Atcelt</button>
                             </div>
                           </div>
                         ) : (
                           <>
                             <div>
                               <div style={{fontWeight: 'bold'}}>📧 {user.email}</div>
-                              <div style={{fontSize: '13px', color: '#666'}}>
-                                {apt ? `Dzīv. ${apt.number}` : 'Nav dzīvokļa'} • 
-                                {user.role === 'admin' ? ' 👤 Administrators' : ' Lietotājs'}
-                              </div>
+                              <div style={{fontSize: '13px', color: '#666'}}>{apt ? `Dzīv. ${apt.number}` : 'Nav dzīvokļa'} • {user.role === 'admin' ? ' 👤 Administrators' : ' Lietotājs'}</div>
                             </div>
                             <div style={{display: 'flex', gap: '4px'}}>
                               <button onClick={() => startEditUser(user)} style={{...styles.btnSmall, padding: '4px 8px'}} title="Rediģēt">✏️</button>
@@ -1905,46 +1691,16 @@ export default function PropertyManager() {
                 <form onSubmit={addTariff} style={styles.form}>
                   <div>
                     <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
-                    <input
-                      type="month"
-                      value={tariffPeriod}
-                      onChange={(e) => setTariffPeriod(e.target.value)}
-                      style={styles.input}
-                    />
+                    <input type="month" value={tariffPeriod} onChange={(e) => setTariffPeriod(e.target.value)} style={styles.input} />
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Nosaukums *"
-                    value={tariffForm.name}
-                    onChange={(e) => setTariffForm({...tariffForm, name: e.target.value})}
-                    style={styles.input}
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Summa mājai (€) *"
-                    value={tariffForm.total_amount}
-                    onChange={(e) => setTariffForm({...tariffForm, total_amount: e.target.value})}
-                    style={styles.input}
-                  />
+                  <input type="text" placeholder="Nosaukums *" value={tariffForm.name} onChange={(e) => setTariffForm({...tariffForm, name: e.target.value})} style={styles.input} />
+                  <input type="number" step="0.01" placeholder="Summa mājai (€) *" value={tariffForm.total_amount} onChange={(e) => setTariffForm({...tariffForm, total_amount: e.target.value})} style={styles.input} />
                   <div>
                     <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>PVN (%) - 0 ja bez PVN</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="PVN procentu likme"
-                      value={tariffForm.vat_rate}
-                      onChange={(e) => setTariffForm({...tariffForm, vat_rate: e.target.value})}
-                      style={styles.input}
-                    />
+                    <input type="number" step="0.01" placeholder="PVN procentu likme" value={tariffForm.vat_rate} onChange={(e) => setTariffForm({...tariffForm, vat_rate: e.target.value})} style={styles.input} />
                   </div>
                   <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: '#f9fafb', borderRadius: '4px'}}>
-                    <input
-                      type="checkbox"
-                      checked={tariffForm.include_in_invoice}
-                      onChange={(e) => setTariffForm({...tariffForm, include_in_invoice: e.target.checked})}
-                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
-                    />
+                    <input type="checkbox" checked={tariffForm.include_in_invoice} onChange={(e) => setTariffForm({...tariffForm, include_in_invoice: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
                     <label style={{fontSize: '13px', color: '#333', cursor: 'pointer', margin: 0}}>Iekļaut rēķinā</label>
                   </div>
                   <button type="submit" style={styles.btn}>Pievienot</button>
@@ -1957,18 +1713,8 @@ export default function PropertyManager() {
                 {copySourceMonth && (
                   <div style={{background: '#fef3c7', padding: '12px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px'}}>
                     <div style={{marginBottom: '10px'}}>📋 Kopēšanas režīms - atlasiet tarifus no <strong>{new Date(copySourceMonth + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</strong></div>
-                    <button
-                      onClick={() => copySelectedTariffs(copySourceMonth, tariffPeriod)}
-                      style={{...styles.btn, fontSize: '12px', padding: '8px 12px', marginRight: '8px'}}
-                    >
-                      ✓ Kopēt atlasītos
-                    </button>
-                    <button
-                      onClick={() => {setCopySourceMonth(null); setSelectedTariffsToCopy({});}}
-                      style={{background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px'}}
-                    >
-                      ✕ Atcelt
-                    </button>
+                    <button onClick={() => copySelectedTariffs(copySourceMonth, tariffPeriod)} style={{...styles.btn, fontSize: '12px', padding: '8px 12px', marginRight: '8px'}}>✓ Kopēt atlasītos</button>
+                    <button onClick={() => {setCopySourceMonth(null); setSelectedTariffsToCopy({});}} style={{background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px'}}>✕ Atcelt</button>
                   </div>
                 )}
 
@@ -1978,16 +1724,8 @@ export default function PropertyManager() {
                   return (
                     <div key={period} style={{marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #e2e8f0'}}>
                       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
-                        <div style={{fontWeight: 'bold', fontSize: '14px'}}>
-                          📅 {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
-                        </div>
-                        <button
-                          onClick={() => setCopySourceMonth(copySourceMonth === period ? null : period)}
-                          style={{...styles.btnSmall, fontSize: '12px', padding: '4px 8px', background: '#e0e7ff', color: '#3730a3', borderRadius: '4px', fontWeight: '500'}}
-                          title="Kopēt tarifus"
-                        >
-                          📋 {copySourceMonth === period ? 'Atcelt' : 'Kopēt'}
-                        </button>
+                        <div style={{fontWeight: 'bold', fontSize: '14px'}}>📅 {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</div>
+                        <button onClick={() => setCopySourceMonth(copySourceMonth === period ? null : period)} style={{...styles.btnSmall, fontSize: '12px', padding: '4px 8px', background: '#e0e7ff', color: '#3730a3', borderRadius: '4px', fontWeight: '500'}} title="Kopēt tarifus">📋 {copySourceMonth === period ? 'Atcelt' : 'Kopēt'}</button>
                       </div>
                       
                       {periodTariffs.map(tar => {
@@ -1997,75 +1735,30 @@ export default function PropertyManager() {
                         return (
                           <div key={tar.id} style={{...styles.listItem, marginBottom: '8px', display: 'flex', gap: '8px'}}>
                             {copySourceMonth === period && (
-                              <input
-                                type="checkbox"
-                                checked={selectedTariffsToCopy[tar.id] || false}
-                                onChange={(e) => setSelectedTariffsToCopy({...selectedTariffsToCopy, [tar.id]: e.target.checked})}
-                                style={{width: '18px', height: '18px', cursor: 'pointer', minWidth: '18px'}}
-                              />
+                              <input type="checkbox" checked={selectedTariffsToCopy[tar.id] || false} onChange={(e) => setSelectedTariffsToCopy({...selectedTariffsToCopy, [tar.id]: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer', minWidth: '18px'}} />
                             )}
                             
                             {isEditing ? (
                               <div style={{flex: 1, display: 'flex', gap: '8px', flexDirection: 'column'}}>
-                                <input
-                                  type="text"
-                                  value={editForm.name}
-                                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                                  style={{...styles.input, fontSize: '12px'}}
-                                />
+                                <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                                 <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={editForm.total_amount}
-                                    onChange={(e) => setEditForm({...editForm, total_amount: e.target.value})}
-                                    style={{...styles.input, fontSize: '12px'}}
-                                  />
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="PVN %"
-                                    value={editForm.vat_rate}
-                                    onChange={(e) => setEditForm({...editForm, vat_rate: e.target.value})}
-                                    style={{...styles.input, fontSize: '12px'}}
-                                  />
+                                  <input type="number" step="0.01" value={editForm.total_amount} onChange={(e) => setEditForm({...editForm, total_amount: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                                  <input type="number" step="0.01" placeholder="PVN %" value={editForm.vat_rate} onChange={(e) => setEditForm({...editForm, vat_rate: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                                 </div>
                                 <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: '#f9fafb', borderRadius: '4px'}}>
-                                  <input
-                                    type="checkbox"
-                                    checked={editForm.include_in_invoice !== false}
-                                    onChange={(e) => setEditForm({...editForm, include_in_invoice: e.target.checked})}
-                                    style={{width: '16px', height: '16px', cursor: 'pointer'}}
-                                  />
+                                  <input type="checkbox" checked={editForm.include_in_invoice !== false} onChange={(e) => setEditForm({...editForm, include_in_invoice: e.target.checked})} style={{width: '16px', height: '16px', cursor: 'pointer'}} />
                                   <label style={{fontSize: '12px', color: '#333', cursor: 'pointer', margin: 0}}>Iekļaut rēķinā</label>
                                 </div>
                                 <div style={{display: 'flex', gap: '8px'}}>
-                                  <button
-                                    onClick={() => saveEditTariff(tar.id)}
-                                    style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}
-                                  >
-                                    ✓ Saglabāt
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingTariff(null)}
-                                    style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}
-                                  >
-                                    Atcelt
-                                  </button>
+                                  <button onClick={() => saveEditTariff(tar.id)} style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}>✓ Saglabāt</button>
+                                  <button onClick={() => setEditingTariff(null)} style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}>Atcelt</button>
                                 </div>
                               </div>
                             ) : (
                               <div style={{flex: 1}}>
                                 <div style={{fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px'}}>
                                   {tar.name}
-                                  <span style={{
-                                    fontSize: '10px',
-                                    padding: '2px 6px',
-                                    borderRadius: '3px',
-                                    backgroundColor: tar.include_in_invoice !== false ? '#dcfce7' : '#fee2e2',
-                                    color: tar.include_in_invoice !== false ? '#166534' : '#991b1b',
-                                    fontWeight: '500'
-                                  }}>
+                                  <span style={{fontSize: '10px', padding: '2px 6px', borderRadius: '3px', backgroundColor: tar.include_in_invoice !== false ? '#dcfce7' : '#fee2e2', color: tar.include_in_invoice !== false ? '#166534' : '#991b1b', fontWeight: '500'}}>
                                     {tar.include_in_invoice !== false ? '✓ Iekļaut' : '✕ Neiekļaut'}
                                   </span>
                                 </div>
@@ -2078,20 +1771,8 @@ export default function PropertyManager() {
                             
                             {!isEditing && (
                               <div style={{display: 'flex', gap: '4px'}}>
-                                <button
-                                  onClick={() => startEditTariff(tar)}
-                                  style={{...styles.btnSmall, padding: '4px 8px'}}
-                                  title="Rediģēt"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={() => deleteTariff(tar.id)}
-                                  style={{...styles.btnSmall, padding: '4px 8px'}}
-                                  title="Dzēst"
-                                >
-                                  🗑️
-                                </button>
+                                <button onClick={() => startEditTariff(tar)} style={{...styles.btnSmall, padding: '4px 8px'}} title="Rediģēt">✏️</button>
+                                <button onClick={() => deleteTariff(tar.id)} style={{...styles.btnSmall, padding: '4px 8px'}} title="Dzēst">🗑️</button>
                               </div>
                             )}
                           </div>
@@ -2104,137 +1785,49 @@ export default function PropertyManager() {
             </div>
           ) : activeTab === 'water' ? (
             <div style={styles.twoCol}>
-              {/* Meters Settings */}
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>⚙️ Skaitītāju Iespējošana</h2>
                 <div style={styles.form}>
                   <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
                     <label style={{fontWeight: '500', fontSize: '14px', cursor: 'pointer'}}>💧 Ūdens</label>
-                    <input
-                      type="checkbox"
-                      checked={enabledMeters.water}
-                      onChange={(e) => setEnabledMeters({...enabledMeters, water: e.target.checked})}
-                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
-                    />
+                    <input type="checkbox" checked={enabledMeters.water} onChange={(e) => setEnabledMeters({...enabledMeters, water: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
                   </div>
                 </div>
               </div>
 
-              {/* Water Tariff */}
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>💧 Ūdens Tarifs</h2>
                 <form onSubmit={saveWaterTariff} style={styles.form}>
                   <div>
                     <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
-                    <select
-                      value={waterTariffForm.period}
-                      onChange={(e) => {
-                        setWaterTariffForm({...waterTariffForm, period: e.target.value});
-                        const existing = waterTariffs.find(w => w.period === e.target.value);
-                        if (existing) {
-                          setWaterTariffForm({
-                            period: e.target.value,
-                            price_per_m3: existing.price_per_m3 || '',
-                            vat_rate: existing.vat_rate || 0,
-                            include_in_invoice: existing.include_in_invoice !== false
-                          });
-                        }
-                      }}
-                      style={styles.input}
-                    >
-                      {uniqueTariffPeriods.map(period => (
-                        <option key={period} value={period}>
-                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
-                        </option>
-                      ))}
+                    <select value={waterTariffForm.period} onChange={(e) => {setWaterTariffForm({...waterTariffForm, period: e.target.value}); const existing = waterTariffs.find(w => w.period === e.target.value); if (existing) {setWaterTariffForm({period: e.target.value, price_per_m3: existing.price_per_m3 || '', vat_rate: existing.vat_rate || 0, include_in_invoice: existing.include_in_invoice !== false});}}} style={styles.input}>
+                      {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
                     </select>
                   </div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Cena par m³ (€) *"
-                    value={waterTariffForm.price_per_m3}
-                    onChange={(e) => setWaterTariffForm({...waterTariffForm, price_per_m3: e.target.value})}
-                    style={styles.input}
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="PVN (%)"
-                    value={waterTariffForm.vat_rate}
-                    onChange={(e) => setWaterTariffForm({...waterTariffForm, vat_rate: e.target.value})}
-                    style={styles.input}
-                  />
+                  <input type="number" step="0.01" placeholder="Cena par m³ (€) *" value={waterTariffForm.price_per_m3} onChange={(e) => setWaterTariffForm({...waterTariffForm, price_per_m3: e.target.value})} style={styles.input} />
+                  <input type="number" step="0.01" placeholder="PVN (%)" value={waterTariffForm.vat_rate} onChange={(e) => setWaterTariffForm({...waterTariffForm, vat_rate: e.target.value})} style={styles.input} />
                   <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
-                    <input
-                      type="checkbox"
-                      checked={waterTariffForm.include_in_invoice}
-                      onChange={(e) => setWaterTariffForm({...waterTariffForm, include_in_invoice: e.target.checked})}
-                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
-                    />
-                    <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>
-                      ✓ Iekļaut mēneša rēķinā
-                    </label>
+                    <input type="checkbox" checked={waterTariffForm.include_in_invoice} onChange={(e) => setWaterTariffForm({...waterTariffForm, include_in_invoice: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
+                    <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>✓ Iekļaut mēneša rēķinā</label>
                   </div>
                   <button type="submit" style={styles.btn}>Saglabāt Tarifu</button>
                 </form>
               </div>
 
-              {/* Waste Tariff */}
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>♻️ Atkritumu Izvešanas Tarifs</h2>
                 <form onSubmit={saveWasteTariff} style={styles.form}>
                   <div>
                     <label style={{fontSize: '12px', color: '#666', fontWeight: '500'}}>Periods</label>
-                    <select
-                      value={wasteTariffForm.period}
-                      onChange={(e) => {
-                        setWasteTariffForm({...wasteTariffForm, period: e.target.value});
-                        const existing = wasteTariffs.find(w => w.period === e.target.value);
-                        if (existing) {
-                          setWasteTariffForm({
-                            period: e.target.value,
-                            total_amount: existing.total_amount || '',
-                            vat_rate: existing.vat_rate || 21,
-                            include_in_invoice: existing.include_in_invoice !== false
-                          });
-                        }
-                      }}
-                      style={styles.input}
-                    >
-                      {uniqueTariffPeriods.map(period => (
-                        <option key={period} value={period}>
-                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
-                        </option>
-                      ))}
+                    <select value={wasteTariffForm.period} onChange={(e) => {setWasteTariffForm({...wasteTariffForm, period: e.target.value}); const existing = wasteTariffs.find(w => w.period === e.target.value); if (existing) {setWasteTariffForm({period: e.target.value, total_amount: existing.total_amount || '', vat_rate: existing.vat_rate || 21, include_in_invoice: existing.include_in_invoice !== false});}}} style={styles.input}>
+                      {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
                     </select>
                   </div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Kopējā summa bez PVN (€) *"
-                    value={wasteTariffForm.total_amount}
-                    onChange={(e) => setWasteTariffForm({...wasteTariffForm, total_amount: e.target.value})}
-                    style={styles.input}
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="PVN (%)"
-                    value={wasteTariffForm.vat_rate}
-                    onChange={(e) => setWasteTariffForm({...wasteTariffForm, vat_rate: e.target.value})}
-                    style={styles.input}
-                  />
+                  <input type="number" step="0.01" placeholder="Kopējā summa bez PVN (€) *" value={wasteTariffForm.total_amount} onChange={(e) => setWasteTariffForm({...wasteTariffForm, total_amount: e.target.value})} style={styles.input} />
+                  <input type="number" step="0.01" placeholder="PVN (%)" value={wasteTariffForm.vat_rate} onChange={(e) => setWasteTariffForm({...wasteTariffForm, vat_rate: e.target.value})} style={styles.input} />
                   <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
-                    <input
-                      type="checkbox"
-                      checked={wasteTariffForm.include_in_invoice}
-                      onChange={(e) => setWasteTariffForm({...wasteTariffForm, include_in_invoice: e.target.checked})}
-                      style={{width: '18px', height: '18px', cursor: 'pointer'}}
-                    />
-                    <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>
-                      ✓ Iekļaut mēneša rēķinā
-                    </label>
+                    <input type="checkbox" checked={wasteTariffForm.include_in_invoice} onChange={(e) => setWasteTariffForm({...wasteTariffForm, include_in_invoice: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
+                    <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>✓ Iekļaut mēneša rēķinā</label>
                   </div>
                   <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '10px', fontSize: '12px', color: '#0369a1', marginBottom: '12px'}}>
                     ℹ️ Summa automātiski tiks dalīta uz visu dzīvokļu deklarēto personu skaitu.
@@ -2243,7 +1836,6 @@ export default function PropertyManager() {
                 </form>
               </div>
 
-              {/* Waste Distribution by Declared Persons */}
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>♻️ Atkritumu Sadalījums - {new Date(wasteTariffForm.period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</h2>
                 <div style={styles.list}>
@@ -2286,12 +1878,10 @@ export default function PropertyManager() {
                 </div>
               </div>
 
-              {/* Water Consumption - from Meter Readings */}
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>💧 Patēriņš - {new Date(tariffPeriod + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</h2>
                 <div style={styles.list}>
                   {apartments.map(apt => {
-                    // Ņem ūdens rādījumu no meter_readings (nevis water_consumption)
                     const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === tariffPeriod);
                     const waterTariff = waterTariffs.find(w => w.period === tariffPeriod);
                     const consumptionValue = waterReading?.reading_value || '';
@@ -2306,14 +1896,7 @@ export default function PropertyManager() {
                           <div style={{fontSize: '12px', color: '#666'}}>€{totalAmount.toFixed(2)}</div>
                         </div>
                         <div style={{display: 'flex', gap: '8px', alignItems: 'center', flex: '1 1 auto'}}>
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder="m³"
-                            value={consumptionValue}
-                            onChange={(e) => saveWaterMeterReading(apt.id, e.target.value, tariffPeriod)}
-                            style={{...styles.input, width: '80px', padding: '8px'}}
-                          />
+                          <input type="number" step="0.01" placeholder="m³" value={consumptionValue} onChange={(e) => saveWaterMeterReading(apt.id, e.target.value, tariffPeriod)} style={{...styles.input, width: '80px', padding: '8px'}} />
                           <span style={{fontSize: '12px', color: '#666', minWidth: '40px'}}>m³</span>
                         </div>
                       </div>
@@ -2322,48 +1905,28 @@ export default function PropertyManager() {
                 </div>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'invoices' ? (
             <div>
               <div style={styles.card}>
                 <h2 style={styles.cardTitle}>📄 Ģenerēt rēķinus</h2>
                 <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
-                  <strong>ℹ️ Vairāki rēķini per dzīvokli:</strong> Var ģenerēt vairākus rēķinus uz vienu dzīvokli vienā mēnesī.
-                  <br/>Rēķini tiks numurēti kā <code style={{background: '#e0f2fe', padding: '2px 6px', borderRadius: '3px'}}>2026/03-14-1</code>, 
-                  <code style={{background: '#e0f2fe', padding: '2px 6px', borderRadius: '3px', marginLeft: '4px'}}>2026/03-14-2</code>, utt.
+                  <strong>ℹ️ Automātiski parāds + pārmaksa:</strong> Sistēma automātiski pievienos parādu no iepriekšējiem mēnešiem un atņems pārmaksas.
                 </div>
                 <form onSubmit={generateInvoices} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                   <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                    <select
-                      value={invoiceMonth}
-                      onChange={(e) => setInvoiceMonth(e.target.value)}
-                      style={styles.input}
-                    >
+                    <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(e.target.value)} style={styles.input}>
                       <option value="">-- Izvēlieties mēnesi --</option>
-                      {uniqueTariffPeriods.map(period => (
-                        <option key={period} value={period}>
-                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
-                        </option>
-                      ))}
+                      {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
                     </select>
                   </div>
                   <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
                     <div>
                       <label style={{fontSize: '12px', color: '#666', marginBottom: '4px', display: 'block'}}>No datuma</label>
-                      <input
-                        type="date"
-                        value={invoiceFromDate}
-                        onChange={(e) => setInvoiceFromDate(e.target.value)}
-                        style={styles.input}
-                      />
+                      <input type="date" value={invoiceFromDate} onChange={(e) => setInvoiceFromDate(e.target.value)} style={styles.input} />
                     </div>
                     <div>
                       <label style={{fontSize: '12px', color: '#666', marginBottom: '4px', display: 'block'}}>Līdz datumam</label>
-                      <input
-                        type="date"
-                        value={invoiceToDate}
-                        onChange={(e) => setInvoiceToDate(e.target.value)}
-                        style={styles.input}
-                      />
+                      <input type="date" value={invoiceToDate} onChange={(e) => setInvoiceToDate(e.target.value)} style={styles.input} />
                     </div>
                   </div>
                   <button type="submit" style={styles.btn}>Ģenerēt</button>
@@ -2373,13 +1936,7 @@ export default function PropertyManager() {
               <div style={styles.card}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
                   <h2 style={styles.cardTitle}>💳 Rēķini ({invoices.length})</h2>
-                  <button
-                    onClick={exportInvoicesToCSV}
-                    style={{padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500'}}
-                    title="Eksportēt uz CSV"
-                  >
-                    📊 CSV Export
-                  </button>
+                  <button onClick={exportInvoicesToCSV} style={{padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500'}} title="Eksportēt uz CSV">📊 CSV Export</button>
                 </div>
                 
                 {sortedMonths.length === 0 ? (
@@ -2408,18 +1965,11 @@ export default function PropertyManager() {
                             }}
                           >
                             <div>
-                              <div style={{fontWeight: 'bold', fontSize: '14px'}}>
-                                📅 {new Date(month + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
-                              </div>
-                              <div style={{fontSize: '12px', color: '#666'}}>
-                                €{monthTotal.toFixed(2)} • Parāds: €{monthUnpaid.toFixed(2)}
-                              </div>
+                              <div style={{fontWeight: 'bold', fontSize: '14px'}}>📅 {new Date(month + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</div>
+                              <div style={{fontSize: '12px', color: '#666'}}>€{monthTotal.toFixed(2)} • Parāds: €{monthUnpaid.toFixed(2)}</div>
                             </div>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                regenerateInvoices(month);
-                              }}
+                              onClick={(e) => {e.stopPropagation(); regenerateInvoices(month);}}
                               style={{...styles.btnSmall, fontSize: '12px', padding: '4px 8px', background: '#fcd34d', color: '#000', borderRadius: '4px', marginRight: '10px', fontWeight: '500'}}
                               title="Reģenerēt visus rēķinus"
                             >
@@ -2434,74 +1984,61 @@ export default function PropertyManager() {
                                 const apt = apartments.find(a => a.id === invoice.apartment_id);
                                 const tariff = tariffs.find(t => t.id === invoice.tariff_id);
                                 return (
-                                  <div key={invoice.id} style={styles.invoiceCard}>
-                                    <div style={{display: 'flex', alignItems: 'center', gap: '10px', flex: 1}}>
-                                      <input
-                                        type="checkbox"
-                                        checked={invoice.paid || false}
-                                        onChange={() => toggleInvoicePaid(invoice.id, invoice.paid)}
-                                        style={{width: '18px', height: '18px', cursor: 'pointer'}}
-                                      />
+                                  <div key={invoice.id} style={{...styles.invoiceCard, flexWrap: 'wrap'}}>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '10px', flex: '0 0 100%', marginBottom: '10px'}}>
+                                      <input type="checkbox" checked={invoice.paid || false} onChange={() => toggleInvoicePaid(invoice.id, invoice.paid)} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
                                       <div style={{flex: 1}}>
                                         <div style={{fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px'}}>
                                           Dzīv. {apt?.number} • {tariff?.name}
-                                          {(() => {
-                                            const status = getInvoiceStatus(invoice);
-                                            return (
-                                              <span style={{
-                                                fontSize: '11px',
-                                                fontWeight: '500',
-                                                padding: '2px 8px',
-                                                borderRadius: '4px',
-                                                backgroundColor: status.color,
-                                                color: 'white'
-                                              }}>
-                                                {status.emoji} {status.status}
-                                              </span>
-                                            );
-                                          })()}
+                                          {(() => { const status = getInvoiceStatus(invoice); return <span style={{fontSize: '11px', fontWeight: '500', padding: '2px 8px', borderRadius: '4px', backgroundColor: status.color, color: 'white'}}>{status.emoji} {status.status}</span>; })()}
                                         </div>
                                         <div style={{fontSize: '12px', color: '#666'}}>
                                           {invoice.invoice_number} • Termiņš: {new Date(invoice.due_date).toLocaleDateString('lv-LV')}
                                         </div>
+
+                                        {invoice.previous_debt_amount > 0 && (
+                                          <div style={{fontSize: '12px', color: '#991b1b', marginTop: '4px', padding: '8px', background: '#fee2e2', borderRadius: '4px'}}>
+                                            <strong>⚠️ Parāds no iepriekš:</strong> €{invoice.previous_debt_amount.toFixed(2)}
+                                            {invoice.previous_debt_note && (
+                                              <div style={{marginTop: '4px', fontStyle: 'italic'}}><strong>{invoice.previous_debt_note}</strong></div>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {invoice.overpayment_amount > 0 && (
+                                          <div style={{fontSize: '12px', color: '#0369a1', marginTop: '4px', padding: '8px', background: '#dbeafe', borderRadius: '4px'}}>
+                                            <strong>💰 Pārmaksa:</strong> -€{invoice.overpayment_amount.toFixed(2)}
+                                          </div>
+                                        )}
+
+                                        {debtNoteForm.invoiceId === invoice.id && (
+                                          <div style={{marginTop: '8px', display: 'flex', gap: '8px'}}>
+                                            <input type="text" placeholder="Parāda paskaidrojums..." value={debtNoteForm.note} onChange={(e) => setDebtNoteForm({...debtNoteForm, note: e.target.value})} style={{...styles.input, flex: 1, fontSize: '12px'}} />
+                                            <button onClick={() => saveDebtNote(invoice.id, debtNoteForm.note)} style={{padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500'}}>✓ Saglabāt</button>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
-                                    <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '10px'}}>
-                                      {invoice.vat_rate > 0 && (
-                                        <div style={{fontSize: '11px', color: '#999', marginBottom: '2px'}}>
-                                          €{invoice.amount_without_vat?.toFixed(2) || '0.00'} + €{invoice.vat_amount?.toFixed(2) || '0.00'}
+
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '8px', flex: '0 0 100%', marginBottom: '10px'}}>
+                                      <div style={{flex: 1}}>
+                                        <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end'}}>
+                                          {invoice.vat_rate > 0 && (
+                                            <div style={{fontSize: '11px', color: '#999', marginBottom: '2px'}}>
+                                              €{invoice.amount_without_vat?.toFixed(2) || '0.00'} + €{invoice.vat_amount?.toFixed(2) || '0.00'}
+                                            </div>
+                                          )}
+                                          <div style={{fontWeight: 'bold', color: invoice.paid ? '#10b981' : '#ef4444', minWidth: '80px', textAlign: 'right', fontSize: '14px'}}>
+                                            €{invoice.amount.toFixed(2)}
+                                          </div>
                                         </div>
-                                      )}
-                                      <div style={{
-                                        fontWeight: 'bold',
-                                        color: invoice.paid ? '#10b981' : '#ef4444',
-                                        minWidth: '80px',
-                                        textAlign: 'right'
-                                      }}>
-                                        €{invoice.amount.toFixed(2)}
                                       </div>
+                                      <button onClick={() => downloadPDF(invoice)} style={{...styles.btnSmall, padding: '6px 12px'}} title="Lejupielādēt PDF">📥</button>
+                                      {invoice.previous_debt_amount > 0 && (
+                                        <button onClick={() => setDebtNoteForm({invoiceId: invoice.id, note: invoice.previous_debt_note || ''})} style={{...styles.btnSmall, padding: '6px 12px', background: '#fecaca', borderRadius: '4px', fontSize: '14px'}} title="Pievienot parāda paskaidrojumu">📝</button>
+                                      )}
+                                      <button onClick={() => deleteInvoice(invoice.id)} style={{...styles.btnSmall, padding: '6px 12px'}} title="Dzēst">🗑️</button>
                                     </div>
-                                    <button
-                                      onClick={() => downloadPDF(invoice)}
-                                      style={{...styles.btnSmall, padding: '6px 12px'}}
-                                      title="Lejupielādēt PDF"
-                                    >
-                                      📥
-                                    </button>
-                                    <button
-                                      onClick={() => regenerateInvoices(month, invoice.tariff_id)}
-                                      style={{...styles.btnSmall, padding: '6px 12px', fontSize: '14px'}}
-                                      title="Reģenerēt šo rēķinu"
-                                    >
-                                      🔄
-                                    </button>
-                                    <button
-                                      onClick={() => deleteInvoice(invoice.id)}
-                                      style={{...styles.btnSmall, padding: '6px 12px'}}
-                                      title="Dzēst"
-                                    >
-                                      🗑️
-                                    </button>
                                   </div>
                                 );
                               })}
@@ -2513,8 +2050,26 @@ export default function PropertyManager() {
                   </div>
                 )}
               </div>
+
+              <div style={styles.card}>
+                <h2 style={styles.cardTitle}>💰 Dzīvokļa pārmaksa</h2>
+                <form onSubmit={saveOverpayment} style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px'}}>
+                    <select value={overpaymentForm.apartmentId} onChange={(e) => setOverpaymentForm({...overpaymentForm, apartmentId: e.target.value})} style={styles.input}>
+                      <option value="">-- Izvēlieties dzīvokli --</option>
+                      {apartments.map(apt => (<option key={apt.id} value={apt.id}>Dzīv. {apt.number} - {apt.owner_name}</option>))}
+                    </select>
+                    <select value={overpaymentForm.month} onChange={(e) => setOverpaymentForm({...overpaymentForm, month: e.target.value})} style={styles.input}>
+                      <option value="">-- Mēnesis --</option>
+                      {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
+                    </select>
+                    <input type="number" step="0.01" placeholder="Pārmaksas summa (€)" value={overpaymentForm.amount} onChange={(e) => setOverpaymentForm({...overpaymentForm, amount: e.target.value})} style={styles.input} />
+                  </div>
+                  <button type="submit" style={styles.btn}>Saglabāt pārmaksu</button>
+                </form>
+              </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
@@ -2522,204 +2077,34 @@ export default function PropertyManager() {
 }
 
 const styles = {
-  app: {
-    display: 'flex',
-    minHeight: '100vh',
-    background: '#f8fafc',
-    fontFamily: "'Plus Jakarta Sans', sans-serif"
-  },
-  sidebar: {
-    width: '250px',
-    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-    color: 'white',
-    padding: '30px 20px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-    position: 'fixed',
-    height: '100vh',
-    left: 0,
-    top: 0,
-    overflowY: 'auto'
-  },
-  logo: {
-    fontSize: '20px',
-    fontWeight: 'bold',
-    marginBottom: '40px',
-    textAlign: 'center',
-    paddingBottom: '20px',
-    borderBottom: '1px solid rgba(255,255,255,0.1)'
-  },
-  nav: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px'
-  },
-  navBtn: {
-    background: 'transparent',
-    color: '#94a3b8',
-    border: 'none',
-    padding: '12px 15px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-    transition: 'all 0.2s',
-    textAlign: 'left'
-  },
-  navBtnActive: {
-    background: 'rgba(59, 130, 246, 0.2)',
-    color: '#60a5fa',
-    borderTop: 'none',
-    borderRight: 'none',
-    borderBottom: 'none',
-    borderLeft: '3px solid #3b82f6'
-  },
-  main: {
-    marginLeft: '250px',
-    flex: 1,
-    padding: '40px'
-  },
-  header: {
-    marginBottom: '40px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  h1: {
-    fontSize: '32px',
-    fontWeight: 'bold',
-    color: '#0f172a',
-    margin: '0 0 8px 0'
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#64748b',
-    margin: 0
-  },
+  app: { display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: "'Plus Jakarta Sans', sans-serif" },
+  sidebar: { width: '250px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: 'white', padding: '30px 20px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', position: 'fixed', height: '100vh', left: 0, top: 0, overflowY: 'auto' },
+  logo: { fontSize: '20px', fontWeight: 'bold', marginBottom: '40px', textAlign: 'center', paddingBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  nav: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  navBtn: { background: 'transparent', color: '#94a3b8', border: 'none', padding: '12px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', transition: 'all 0.2s', textAlign: 'left' },
+  navBtnActive: { background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: '3px solid #3b82f6' },
+  main: { marginLeft: '250px', flex: 1, padding: '40px' },
+  header: { marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  h1: { fontSize: '32px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 8px 0' },
+  subtitle: { fontSize: '14px', color: '#64748b', margin: 0 },
   content: {},
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '15px',
-    marginBottom: '30px'
-  },
-  stat: {
-    background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
-    color: 'white',
-    padding: '25px',
-    borderRadius: '12px',
-    textAlign: 'center',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-  },
-  statValue: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    marginBottom: '8px'
-  },
-  statLabel: {
-    fontSize: '12px',
-    opacity: 0.9
-  },
-  card: {
-    background: 'white',
-    borderRadius: '12px',
-    padding: '25px',
-    marginBottom: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-    border: '1px solid #e2e8f0'
-  },
-  cardTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    marginBottom: '20px',
-    color: '#0f172a'
-  },
-  twoCol: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '20px'
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
-  },
-  formRow: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px'
-  },
-  input: {
-    padding: '12px 14px',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontFamily: 'inherit',
-    transition: 'border 0.2s'
-  },
-  btn: {
-    padding: '12px 20px',
-    background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '14px',
-    transition: 'transform 0.2s'
-  },
-  btnSmall: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '16px',
-    padding: '4px 8px'
-  },
-  list: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px'
-  },
-  listItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '12px 15px',
-    background: '#f8fafc',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    fontSize: '14px'
-  },
-  invoiceCard: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '12px 15px',
-    background: '#f8fafc',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    marginBottom: '8px',
-    gap: '10px'
-  },
-  summaryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '20px'
-  },
-  summaryItem: {
-    padding: '20px',
-    background: '#f8fafc',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0'
-  },
-  summaryLabel: {
-    fontSize: '12px',
-    color: '#64748b',
-    marginBottom: '8px',
-    fontWeight: '500'
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '40px',
-    fontSize: '16px',
-    color: '#64748b'
-  }
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '30px' },
+  stat: { background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', color: 'white', padding: '25px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' },
+  statValue: { fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' },
+  statLabel: { fontSize: '12px', opacity: 0.9 },
+  card: { background: 'white', borderRadius: '12px', padding: '25px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0' },
+  cardTitle: { fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#0f172a' },
+  twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
+  form: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  formRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' },
+  input: { padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', transition: 'border 0.2s' },
+  btn: { padding: '12px 20px', background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', transition: 'transform 0.2s' },
+  btnSmall: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', padding: '4px 8px' },
+  list: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px' },
+  invoiceCard: { display: 'flex', alignItems: 'center', padding: '12px 15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '8px', gap: '10px' },
+  summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' },
+  summaryItem: { padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' },
+  summaryLabel: { fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '500' },
+  loading: { textAlign: 'center', padding: '40px', fontSize: '16px', color: '#64748b' }
 };
