@@ -348,6 +348,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     const paymentBank = settings.payment_bank || 'Habib Bank';
     const paymentEmail = settings.payment_email || 'info@barona78.lv';
     const paymentPhone = settings.payment_phone || '+371 67800000';
+    const additionalInfo = settings.additional_invoice_info || '';
 
     const generateRows = (details, filterFn) => {
       return details.filter(filterFn).map(detail => {
@@ -439,39 +440,38 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             <div class="amount-total">€${amountWithVat.toFixed(2)}</div>
           </div>
 
+          ${additionalInfo ? `<div style="background: #f5f5f5; padding: 15px; margin: 30px 0; border-radius: 4px; font-size: 12px; line-height: 1.6;">${additionalInfo.replace(/\n/g, '<br>')}</div>` : ''}
+
           <div class="payment-info-box">
-            <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px;">Maksājuma informācija</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px;">Maksājuma rekvizīti</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
               <div>
-                <div style="margin-bottom: 5px;">ĒKAS NOSAUKUMS</div>
-                <div style="font-weight: bold;">${buildingName}</div>
+                <div style="margin-bottom: 5px; font-size: 11px;">NOSAUKUMS</div>
+                <div style="font-weight: bold; font-size: 12px;">${buildingName}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px;">REĢISTRĀCIJAS KODS</div>
-                <div style="font-weight: bold;">${buildingCode}</div>
+                <div style="margin-bottom: 5px; font-size: 11px;">REĢ. KODS</div>
+                <div style="font-weight: bold; font-size: 12px;">${buildingCode}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px;">ADRESE</div>
-                <div style="font-weight: bold;">${buildingAddress}</div>
-              </div>
-              <div style="grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 15px; margin-top: 10px;">
-                <div style="margin-bottom: 5px; font-size: 11px; opacity: 0.9;">MAKSĀJUMA REKVIZĪTI</div>
+                <div style="margin-bottom: 5px; font-size: 11px;">ADRESE</div>
+                <div style="font-weight: bold; font-size: 12px;">${buildingAddress}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px;">BANKA</div>
-                <div style="font-weight: bold;">${paymentBank}</div>
+                <div style="margin-bottom: 5px; font-size: 11px;">BANKA</div>
+                <div style="font-weight: bold; font-size: 12px;">${paymentBank}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px;">IBAN</div>
-                <div style="font-weight: bold;">${paymentIban}</div>
+                <div style="margin-bottom: 5px; font-size: 11px;">IBAN</div>
+                <div style="font-weight: bold; font-size: 12px;">${paymentIban}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px;">E-PASTS</div>
-                <div style="font-weight: bold;">${paymentEmail}</div>
+                <div style="margin-bottom: 5px; font-size: 11px;">E-PASTS</div>
+                <div style="font-weight: bold; font-size: 12px;">${paymentEmail}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px;">TĀLRUNIS</div>
-                <div style="font-weight: bold;">${paymentPhone}</div>
+                <div style="margin-bottom: 5px; font-size: 11px;">TĀLRUNIS</div>
+                <div style="font-weight: bold; font-size: 12px;">${paymentPhone}</div>
               </div>
             </div>
           </div>

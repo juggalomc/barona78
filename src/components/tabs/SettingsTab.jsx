@@ -94,7 +94,7 @@ export function SettingsTab({
 
       {/* MAKSĀJUMA INFORMĀCIJA */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}>💳 Maksājuma Informācija</h2>
+        <h2 style={styles.cardTitle}>💳 Maksājuma Rekvizīti</h2>
         <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
           <strong>ℹ️ Šī informācija tiks parādīta rēķinu apakšā</strong>
         </div>
@@ -102,6 +102,67 @@ export function SettingsTab({
         <SettingField label="Banka" prop="payment_bank" icon="🏛️" />
         <SettingField label="E-pasts" prop="payment_email" icon="📧" />
         <SettingField label="Tālrunis" prop="payment_phone" icon="☎️" />
+      </div>
+
+      {/* PAPILDUS INFORMĀCIJA */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>📝 Papildus Informācija Rēķinos</h2>
+        <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#0369a1'}}>
+          <strong>ℹ️ Šī informācija tiks rādīta virs maksājuma rekvizītiem rēķinos</strong>
+        </div>
+        <div style={{marginBottom: '12px', padding: '12px 15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+          <div style={{fontSize: '14px', fontWeight: '600', marginBottom: '8px'}}>📋 Papildus Teksts</div>
+          {editingField === 'additional_invoice_info' ? (
+            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+              <textarea
+                value={editForm['additional_invoice_info'] !== undefined ? editForm['additional_invoice_info'] : (settings['additional_invoice_info'] || '')}
+                onChange={(e) => setEditForm({...editForm, 'additional_invoice_info': e.target.value})}
+                style={{
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '2px solid #0ea5e9',
+                  borderRadius: '4px',
+                  fontFamily: 'inherit',
+                  minHeight: '100px',
+                  resize: 'vertical'
+                }}
+                placeholder="Ievadiet papildus informāciju..."
+              />
+              <div style={{display: 'flex', gap: '8px'}}>
+                <button
+                  onClick={() => handleSave('additional_invoice_info')}
+                  style={{padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}
+                >
+                  ✓ Saglabāt
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingField(null);
+                    setEditForm({...editForm, 'additional_invoice_info': settings['additional_invoice_info'] || ''});
+                  }}
+                  style={{padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '4px', cursor: 'pointer'}}
+                >
+                  ✕ Atcelt
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap'}}>
+              <div style={{fontSize: '13px', color: '#666', wordBreak: 'break-word', flex: 1, minWidth: '150px', whiteSpace: 'pre-wrap'}}>
+                {settings['additional_invoice_info'] ? settings['additional_invoice_info'] : '(tukšs)'}
+              </div>
+              <button
+                onClick={() => {
+                  setEditingField('additional_invoice_info');
+                  setEditForm({...editForm, 'additional_invoice_info': settings['additional_invoice_info'] || ''});
+                }}
+                style={{padding: '6px 12px', background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500', color: '#0369a1', whiteSpace: 'nowrap'}}
+              >
+                ✏️ Rediģēt
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* GMAIL INTEGRACIJA */}
@@ -145,7 +206,8 @@ export function SettingsTab({
         <h2 style={styles.cardTitle}>✓ Pārbaude</h2>
         <div style={{fontSize: '12px', lineHeight: '1.8', color: '#666'}}>
           <p><strong>✓ Ēkas informācija:</strong> Tiks rādīta rēķinu augšdaļā</p>
-          <p><strong>✓ Maksājuma informācija:</strong> Tiks rādīta rēķinu apakšā</p>
+          <p><strong>✓ Maksājuma rekvizīti:</strong> Tiks rādīti rēķinu apakšā</p>
+          <p><strong>✓ Papildus informācija:</strong> Tiks rādīta virs maksājuma rekvizītiem</p>
           <p><strong>✓ Automātiski:</strong> Visi nākotnē ģenerētie rēķini izmantos jaunos iestatījumus</p>
         </div>
       </div>
