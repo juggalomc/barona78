@@ -554,16 +554,20 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         <head>
           <meta charset="utf-8">
           <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 40px; line-height: 1.6; }
-            .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
-            .title { font-size: 24px; font-weight: bold; }
+            @page { size: A4; margin: 20mm; }
+            body { font-family: 'DejaVu Sans', 'Arial Unicode MS', Arial, sans-serif; margin: 0; padding: 40px; line-height: 1.6; }
+            .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
+            .title { font-size: 24px; font-weight: bold; letter-spacing: 0.1em; }
             .company-info { text-align: right; font-size: 12px; }
-            .divider { border-top: 3px solid #000; margin: 30px 0; }
-            .payment-info-box { background: #003399; color: white; padding: 20px; margin: 30px 0; font-size: 12px; }
-            table { width: 100%; border-collapse: collapse; margin: 30px 0; }
-            th { text-align: left; padding: 10px; border-bottom: 2px solid #000; font-size: 12px; font-weight: bold; }
-            td { padding: 12px 10px; }
-            .amount-total { font-size: 32px; font-weight: bold; color: #003399; text-align: right; margin: 20px 0; }
+            .divider { border-top: 3px solid #000; margin: 20px 0; }
+            .payment-info-box { background: #003399; color: white; padding: 20px; margin: 20px 0; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { text-align: left; padding: 8px; border-bottom: 1px solid #000; font-size: 11px; font-weight: bold; }
+            td { padding: 8px; font-size: 11px; }
+            .amount-total { font-size: 26px; font-weight: bold; color: #003399; text-align: right; margin: 15px 0; }
+            .text-sm { font-size: 10px; }
+            .nowrap { white-space: nowrap; }
+            .break-word { word-break: break-word; }
           </style>
         </head>
         <body>
