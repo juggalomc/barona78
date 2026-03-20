@@ -9,7 +9,8 @@ export const TABS = [
   { id: 'users', label: '👥 Lietotāji' },
   { id: 'tariffs', label: '💰 Tarifi' },
   { id: 'water', label: '💧 Ūdens' },
-  { id: 'invoices', label: '📄 Rēķini' }
+  { id: 'invoices', label: '📄 Rēķini' },
+  { id: 'settings', label: '⚙️ Iestatījumi' }
 ];
 
 export const TOAST_TYPES = {

@@ -11,6 +11,7 @@ import { UsersTab } from './tabs/UsersTab';
 import { TariffsTab } from './tabs/TariffsTab';
 import { WaterTab } from './tabs/WaterTab';
 import { InvoicesTab } from './tabs/InvoicesTab';
+import { SettingsTab } from './tabs/SettingsTab';
 
 // Konstantes un stili
 import { TABS } from './shared/constants';
@@ -23,6 +24,7 @@ import { useUserHandlers } from './hooks/useUserHandlers';
 import { useTariffHandlers } from './hooks/useTariffHandlers';
 import { useWaterHandlers } from './hooks/useWaterHandlers';
 import { useInvoiceHandlers } from './hooks/useInvoiceHandlers';
+import { useSettings } from './hooks/useSettings';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY;
@@ -41,6 +43,8 @@ export default function PropertyManager() {
     fetchData, fetchUserData
   } = useDataFetching(supabase);
 
+  const { settings, editForm, setEditForm, updateSetting, fetchSettings } = useSettings(supabase);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
   };
@@ -50,7 +54,7 @@ export default function PropertyManager() {
   const userHandlers = useUserHandlers(supabase, fetchData, showToast);
   const tariffHandlers = useTariffHandlers(supabase, fetchData, showToast);
   const waterHandlers = useWaterHandlers(supabase, apartments, fetchData, showToast);
-  const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, wasteTariffs, meterReadings, fetchData, showToast);
+  const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings);
 
   useEffect(() => {
     fetchData();
@@ -232,6 +236,14 @@ export default function PropertyManager() {
                 sendInvoicesByEmail={invoiceHandlers.sendInvoicesByEmail}
                 regenerateInvoice={invoiceHandlers.regenerateInvoice}
                 {...invoiceHandlers}
+              />
+            ) : activeTab === 'settings' ? (
+              <SettingsTab
+                settings={settings}
+                editForm={editForm}
+                setEditForm={setEditForm}
+                updateSetting={updateSetting}
+                showToast={showToast}
               />
             ) : null}
           </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BUILDING_NAME, BUILDING_CODE, BUILDING_ADDRESS, TOTAL_AREA } from '../shared/constants';
 
-export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, wasteTariffs, meterReadings, fetchData, showToast) {
+export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
   const [invoiceToDate, setInvoiceToDate] = useState('');
@@ -341,6 +341,14 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     const vatAmount = invoice.vat_amount || 0;
     const amountWithVat = invoice.amount_with_vat || invoice.amount;
 
+    const buildingName = settings.building_name || 'BIEDRĪBA "BARONA 78"';
+    const buildingCode = settings.building_code || '40008325768';
+    const buildingAddress = settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001';
+    const paymentIban = settings.payment_iban || 'LV62HABA0551064112797';
+    const paymentBank = settings.payment_bank || 'Habib Bank';
+    const paymentEmail = settings.payment_email || 'info@barona78.lv';
+    const paymentPhone = settings.payment_phone || '+371 67800000';
+
     const generateRows = (details, filterFn) => {
       return details.filter(filterFn).map(detail => {
         if (detail.type === 'water') {
@@ -383,9 +391,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           <div class="header">
             <div class="title">RĒĶINS</div>
             <div class="company-info">
-              <div style="font-weight: bold; margin-bottom: 10px;">${BUILDING_NAME}</div>
-              <div>${BUILDING_CODE}</div>
-              <div style="font-size: 11px; margin-top: 5px;">${BUILDING_ADDRESS}</div>
+              <div style="font-weight: bold; margin-bottom: 10px;">${buildingName}</div>
+              <div>${buildingCode}</div>
+              <div style="font-size: 11px; margin-top: 5px;">${buildingAddress}</div>
             </div>
           </div>
 
@@ -435,12 +443,20 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px;">Maksājuma informācija</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
               <div>
-                <div style="margin-bottom: 5px;">SAŅEMĒJA IBAN</div>
-                <div style="font-weight: bold;">LV62HABA0551064112797</div>
+                <div style="margin-bottom: 5px;">BANKA</div>
+                <div style="font-weight: bold;">${paymentBank}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px;">MAKSĀJUMA MĒRĶIS</div>
-                <div style="font-weight: bold;">Rēķins ${invoice.invoice_number}</div>
+                <div style="margin-bottom: 5px;">IBAN</div>
+                <div style="font-weight: bold;">${paymentIban}</div>
+              </div>
+              <div>
+                <div style="margin-bottom: 5px;">E-PASTS</div>
+                <div style="font-weight: bold;">${paymentEmail}</div>
+              </div>
+              <div>
+                <div style="margin-bottom: 5px;">TĀLRUNIS</div>
+                <div style="font-weight: bold;">${paymentPhone}</div>
               </div>
             </div>
           </div>
