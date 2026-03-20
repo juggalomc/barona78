@@ -97,23 +97,19 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
           {/* Siltais ūdens */}
           <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fde68a' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>🔥 Siltais ūdens</label>
-            {hotWaterTariffs.find(w => w.period === currentPeriod) ? (
-              <div>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Skaitītāja rādījums (m³)"
-                  value={meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'hot_water' && mr.period === currentPeriod)?.reading_value || ''}
-                  onChange={(e) => onSaveHotWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px' }}
-                />
-                <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-                  Cena: €{parseFloat(hotWaterTariffs.find(w => w.period === currentPeriod)?.price_per_m3 || 0).toFixed(4)}/m³
-                </div>
+            <div>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Skaitītāja rādījums (m³)"
+                value={hotCurrent}
+                onChange={(e) => onSaveHotWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
+                style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px' }}
+              />
+              <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                Iepriekšējais mēnesis ({previousPeriod}): {hotPrevious || 'nav datos'}
               </div>
-            ) : (
-              <p style={{ color: '#999', fontSize: '12px' }}>Tarifs nav norādīts</p>
-            )}
+            </div>
           </div>
         </div>
       </div>
