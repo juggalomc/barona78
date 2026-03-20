@@ -33,7 +33,6 @@ export function InvoicesTab({
   downloadMonthAsZip
 }) {
   const [selectedApartmentForGen, setSelectedApartmentForGen] = React.useState('');
-  const [selectedInvoiceForEmail, setSelectedInvoiceForEmail] = React.useState('');
   const [selectedInvoices, setSelectedInvoices] = React.useState(new Set());
   const [batchMonth, setBatchMonth] = React.useState('');
   const [editingOverpaymentId, setEditingOverpaymentId] = React.useState(null);

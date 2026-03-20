@@ -22,10 +22,8 @@ export function WaterTab({
   deleteMeterReading,
   calculateWasteDistribution
 }) {
-  const [editingReadingId, setEditingReadingId] = React.useState(null);
   const [editValues, setEditValues] = React.useState({});
   const [selectedPeriod, setSelectedPeriod] = React.useState(tariffPeriod);
-  const [adminEditMonth, setAdminEditMonth] = React.useState(null);
   const [adminEditApt, setAdminEditApt] = React.useState(null);
 
   // Filtrēt rādījumus pēc perioda
