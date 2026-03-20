@@ -1348,48 +1348,59 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               // Teksta slānis (ne redzams, bet select-able)
               const mmPerPx = (imgWidth / (canvas.width / scale));
 
-              pdf.setTextRenderingMode(3);
-              pdf.setFont('helvetica', 'normal');
+              try {
+                pdf.setTextRenderingMode(3);
+                pdf.setFont('helvetica', 'normal');
 
-              const walker = printWindow.document.createTreeWalker(
-                printWindow.document.body,
-                NodeFilter.SHOW_TEXT,
-                {
-                  acceptNode(node) {
-                    return node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                const walker = printWindow.document.createTreeWalker(
+                  printWindow.document.body,
+                  NodeFilter.SHOW_TEXT,
+                  {
+                    acceptNode(node) {
+                      return node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                    }
+                  }
+                );
+
+                while (walker.nextNode()) {
+                  const textNode = walker.currentNode;
+                  const parentEl = textNode.parentElement;
+                  const rawText = textNode.nodeValue.replace(/\s+/g, ' ').trim();
+                  if (!rawText || !parentEl) continue;
+
+                  const range = printWindow.document.createRange();
+                  range.selectNodeContents(textNode);
+                  const rect = range.getBoundingClientRect();
+                  if (rect.width === 0 || rect.height === 0) continue;
+
+                  const absoluteY = rect.top + (printWindow.scrollY || 0);
+                  const pageIndex = Math.floor((absoluteY * mmPerPx) / pageHeight);
+                  while (pdf.getNumberOfPages() < pageIndex + 1) {
+                    pdf.addPage();
+                  }
+
+                  pdf.setPage(pageIndex + 1);
+                  const x = rect.left * mmPerPx;
+                  const y = (absoluteY * mmPerPx) - pageIndex * pageHeight;
+                  const fontSizePx = parseFloat(printWindow.getComputedStyle(parentEl).fontSize) || 11;
+                  pdf.setFontSize(fontSizePx * 0.75);
+
+                  try {
+                    pdf.text(rawText, x, y, {
+                      baseline: 'top',
+                      maxWidth: rect.width * mmPerPx
+                    });
+                  } catch (innerErr) {
+                    console.warn('Teksta slāņa pievienošanas kļūda:', innerErr, rawText);
+                    // nevis pārtraukt, turpinām ar pārējiem elementiem
                   }
                 }
-              );
-
-              while (walker.nextNode()) {
-                const textNode = walker.currentNode;
-                const rawText = textNode.nodeValue.replace(/\s+/g, ' ').trim();
-                if (!rawText) continue;
-
-                const range = printWindow.document.createRange();
-                range.selectNodeContents(textNode);
-                const rect = range.getBoundingClientRect();
-                if (rect.width === 0 || rect.height === 0) continue;
-
-                const absoluteY = rect.top + (printWindow.scrollY || 0);
-                const pageIndex = Math.floor((absoluteY * mmPerPx) / pageHeight);
-                while (pdf.getNumberOfPages() < pageIndex + 1) {
-                  pdf.addPage();
-                }
-
-                pdf.setPage(pageIndex + 1);
-                const x = rect.left * mmPerPx;
-                const y = (absoluteY * mmPerPx) - pageIndex * pageHeight;
-                const fontSizePx = parseFloat(printWindow.getComputedStyle(textNode.parentElement).fontSize) || 11;
-                pdf.setFontSize(fontSizePx * 0.75);
-
-                pdf.text(rawText, x, y, {
-                  baseline: 'top',
-                  maxWidth: rect.width * mmPerPx
-                });
+              } catch (textLayerErr) {
+                console.warn('Teksta slāņa ģenerēšana neizdevās, turpinām ar attēlu:', textLayerErr);
+              } finally {
+                pdf.setTextRenderingMode(0);
               }
 
-              pdf.setTextRenderingMode(0);
               printWindow.close();
 
               // Saglabā
