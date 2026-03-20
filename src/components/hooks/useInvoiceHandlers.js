@@ -1418,7 +1418,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     try {
-      showToast('⏳ Sagatavo PDF rēķinus ZIP failā...', 'info');
+      showToast('⏳ Sagatavo ZIP failu...', 'info');
       
       // Dinamiski ielodē bibliotēkas
       const loadScript = (src) => new Promise((resolve, reject) => {
@@ -1438,7 +1438,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       const html2canvas = window.html2canvas;
       const JSZip = window.JSZip;
       const jsPDF = window.jspdf.jsPDF;
-      const zip = new JSZip();
       
       const monthInvoices = invoices.filter(inv => inv.period === period);
       
@@ -1449,9 +1448,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       showToast(`⏳ Ģenerē ${monthInvoices.length} PDF rēķinus...`, 'info');
 
-      const pdfBlobs = [];
+      const pdfArray = [];
 
-      // Ģenerē PDF vienu pēc otra ar pieņemtu sekvenču
+      // Ģenerē PDF vienu pēc otra
       for (let i = 0; i < monthInvoices.length; i++) {
         const invoice = monthInvoices[i];
         const apt = apartments.find(a => a.id === invoice.apartment_id);
@@ -1463,108 +1462,113 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         try {
           const htmlContent = generateInvoicePdfHtml(invoice, apt);
           
-          // Izveido jaunu logu
-          const printWindow = window.open('about:blank', '', 'width=800,height=1200');
-          if (!printWindow) {
-            console.warn('Logu bloķēšanas kļūda');
-            continue;
-          }
-          
-          printWindow.document.write(htmlContent);
-          printWindow.document.close();
+          // Izveidojam div ar HTML saturu uz lapas (neredzamas)
+          const container = document.createElement('div');
+          container.innerHTML = htmlContent;
+          container.style.position = 'fixed';
+          container.style.left = '-9999px';
+          container.style.top = '0';
+          container.style.width = '800px';
+          container.style.backgroundColor = 'white';
+          container.style.zIndex = '-1000';
+          document.body.appendChild(container);
 
-          // Gaidīsim renderēšanu ar timeout
-          await new Promise(resolve => {
-            setTimeout(async () => {
-              try {
-                const canvas = await html2canvas(printWindow.document.body, {
-                  scale: 1.5,
-                  useCORS: true,
-                  logging: false,
-                  backgroundColor: '#ffffff',
-                  windowWidth: printWindow.document.body.scrollWidth || 800,
-                  windowHeight: printWindow.document.body.scrollHeight || 1200,
-                  allowTaint: true,
-                  foreignObjectRendering: false
-                });
+          // Gaidīsim renderēšanu
+          await new Promise(resolve => setTimeout(resolve, 300));
 
-                if (printWindow && !printWindow.closed) {
-                  printWindow.close();
-                }
-
-                // Izveido PDF
-                const pdf = new jsPDF({
-                  orientation: 'portrait',
-                  unit: 'mm',
-                  format: 'a4',
-                  compress: true
-                });
-
-                const imgWidth = 210;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                const pageHeight = 297;
-                let heightLeft = imgHeight;
-                let position = 0;
-
-                const imgData = canvas.toDataURL('image/jpeg', 0.92);
-
-                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-
-                while (heightLeft > 0) {
-                  position = heightLeft - imgHeight;
-                  pdf.addPage();
-                  pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                  heightLeft -= pageHeight;
-                }
-
-                const pdfBlob = pdf.output('blob');
-                const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
-                pdfBlobs.push({ fileName: safeFileName, blob: pdfBlob });
-                
-                showToast(`📄 Ģenerēts ${pdfBlobs.length}/${monthInvoices.length}`, 'info');
-                resolve();
-
-              } catch (err) {
-                console.error(`Kļūda ģenerējot PDF rēķinam ${invoice.invoice_number}:`, err);
-                if (printWindow && !printWindow.closed) {
-                  printWindow.close();
-                }
-                resolve();
-              }
-            }, 600);
+          // Ģenerē canvas no konteinera
+          const canvas = await html2canvas(container, {
+            scale: 1.5,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            windowWidth: 800,
+            windowHeight: 1200,
+            allowTaint: true,
+            foreignObjectRendering: false,
+            ignoreElements: (element) => {
+              return element.id === '__next' || false;
+            }
           });
 
+          // Noņemam konteineri no DOM
+          document.body.removeChild(container);
+
+          // Izveido PDF no canvas
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4',
+            compress: true
+          });
+
+          const imgWidth = 210;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const pageHeight = 297;
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+          pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+
+          while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
+
+          // Konvertē PDF uz blob
+          const pdfBlob = pdf.output('blob');
+          const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
+          
+          pdfArray.push({
+            name: safeFileName,
+            blob: pdfBlob
+          });
+          
+          showToast(`📄 Ģenerēts ${pdfArray.length}/${monthInvoices.length}`, 'info');
+
         } catch (err) {
-          console.error(`Kļūda rēķinam ${invoice.invoice_number}:`, err);
+          console.error(`Kļūda ģenerējot PDF rēķinam ${invoice.invoice_number}:`, err);
         }
       }
 
-      // Pēc visu PDF ģenerēšanas, ievietojam ZIP
-      if (pdfBlobs.length > 0) {
-        console.log(`Pievienojam ${pdfBlobs.length} PDF zip failam...`);
-        for (const { fileName, blob } of pdfBlobs) {
-          zip.file(`${fileName}.pdf`, blob);
+      // Pēc visu PDF ģenerēšanas, taisām ZIP
+      if (pdfArray.length > 0) {
+        showToast(`📦 Pakotne ZIP (${pdfArray.length} PDF)...`, 'info');
+        
+        const zip = new JSZip();
+        
+        // Pievienojam visus PDF ZIP failam
+        for (const { name, blob } of pdfArray) {
+          zip.file(`${name}.pdf`, blob);
         }
 
-        // Ģenerē un lejuplādē ZIP
-        zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }).then(zipContent => {
-          const zipUrl = URL.createObjectURL(zipContent);
-          const link = document.createElement('a');
-          link.href = zipUrl;
-          link.download = `recini_${period}.zip`;
-          document.body.appendChild(link);
-          link.click();
-          
-          setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(zipUrl);
-            showToast(`✓ ZIP lejuplādes ar ${pdfBlobs.length} PDF rēķiniem`);
-          }, 200);
-        }).catch(err => {
-          console.error('ZIP ģenerēšanas kļūda:', err);
-          showToast('Kļūda ZIP ģenerēšanā', 'error');
+        // Ģenerē ZIP
+        const zipBlob = await zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }
         });
+
+        // Lejuplādē ZIP
+        const zipUrl = URL.createObjectURL(zipBlob);
+        const link = document.createElement('a');
+        link.href = zipUrl;
+        link.download = `recini_${period}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Tīra
+        setTimeout(() => {
+          URL.revokeObjectURL(zipUrl);
+        }, 100);
+        
+        showToast(`✓ ZIP lejuplādes ar ${pdfArray.length} PDF rēķiniem`);
       } else {
         showToast('Kļūda: neizdevās ģenerēt jebkādus PDF', 'error');
       }
