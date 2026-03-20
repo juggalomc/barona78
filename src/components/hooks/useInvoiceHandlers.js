@@ -530,15 +530,15 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     const generateRows = (details, filterFn) => {
       return details.filter(filterFn).map(detail => {
         if (detail.type === 'water') {
-          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+          return `<tr><td>${detail.tariff_name}</td><td>${detail.consumption_m3} m³</td><td>€${detail.price_per_m3.toFixed(4)}</td><td>€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else if (detail.type === 'waste') {
-          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.declared_persons} pers.</td><td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+          return `<tr><td>${detail.tariff_name}</td><td>${detail.declared_persons} pers.</td><td>€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td>€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else if (detail.type === 'debt') {
-          return `<tr style="background: #fee2e2;"><td style="color: #991b1b; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #991b1b; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+          return `<tr><td><strong>${detail.tariff_name}</strong></td><td></td><td></td><td><strong>€${detail.amount_without_vat.toFixed(2)}</strong></td></tr>`;
         } else if (detail.type === 'overpayment') {
-          return `<tr style="background: #dbeafe;"><td style="color: #0369a1; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #0369a1; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+          return `<tr><td><strong>${detail.tariff_name}</strong></td><td></td><td></td><td><strong>€${detail.amount_without_vat.toFixed(2)}</strong></td></tr>`;
         } else {
-          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${apt.area} m²</td><td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+          return `<tr><td>${detail.tariff_name}</td><td>${apt.area} m²</td><td>€${(detail.amount_without_vat / apt.area).toFixed(4)}</td><td>€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         }
       }).join('');
     };
@@ -549,119 +549,150 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     const overpaymentRows = generateRows(invoiceDetails, d => d.type === 'overpayment');
 
     return `
+      <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <style>
-            @page { size: A4; margin: 20mm; }
-            body { font-family: 'DejaVu Sans', 'Arial Unicode MS', Arial, sans-serif; margin: 0; padding: 40px; line-height: 1.6; }
-            .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
-            .title { font-size: 24px; font-weight: bold; letter-spacing: 0.1em; }
-            .company-info { text-align: right; font-size: 12px; }
-            .divider { border-top: 3px solid #000; margin: 20px 0; }
-            .payment-info-box { background: #003399; color: white; padding: 20px; margin: 20px 0; font-size: 12px; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th { text-align: left; padding: 8px; border-bottom: 1px solid #000; font-size: 11px; font-weight: bold; }
-            td { padding: 8px; font-size: 11px; }
-            .amount-total { font-size: 26px; font-weight: bold; color: #003399; text-align: right; margin: 15px 0; }
-            .text-sm { font-size: 10px; }
-            .nowrap { white-space: nowrap; }
-            .break-word { word-break: break-word; }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 20px;
+              line-height: 1.4;
+              font-size: 11px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 10px 0;
+            }
+            th {
+              text-align: left;
+              padding: 6px;
+              border-bottom: 1px solid #000;
+              font-weight: bold;
+              font-size: 11px;
+            }
+            td {
+              padding: 6px;
+              border-bottom: 1px solid #ccc;
+            }
+            .header-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #000;
+              padding-bottom: 15px;
+            }
+            .title {
+              font-size: 20px;
+              font-weight: bold;
+            }
+            .company-info {
+              text-align: right;
+              font-size: 10px;
+            }
+            .invoice-details {
+              margin: 15px 0;
+              font-size: 11px;
+            }
+            .recipient {
+              background-color: #f5f5f5;
+              padding: 10px;
+              margin: 15px 0;
+              font-size: 11px;
+            }
+            .amount-total {
+              font-size: 18px;
+              font-weight: bold;
+              text-align: right;
+              margin: 15px 0;
+              padding: 10px;
+              border: 2px solid #000;
+            }
+            .payment-info {
+              margin-top: 20px;
+              padding: 15px;
+              background-color: #f0f0f0;
+              font-size: 10px;
+            }
+            .row {
+              margin: 5px 0;
+            }
           </style>
         </head>
         <body>
-          <div class="header">
+          <div class="header-row">
             <div class="title">RĒĶINS</div>
             <div class="company-info">
-              <div style="font-weight: bold; margin-bottom: 10px;">${buildingName}</div>
-              <div>${buildingCode}</div>
-              <div style="font-size: 11px; margin-top: 5px;">${buildingAddress}</div>
+              <strong>${buildingName}</strong><br>
+              ${buildingCode}<br>
+              ${buildingAddress}
             </div>
           </div>
 
-          <div style="font-size: 12px;">
-            <p><strong>Nr:</strong> ${invoice.invoice_number}</p>
-            <p><strong>PERIODS:</strong> ${invoice.period}</p>
-            <p><strong>TERMIŅŠ:</strong> ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}</p>
+          <div class="invoice-details">
+            <div class="row"><strong>Nr:</strong> ${invoice.invoice_number}</div>
+            <div class="row"><strong>PERIODS:</strong> ${invoice.period}</div>
+            <div class="row"><strong>TERMIŅŠ:</strong> ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}</div>
           </div>
 
-          <div class="divider"></div>
-
-          <div style="background: #f5f5f5; padding: 20px; margin: 20px 0;">
-            <div style="font-weight: bold; margin-bottom: 10px; font-size: 13px;">SAŅĒMĒJS:</div>
-            <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">Dzīvoklis Nr. ${apt.number}</div>
-            ${apt.owner_name ? `<div style="font-size: 12px;">Vārds/Nosaukums: ${apt.owner_name}</div>` : ''}
-            ${apt.owner_surname ? `<div style="font-size: 12px;">Uzvārds: ${apt.owner_surname}</div>` : ''}
-            ${apt.email ? `<div style="font-size: 12px;">E-pasts: ${apt.email}</div>` : ''}
-            ${apt.declared_persons ? `<div style="font-size: 12px;">Deklarēto personu skaits: ${apt.declared_persons}</div>` : ''}
-            ${apt.registration_number ? `<div style="font-size: 12px; margin-top: 8px; font-weight: bold;">Reģ. numurs: ${apt.registration_number}</div>` : ''}
-            ${apt.apartment_address ? `<div style="font-size: 12px;">Adrese: ${apt.apartment_address}</div>` : ''}
-            <div style="font-size: 12px; margin-top: 8px;">Platība: ${apt.area} m²</div>
+          <div class="recipient">
+            <div class="row"><strong>SAŅĒMĒJS:</strong></div>
+            <div class="row"><strong>Dzīvoklis Nr. ${apt.number}</strong></div>
+            ${apt.owner_name ? `<div class="row">Vārds: ${apt.owner_name}</div>` : ''}
+            ${apt.owner_surname ? `<div class="row">Uzvārds: ${apt.owner_surname}</div>` : ''}
+            ${apt.email ? `<div class="row">E-pasts: ${apt.email}</div>` : ''}
+            ${apt.declared_persons ? `<div class="row">Deklarēto personu skaits: ${apt.declared_persons}</div>` : ''}
+            ${apt.registration_number ? `<div class="row">Reģ. numurs: ${apt.registration_number}</div>` : ''}
+            ${apt.apartment_address ? `<div class="row">Adrese: ${apt.apartment_address}</div>` : ''}
+            <div class="row">Platība: ${apt.area} m²</div>
           </div>
 
           <table>
-            <tr>
-              <th>PAKALPOJUMS</th>
-              <th style="text-align: center;">DAUDZ.</th>
-              <th style="text-align: right;">CENA</th>
-              <th style="text-align: right;">SUMMA</th>
-            </tr>
-            ${rowsWithoutVat}
-            ${rowsWithVat}
-            ${debtRows}
-            ${overpaymentRows}
+            <thead>
+              <tr>
+                <th>PAKALPOJUMS</th>
+                <th>DAUDZ.</th>
+                <th>CENA</th>
+                <th>SUMMA</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsWithoutVat}
+              ${rowsWithVat}
+              ${debtRows}
+              ${overpaymentRows}
+            </tbody>
           </table>
 
           ${invoice.previous_debt_note ? `
-            <div style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; padding: 12px; color: #991b1b; font-size: 12px; margin: 15px 0;">
-              <strong>💬 Parāda paskaidrojums:</strong> ${invoice.previous_debt_note}
+            <div class="row" style="background-color: #ffe6e6; padding: 10px; margin: 10px 0;">
+              <strong>Parāda paskaidrojums:</strong> ${invoice.previous_debt_note}
             </div>
           ` : ''}
 
-          <div style="text-align: right; margin: 20px 0; border-top: 2px solid #000; padding-top: 15px;">
-            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px;">
-              <span>Summa bez PVN:</span>
-              <span>€${amountWithoutVat.toFixed(2)}</span>
-            </div>
-            ${vatAmount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 15px;"><span>PVN kopā:</span><span>€${vatAmount.toFixed(2)}</span></div>` : ''}
-            <div style="font-size: 12px; margin-bottom: 15px;">KOPĀ APMAKSAI (EUR):</div>
-            <div class="amount-total">€${amountWithVat.toFixed(2)}</div>
+          <div style="text-align: right; margin: 20px 0; padding-top: 15px; border-top: 2px solid #000;">
+            <div class="row"><strong>Summa bez PVN:</strong> €${amountWithoutVat.toFixed(2)}</div>
+            ${vatAmount > 0 ? `<div class="row"><strong>PVN kopā:</strong> €${vatAmount.toFixed(2)}</div>` : ''}
+            <div class="amount-total">KOPĀ APMAKSAI: €${amountWithVat.toFixed(2)}</div>
           </div>
 
-          ${additionalInfo ? `<div style="background: #f5f5f5; padding: 15px; margin: 30px 0; border-radius: 4px; font-size: 12px; line-height: 1.6;">${additionalInfo.replace(/\n/g, '<br>')}</div>` : ''}
-
-          <div class="payment-info-box">
-            <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px;">Maksājuma rekvizīti</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">NOSAUKUMS</div>
-                <div style="font-weight: bold; font-size: 12px;">${buildingName}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">REĢ. KODS</div>
-                <div style="font-weight: bold; font-size: 12px;">${buildingCode}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">ADRESE</div>
-                <div style="font-weight: bold; font-size: 12px;">${buildingAddress}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">BANKA</div>
-                <div style="font-weight: bold; font-size: 12px;">${paymentBank}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">IBAN</div>
-                <div style="font-weight: bold; font-size: 12px;">${paymentIban}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">E-PASTS</div>
-                <div style="font-weight: bold; font-size: 12px;">${paymentEmail}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">TĀLRUNIS</div>
-                <div style="font-weight: bold; font-size: 12px;">${paymentPhone}</div>
-              </div>
+          ${additionalInfo ? `
+            <div style="background-color: #f5f5f5; padding: 10px; margin: 20px 0; font-size: 10px;">
+              ${additionalInfo.replace(/\n/g, '<br>')}
             </div>
+          ` : ''}
+
+          <div class="payment-info">
+            <div><strong>MAKSĀJUMA REKVIZĪTI</strong></div>
+            <div class="row"><strong>NOSAUKUMS:</strong> ${buildingName}</div>
+            <div class="row"><strong>REĢ. KODS:</strong> ${buildingCode}</div>
+            <div class="row"><strong>ADRESE:</strong> ${buildingAddress}</div>
+            <div class="row"><strong>BANKA:</strong> ${paymentBank}</div>
+            <div class="row"><strong>IBAN:</strong> ${paymentIban}</div>
+            <div class="row"><strong>E-PASTS:</strong> ${paymentEmail}</div>
+            <div class="row"><strong>TĀLRUNIS:</strong> ${paymentPhone}</div>
           </div>
         </body>
       </html>
