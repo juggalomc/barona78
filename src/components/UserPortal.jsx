@@ -1,7 +1,7 @@
 import React from 'react';
 import { Toast } from './shared/Toast';
 
-export function UserPortal({ userApartment, userInvoices, onLogout, onDownloadPDF, toast, onCloseToast }) {
+export function UserPortal({ userApartment, userInvoices, meterReadings, waterTariffs, hotWaterTariffs, onLogout, onDownloadPDF, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, currentPeriod }) {
   const getInvoiceStatus = (invoice) => {
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
@@ -57,6 +57,55 @@ export function UserPortal({ userApartment, userInvoices, onLogout, onDownloadPD
                   </div>
                 );
               })
+            )}
+          </div>
+        </div>
+
+        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <h2>💧 Skaitītāju Rādījumi</h2>
+          <p style={{ fontSize: '12px', color: '#666', marginBottom: '16px' }}>{new Date(currentPeriod + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</p>
+          
+          {/* Aukstais ūdens */}
+          <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '6px', border: '1px solid #e0f2fe' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>❄️ Aukstais ūdens</label>
+            {waterTariffs.find(w => w.period === currentPeriod) ? (
+              <div>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Skaitītāja rādījums (m³)"
+                  value={meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'water' && mr.period === currentPeriod)?.reading_value || ''}
+                  onChange={(e) => onSaveWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px' }}
+                />
+                <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                  Cena: €{parseFloat(waterTariffs.find(w => w.period === currentPeriod)?.price_per_m3 || 0).toFixed(4)}/m³
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: '#999', fontSize: '12px' }}>Tarifs nav norādīts</p>
+            )}
+          </div>
+
+          {/* Siltais ūdens */}
+          <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fde68a' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>🔥 Siltais ūdens</label>
+            {hotWaterTariffs.find(w => w.period === currentPeriod) ? (
+              <div>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Skaitītāja rādījums (m³)"
+                  value={meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'hot_water' && mr.period === currentPeriod)?.reading_value || ''}
+                  onChange={(e) => onSaveHotWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px' }}
+                />
+                <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                  Cena: €{parseFloat(hotWaterTariffs.find(w => w.period === currentPeriod)?.price_per_m3 || 0).toFixed(4)}/m³
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: '#999', fontSize: '12px' }}>Tarifs nav norādīts</p>
             )}
           </div>
         </div>

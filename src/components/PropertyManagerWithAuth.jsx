@@ -142,10 +142,16 @@ export default function PropertyManager() {
         <UserPortal 
           userApartment={userApartment}
           userInvoices={userInvoices}
+          meterReadings={meterReadings}
+          waterTariffs={waterTariffs}
+          hotWaterTariffs={hotWaterTariffs}
           onLogout={handleLogout}
           onDownloadPDF={invoiceHandlers.downloadPDF}
+          onSaveWaterMeterReading={waterHandlers.saveWaterMeterReading}
+          onSaveHotWaterMeterReading={waterHandlers.saveHotWaterMeterReading}
           toast={toast}
           onCloseToast={() => setToast(null)}
+          currentPeriod={waterHandlers.tariffPeriod}
         />
       </>
     );
