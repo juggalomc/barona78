@@ -6,6 +6,7 @@ export function useDataFetching(supabase) {
   const [invoices, setInvoices] = useState([]);
   const [waterConsumption, setWaterConsumption] = useState([]);
   const [waterTariffs, setWaterTariffs] = useState([]);
+  const [hotWaterTariffs, setHotWaterTariffs] = useState([]);
   const [wasteTariffs, setWasteTariffs] = useState([]);
   const [meterReadings, setMeterReadings] = useState([]);
   const [users, setUsers] = useState([]);
@@ -14,12 +15,13 @@ export function useDataFetching(supabase) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [aptRes, tarRes, invRes, wcRes, wtRes, wrRes, usersRes, mrRes] = await Promise.all([
+      const [aptRes, tarRes, invRes, wcRes, wtRes, hwRes, wrRes, usersRes, mrRes] = await Promise.all([
         supabase.from('apartments').select('*').order('number', { ascending: true }),
         supabase.from('tariffs').select('*').order('period', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('invoices').select('*').order('period', { ascending: false }),
         supabase.from('water_consumption').select('*').order('period', { ascending: false }),
         supabase.from('water_tariffs').select('*').order('period', { ascending: false }),
+        supabase.from('hot_water_tariffs').select('*').order('period', { ascending: false }),
         supabase.from('waste_tariffs').select('*').order('period', { ascending: false }),
         supabase.from('users').select('*').order('email', { ascending: true }),
         supabase.from('meter_readings').select('*').order('reading_date', { ascending: false })
@@ -30,6 +32,7 @@ export function useDataFetching(supabase) {
       setInvoices(invRes.data || []);
       setWaterConsumption(wcRes.data || []);
       setWaterTariffs(wtRes.data || []);
+      setHotWaterTariffs(hwRes.data || []);
       setWasteTariffs(wrRes.data || []);
       setUsers(usersRes.data || []);
       setMeterReadings(mrRes.data || []);
@@ -63,6 +66,7 @@ export function useDataFetching(supabase) {
     invoices, setInvoices,
     waterConsumption, setWaterConsumption,
     waterTariffs, setWaterTariffs,
+    hotWaterTariffs, setHotWaterTariffs,
     wasteTariffs, setWasteTariffs,
     meterReadings, setMeterReadings,
     users, setUsers,

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { TOTAL_AREA } from '../shared/constants';
 import jsPDF from 'jspdf';
 
-export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}) {
+export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
   const [invoiceToDate, setInvoiceToDate] = useState('');
@@ -274,12 +274,32 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         });
       }
 
-      // Ūdens
+      // Aukstais ūdens
       const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === currentInvoiceMonth);
       const waterTariff = waterTariffs.find(w => w.period === currentInvoiceMonth);
 
       if (waterReading && waterTariff && waterTariff.include_in_invoice !== false) {
-        const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
+        // Calculate previous month period
+        const [year, month] = currentInvoiceMonth.split('-');
+        let prevMonth = parseInt(month) - 1;
+        let prevYear = parseInt(year);
+        if (prevMonth === 0) {
+          prevMonth = 12;
+          prevYear -= 1;
+        }
+        const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+        
+        // Get current and previous readings
+        const currentReading = parseFloat(waterReading.reading_value) || 0;
+        const previousWaterReading = meterReadings.find(mr => 
+          mr.apartment_id === apt.id && 
+          mr.meter_type === 'water' && 
+          mr.period === previousPeriod
+        );
+        const previousReadingValue = previousWaterReading ? parseFloat(previousWaterReading.reading_value) || 0 : 0;
+        
+        // Calculate consumption as meter difference (current - previous)
+        const waterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
         const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
         const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
         const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
@@ -290,13 +310,59 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
         invoiceDetails.push({
           tariff_id: waterTariff.id,
-          tariff_name: `Ūdens (${waterConsumptionM3} m³)`,
+          tariff_name: `Aukstais ūdens (${waterConsumptionM3} m³)`,
           consumption_m3: waterConsumptionM3,
           price_per_m3: waterPricePerM3,
           amount_without_vat: waterAmountWithoutVat,
           vat_rate: waterVatRate,
           vat_amount: waterVatAmount,
           type: 'water'
+        });
+      }
+
+      // Siltais ūdens
+      const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === currentInvoiceMonth);
+      const hotWaterTariff = hotWaterTariffs.find(w => w.period === currentInvoiceMonth);
+
+      if (hotWaterReading && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
+        // Calculate previous month period
+        const [year, month] = currentInvoiceMonth.split('-');
+        let prevMonth = parseInt(month) - 1;
+        let prevYear = parseInt(year);
+        if (prevMonth === 0) {
+          prevMonth = 12;
+          prevYear -= 1;
+        }
+        const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+        
+        // Get current and previous readings
+        const currentReading = parseFloat(hotWaterReading.reading_value) || 0;
+        const previousHotWaterReading = meterReadings.find(mr => 
+          mr.apartment_id === apt.id && 
+          mr.meter_type === 'hot_water' && 
+          mr.period === previousPeriod
+        );
+        const previousReadingValue = previousHotWaterReading ? parseFloat(previousHotWaterReading.reading_value) || 0 : 0;
+        
+        // Calculate consumption as meter difference (current - previous)
+        const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
+        const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
+        const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
+        const hotWaterVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+        const hotWaterVatAmount = Math.round(hotWaterAmountWithoutVat * hotWaterVatRate / 100 * 100) / 100;
+
+        totalAmountWithoutVat += hotWaterAmountWithoutVat;
+        totalVatAmount += hotWaterVatAmount;
+
+        invoiceDetails.push({
+          tariff_id: hotWaterTariff.id,
+          tariff_name: `Siltais ūdens (${hotWaterConsumptionM3} m³)`,
+          consumption_m3: hotWaterConsumptionM3,
+          price_per_m3: hotWaterPricePerM3,
+          amount_without_vat: hotWaterAmountWithoutVat,
+          vat_rate: hotWaterVatRate,
+          vat_amount: hotWaterVatAmount,
+          type: 'hot_water'
         });
       }
 
@@ -676,7 +742,27 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const waterTariff = waterTariffs.find(w => w.period === currentInvoiceMonth);
 
         if (waterReading && waterTariff && enabledMeters.water && waterTariff.include_in_invoice !== false) {
-          const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
+          // Calculate previous month period
+          const [year, month] = currentInvoiceMonth.split('-');
+          let prevMonth = parseInt(month) - 1;
+          let prevYear = parseInt(year);
+          if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear -= 1;
+          }
+          const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+          
+          // Get current and previous readings
+          const currentReading = parseFloat(waterReading.reading_value) || 0;
+          const previousWaterReading = meterReadings.find(mr => 
+            mr.apartment_id === apt.id && 
+            mr.meter_type === 'water' && 
+            mr.period === previousPeriod
+          );
+          const previousReadingValue = previousWaterReading ? parseFloat(previousWaterReading.reading_value) || 0 : 0;
+          
+          // Calculate consumption as meter difference (current - previous)
+          const waterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
           const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
           const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
           const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
@@ -687,13 +773,58 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           invoiceDetails.push({
             tariff_id: waterTariff.id,
-            tariff_name: `Ūdens (${waterConsumptionM3} m³)`,
+            tariff_name: `Aukstais ūdens (${waterConsumptionM3} m³)`,
             consumption_m3: waterConsumptionM3,
             price_per_m3: waterPricePerM3,
             amount_without_vat: waterAmountWithoutVat,
             vat_rate: waterVatRate,
             vat_amount: waterVatAmount,
             type: 'water'
+          });
+        }
+
+        const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === currentInvoiceMonth);
+        const hotWaterTariff = hotWaterTariffs.find(w => w.period === currentInvoiceMonth);
+
+        if (hotWaterReading && hotWaterTariff && enabledMeters.hot_water && hotWaterTariff.include_in_invoice !== false) {
+          // Calculate previous month period
+          const [year, month] = currentInvoiceMonth.split('-');
+          let prevMonth = parseInt(month) - 1;
+          let prevYear = parseInt(year);
+          if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear -= 1;
+          }
+          const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+          
+          // Get current and previous readings
+          const currentReading = parseFloat(hotWaterReading.reading_value) || 0;
+          const previousHotWaterReading = meterReadings.find(mr => 
+            mr.apartment_id === apt.id && 
+            mr.meter_type === 'hot_water' && 
+            mr.period === previousPeriod
+          );
+          const previousReadingValue = previousHotWaterReading ? parseFloat(previousHotWaterReading.reading_value) || 0 : 0;
+          
+          // Calculate consumption as meter difference (current - previous)
+          const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
+          const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
+          const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
+          const hotWaterVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+          const hotWaterVatAmount = Math.round(hotWaterAmountWithoutVat * hotWaterVatRate / 100 * 100) / 100;
+
+          totalAmountWithoutVat += hotWaterAmountWithoutVat;
+          totalVatAmount += hotWaterVatAmount;
+
+          invoiceDetails.push({
+            tariff_id: hotWaterTariff.id,
+            tariff_name: `Siltais ūdens (${hotWaterConsumptionM3} m³)`,
+            consumption_m3: hotWaterConsumptionM3,
+            price_per_m3: hotWaterPricePerM3,
+            amount_without_vat: hotWaterAmountWithoutVat,
+            vat_rate: hotWaterVatRate,
+            vat_amount: hotWaterVatAmount,
+            type: 'hot_water'
           });
         }
 
