@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { TOTAL_AREA } from '../shared/constants';
 
 export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
   const [enabledMeters, setEnabledMeters] = useState({ water: true });

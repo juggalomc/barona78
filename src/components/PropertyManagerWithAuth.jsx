@@ -13,7 +13,7 @@ import { WaterTab } from './tabs/WaterTab';
 import { InvoicesTab } from './tabs/InvoicesTab';
 
 // Konstantes un stili
-import { BUILDING_NAME, TABS, TOTAL_AREA } from './shared/constants';
+import { TABS } from './shared/constants';
 import { styles } from './shared/styles';
 
 // Hooks
@@ -30,8 +30,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export default function PropertyManager() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
   const [userApartment, setUserApartment] = useState(null);
   const [userInvoices, setUserInvoices] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
@@ -43,6 +41,10 @@ export default function PropertyManager() {
     fetchData, fetchUserData
   } = useDataFetching(supabase);
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
   // Handler hooks
   const apartmentHandlers = useApartmentHandlers(supabase, fetchData, showToast);
   const userHandlers = useUserHandlers(supabase, fetchData, showToast);
@@ -50,15 +52,10 @@ export default function PropertyManager() {
   const waterHandlers = useWaterHandlers(supabase, apartments, fetchData, showToast);
   const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, wasteTariffs, meterReadings, fetchData, showToast);
 
-  const enabledMeters = waterHandlers.enabledMeters;
-
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-  };
 
   const handleLogin = async (email, password) => {
     try {

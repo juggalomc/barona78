@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function useDataFetching(supabase) {
   const [apartments, setApartments] = useState([]);
@@ -43,10 +43,9 @@ export function useDataFetching(supabase) {
   const fetchUserData = async (apartmentId) => {
     try {
       setLoading(true);
-      const [aptRes, invRes, mrRes] = await Promise.all([
+      const [aptRes, invRes] = await Promise.all([
         supabase.from('apartments').select('*').eq('id', apartmentId).single(),
-        supabase.from('invoices').select('*').eq('apartment_id', apartmentId).order('period', { ascending: false }),
-        supabase.from('meter_readings').select('*').eq('apartment_id', apartmentId).order('reading_date', { ascending: false })
+        supabase.from('invoices').select('*').eq('apartment_id', apartmentId).order('period', { ascending: false })
       ]);
 
       return { apartment: aptRes.data, invoices: invRes.data || [] };
