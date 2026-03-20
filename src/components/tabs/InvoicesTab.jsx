@@ -11,7 +11,7 @@ const styles = {
     border: '1px solid #e2e8f0'
   },
   cardTitle: {
-    fontSize: '20px',
+    fontSize: '20,px',
     fontWeight: '700',
     color: '#0f172a',
     marginBottom: '20px',
@@ -37,20 +37,17 @@ const styles = {
     borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: '600',
-    fontSize: '14px',
-    textAlign: 'center',
-    transition: 'all 0.2s'
+    transition: 'background 0.2s',
+    fontSize: '14px'
   },
   btnSmall: {
-    padding: '6px 10px',
+    padding: '6px 12px',
     fontSize: '12px',
-    border: 'none',
     borderRadius: '4px',
+    border: 'none',
     cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: '500'
+    fontWeight: '600',
+    color: '#fff'
   }
 };
 
@@ -58,373 +55,277 @@ export function InvoicesTab({
   invoices,
   apartments,
   tariffs,
-  waterTariffs,
-  meterReadings,
   uniqueTariffPeriods,
   invoiceMonth, setInvoiceMonth,
   invoiceFromDate, setInvoiceFromDate,
   invoiceToDate, setInvoiceToDate,
-  expandedInvoiceMonth, setExpandedInvoiceMonth,
   debtNoteForm, setDebtNoteForm,
-  overpaymentForm, setOverpaymentForm,
   generateInvoices,
   toggleInvoicePaid,
   deleteInvoice,
   downloadPDF,
   exportInvoicesToCSV,
-  saveDebtNote,
-  saveOverpayment,
   getInvoiceStatus,
   showToast,
-  regenerateInvoice,
   generateInvoiceForApartment,
-  sendInvoicesByEmail,
-  deleteInvoices,
-  regenerateInvoices,
   updateOverpayment,
   deleteOverpayment,
   downloadMonthAsZip
 }) {
   const [selectedApartmentForGen, setSelectedApartmentForGen] = React.useState('');
-  const [selectedInvoices, setSelectedInvoices] = React.useState(new Set());
-  const [batchMonth, setBatchMonth] = React.useState('');
   const [editingOverpaymentId, setEditingOverpaymentId] = React.useState(null);
   const [editingOverpaymentAmount, setEditingOverpaymentAmount] = React.useState('');
   const [filterMonth, setFilterMonth] = React.useState('');
   const [filterApartment, setFilterApartment] = React.useState('');
 
-  // Grupēšana un filtrēšana
-  const groupedInvoices = {};
-  invoices.forEach(inv => {
-    if (!groupedInvoices[inv.period]) groupedInvoices[inv.period] = [];
-    groupedInvoices[inv.period].push(inv);
-  });
+  // Aprēķinām unikālos mēnešus no esošajiem rēķiniem filtrēšanai
+  const sortedMonths = [...new Set(invoices.map(i => i.period))].sort().reverse();
 
-  const sortedMonths = Object.keys(groupedInvoices).sort().reverse();
-
+  // Filtrēšanas loģika sarakstam
   const filteredInvoices = invoices.filter(inv => {
     if (filterMonth && inv.period !== filterMonth) return false;
     if (filterApartment) {
       const apt = apartments.find(a => a.id === inv.apartment_id);
-      if (!apt || apt.number !== filterApartment) return false;
+      if (!apt || !apt.number.toString().includes(filterApartment)) return false;
     }
     return true;
   });
 
-  const handleSelectAllInMonth = (month) => {
-    const monthInvoices = invoices.filter(inv => inv.period === month);
-    setSelectedInvoices(new Set(monthInvoices.map(inv => inv.id)));
-  };
-
-  /**
-   * Jauna, profesionāla PDF ģenerēšanas funkcija latviešu valodā
-   * Ja globālais pdfMake neeksistē, mēģinām alternatīvu vai izvadam kļūdu
-   */
-  const handleGeneratePDF = (invoice) => {
-    const apt = apartments.find(a => a.id === invoice.apartment_id);
-    
-    // Pārbaudām vai pdfMake ir pieejams globāli
-    const pdfMake = window.pdfMake;
-    if (!pdfMake || typeof pdfMake.createPdf !== 'function') {
-      console.error("pdfMake nav inicializēts");
-      showToast("Kļūda: PDF bibliotēka nav pieejama. Mēģiniet pārlādēt lapu.", "error");
-      return;
-    }
-
-    const docDefinition = {
-      content: [
-        { text: 'RĒĶINS Nr. ' + invoice.invoice_number, style: 'header' },
-        { text: 'Datums: ' + new Date().toLocaleDateString('lv-LV'), alignment: 'right' },
-        { text: '\n' },
-        {
-          columns: [
-            {
-              width: '*',
-              stack: [
-                { text: 'PAKALPOJUMA SNIEDZĒJS:', style: 'subHeader' },
-                { text: 'Biedrība "Mājas Apsaimniekotājs"' },
-                { text: 'Reģ. nr: 40000000000' },
-                { text: 'Adrese: Rīga, Latvija' },
-              ]
-            },
-            {
-              width: '*',
-              stack: [
-                { text: 'KLIENTS:', style: 'subHeader' },
-                { text: 'Dzīvoklis Nr. ' + (apt?.number || 'N/A') },
-                { text: 'Īpašnieks: ' + (apt?.owner_name || 'N/A') },
-                { text: 'Adrese: ' + (apt?.address || 'N/A') },
-              ]
-            }
-          ]
-        },
-        { text: '\n\n' },
-        { text: 'Norēķinu periods: ' + invoice.period, style: 'boldText' },
-        {
-          style: 'tableExample',
-          table: {
-            widths: ['*', 'auto', 'auto', 'auto'],
-            body: [
-              [
-                { text: 'Pakalpojums', style: 'tableHeader' },
-                { text: 'Daudzums', style: 'tableHeader' },
-                { text: 'Tarifs', style: 'tableHeader' },
-                { text: 'Summa (€)', style: 'tableHeader' }
-              ],
-              ...(invoice.items || []).map(item => [
-                item.name,
-                item.quantity.toFixed(2),
-                '€' + item.price.toFixed(4),
-                '€' + (item.quantity * item.price).toFixed(2)
-              ]),
-              [
-                { text: 'KOPĀ APMAKSAI:', colSpan: 3, style: 'boldText' },
-                {},
-                {},
-                { text: '€' + invoice.amount.toFixed(2), style: 'boldText' }
-              ]
-            ]
-          },
-          layout: 'lightHorizontalLines'
-        },
-        { text: '\n' },
-        invoice.previous_debt_amount > 0 ? {
-          text: 'Iepriekšējais parāds: €' + invoice.previous_debt_amount.toFixed(2),
-          color: 'red'
-        } : null,
-        invoice.overpayment_amount > 0 ? {
-          text: 'Pārmaksa: €' + invoice.overpayment_amount.toFixed(2),
-          color: 'green'
-        } : null,
-        { text: '\n\n' },
-        { text: 'Piezīmes: Rēķins sagatavots elektroniski un ir derīgs bez paraksta.', style: 'smallText' }
-      ],
-      styles: {
-        header: { fontSize: 22, fontWeight: 'bold', marginBottom: 10, color: '#1e293b' },
-        subHeader: { fontSize: 12, fontWeight: 'bold', marginBottom: 5, color: '#64748b' },
-        tableHeader: { bold: true, fontSize: 12, color: 'white', fillOpacity: 1, fillColor: '#2563eb' },
-        boldText: { bold: true, fontSize: 13 },
-        smallText: { fontSize: 10, italic: true, color: '#94a3b8' },
-        tableExample: { margin: [0, 5, 0, 15] }
-      },
-      defaultStyle: { font: 'Roboto' } // Pārliecinies, ka fonti ir ielādēti
-    };
-
-    try {
-      pdfMake.createPdf(docDefinition).download(`Rekins_${invoice.invoice_number}.pdf`);
-      showToast("PDF veiksmīgi izveidots");
-    } catch (e) {
-      console.error("PDF ģenerēšanas kļūda:", e);
-      // Fallback uz veco metodi, ja jaunā neizdodas
-      downloadPDF(invoice);
-    }
-  };
-
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      
-      {/* ===== ĢENERĒŠANAS SEKCIJA ===== */}
-      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '32px'}}>
+    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+        
+        {/* Rēķinu ģenerēšanas bloks */}
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>📄 Masu rēķinu ģenerēšana</h2>
-          <form onSubmit={(e) => generateInvoices(e, tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice === true), invoiceMonth, { water: true })} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-            <label style={{fontSize: '14px', fontWeight: '500'}}>Izvēlieties periodu</label>
-            <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(e.target.value)} style={styles.input}>
-              <option value="">-- Mēnesis --</option>
-              {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{period}</option>))}
+          <h2 style={styles.cardTitle}>⚙️ Rēķinu ģenerēšana</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <select style={styles.input} value={invoiceMonth} onChange={e => setInvoiceMonth(e.target.value)}>
+              <option value="">Izvēlieties mēnesi...</option>
+              {uniqueTariffPeriods.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-              <div>
-                <label style={{fontSize: '12px', color: '#64748b'}}>No</label>
-                <input type="date" value={invoiceFromDate} onChange={(e) => setInvoiceFromDate(e.target.value)} style={styles.input} />
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>No datuma:</label>
+                <input type="date" style={styles.input} value={invoiceFromDate} onChange={e => setInvoiceFromDate(e.target.value)} />
               </div>
-              <div>
-                <label style={{fontSize: '12px', color: '#64748b'}}>Līdz</label>
-                <input type="date" value={invoiceToDate} onChange={(e) => setInvoiceToDate(e.target.value)} style={styles.input} />
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Līdz datumam:</label>
+                <input type="date" style={styles.input} value={invoiceToDate} onChange={e => setInvoiceToDate(e.target.value)} />
               </div>
             </div>
-            <button type="submit" style={styles.btn}>🚀 Ģenerēt visiem dzīvokļiem</button>
-          </form>
+            <button 
+              style={styles.btn} 
+              onClick={(e) => generateInvoices(e, tariffs.filter(t => t.period === invoiceMonth), invoiceMonth)}
+            >
+              🚀 Ģenerēt rēķinus visiem
+            </button>
+          </div>
         </div>
 
+        {/* Individuāls rēķins */}
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>🏠 Individuāls rēķins</h2>
-          <form onSubmit={(e) => generateInvoiceForApartment(e, selectedApartmentForGen, invoiceMonth, tariffs.filter(t => t.period === invoiceMonth && t.include_in_invoice === true), invoiceFromDate, invoiceToDate)} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-            <label style={{fontSize: '14px', fontWeight: '500'}}>Dzīvoklis</label>
-            <select value={selectedApartmentForGen} onChange={(e) => setSelectedApartmentForGen(e.target.value)} style={styles.input}>
-              <option value="">-- Atlasīt dzīvokli --</option>
-              {apartments.sort((a,b) => a.number.localeCompare(b.number, undefined, {numeric: true})).map(apt => (
-                <option key={apt.id} value={apt.id}>Dz. {apt.number} - {apt.owner_name}</option>
-              ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <select style={styles.input} value={selectedApartmentForGen} onChange={e => setSelectedApartmentForGen(e.target.value)}>
+              <option value="">Izvēlieties dzīvokli...</option>
+              {apartments.map(a => <option key={a.id} value={a.id}>Dz. {a.number} - {a.owner_name}</option>)}
             </select>
-            <button type="submit" style={{...styles.btn, background: '#0ea5e9'}}>✨ Izveidot vienu rēķinu</button>
-          </form>
+            <button 
+              style={{ ...styles.btn, background: '#0ea5e9' }} 
+              onClick={(e) => generateInvoiceForApartment(e, selectedApartmentForGen, invoiceMonth)}
+            >
+              Izveidot šim dzīvoklim
+            </button>
+            {invoiceMonth && (
+               <button 
+               style={{ ...styles.btn, background: '#6366f1' }} 
+               onClick={() => downloadMonthAsZip(invoiceMonth)}
+             >
+               📦 Lejupielādēt mēneša ZIP
+             </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ===== FILTRI UN DARBĪBAS ===== */}
-      <div style={styles.card}>
-        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px'}}>
-          <h2 style={styles.cardTitle}>📋 Rēķinu pārvaldība</h2>
-          <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
+      {/* Rēķinu saraksta tabula */}
+      <div style={{ ...styles.card, marginTop: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+          <h2 style={{ ...styles.cardTitle, marginBottom: 0 }}>📋 Sagatavotie rēķini</h2>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <input 
-              type="text" 
-              placeholder="🔍 Meklēt dzīv. nr." 
+              placeholder="🔍 Dzīv. nr." 
+              style={{ ...styles.input, width: '130px' }} 
               value={filterApartment} 
-              onChange={(e) => setFilterApartment(e.target.value)} 
-              style={{...styles.input, width: '180px'}}
+              onChange={e => setFilterApartment(e.target.value)} 
             />
-            <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} style={{...styles.input, width: '160px'}}>
+            <select style={{ ...styles.input, width: '150px' }} value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
               <option value="">Visi mēneši</option>
-              {sortedMonths.map(p => <option key={p} value={p}>{p}</option>)}
+              {sortedMonths.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
-            <button onClick={exportInvoicesToCSV} style={{...styles.btnSmall, background: '#10b981', color: 'white', padding: '10px 15px'}}>📊 Eksportēt CSV</button>
+            <button onClick={exportInvoicesToCSV} style={{ ...styles.btnSmall, background: '#10b981' }}>Eksportēt CSV</button>
           </div>
         </div>
 
-        {selectedInvoices.size > 0 && (
-          <div style={{marginBottom: '20px', padding: '15px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <span style={{fontWeight: '600', color: '#1e40af'}}>Izvēlēti {selectedInvoices.size} rēķini</span>
-            <div style={{display: 'flex', gap: '10px'}}>
-              <button onClick={() => regenerateInvoices(Array.from(selectedInvoices))} style={{...styles.btnSmall, background: '#f59e0b', color: 'white'}}>🔄 Reģenerēt</button>
-              <button onClick={() => deleteInvoices(Array.from(selectedInvoices))} style={{...styles.btnSmall, background: '#ef4444', color: 'white'}}>🗑️ Dzēst</button>
-              <button onClick={() => setSelectedInvoices(new Set())} style={{...styles.btnSmall, background: '#64748b', color: 'white'}}>Atcelt</button>
-            </div>
-          </div>
-        )}
-
-        <div style={{overflowX: 'auto'}}>
-          <table style={{width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '14px'}}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{background: '#f8fafc'}}>
-                <th style={{padding: '16px', textAlign: 'left', borderBottom: '2px solid #e2e8f0'}}><input type="checkbox" onChange={(e) => {
-                  if (e.target.checked) handleSelectAllInMonth(filterMonth);
-                  else setSelectedInvoices(new Set());
-                }} /></th>
-                <th style={{padding: '16px', textAlign: 'left', borderBottom: '2px solid #e2e8f0'}}>Rēķins</th>
-                <th style={{padding: '16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0'}}>Dzīv.</th>
-                <th style={{padding: '16px', textAlign: 'right', borderBottom: '2px solid #e2e8f0'}}>Summa</th>
-                <th style={{padding: '16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0'}}>Pārmaksa</th>
-                <th style={{padding: '16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0'}}>Statuss</th>
-                <th style={{padding: '16px', textAlign: 'center', borderBottom: '2px solid #e2e8f0'}}>Darbības</th>
+              <tr style={{ borderBottom: '2px solid #f1f5f9', textAlign: 'left', color: '#64748b' }}>
+                <th style={{ padding: '12px' }}>Nr.</th>
+                <th style={{ padding: '12px' }}>Dzīvoklis</th>
+                <th style={{ padding: '12px' }}>Periods</th>
+                <th style={{ padding: '12px', textAlign: 'right' }}>Summa</th>
+                <th style={{ padding: '12px', textAlign: 'center' }}>Statuss</th>
+                <th style={{ padding: '12px', textAlign: 'right' }}>Darbības</th>
               </tr>
             </thead>
             <tbody>
-              {filteredInvoices.map((invoice) => {
-                const apt = apartments.find(a => a.id === invoice.apartment_id);
-                const status = getInvoiceStatus(invoice);
-                const isEditing = editingOverpaymentId === invoice.id;
-
+              {filteredInvoices.map(inv => {
+                const apt = apartments.find(a => a.id === inv.apartment_id);
+                const status = getInvoiceStatus(inv);
                 return (
-                  <tr key={invoice.id} style={{
-                    background: selectedInvoices.has(invoice.id) ? '#f0f9ff' : 'white',
-                    transition: 'background 0.2s'
-                  }}>
-                    <td style={{padding: '14px', borderBottom: '1px solid #f1f5f9'}}>
-                      <input 
-                        type="checkbox" 
-                        checked={selectedInvoices.has(invoice.id)}
-                        onChange={(e) => {
-                          const next = new Set(selectedInvoices);
-                          if (e.target.checked) next.add(invoice.id);
-                          else next.delete(invoice.id);
-                          setSelectedInvoices(next);
-                        }}
-                      />
-                    </td>
-                    <td style={{padding: '14px', borderBottom: '1px solid #f1f5f9', fontWeight: '500'}}>{invoice.invoice_number}</td>
-                    <td style={{padding: '14px', textAlign: 'center', borderBottom: '1px solid #f1f5f9'}}>{apt?.number}</td>
-                    <td style={{padding: '14px', textAlign: 'right', fontWeight: '700', borderBottom: '1px solid #f1f5f9'}}>€{invoice.amount.toFixed(2)}</td>
-                    
-                    <td style={{padding: '14px', textAlign: 'center', borderBottom: '1px solid #f1f5f9'}}>
-                      {isEditing ? (
-                        <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>
-                          <input 
-                            type="number" 
-                            value={editingOverpaymentAmount} 
-                            onChange={(e) => setEditingOverpaymentAmount(e.target.value)} 
-                            style={{width: '60px', padding: '4px', border: '1px solid #3b82f6', borderRadius: '4px'}}
-                          />
-                          <button onClick={() => {
-                            updateOverpayment(invoice.id, parseFloat(editingOverpaymentAmount));
-                            setEditingOverpaymentId(null);
-                          }} style={{...styles.btnSmall, background: '#10b981', color: 'white'}}>✓</button>
-                        </div>
-                      ) : (
-                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
-                          <span style={{color: invoice.overpayment_amount > 0 ? '#10b981' : '#94a3b8', fontWeight: '600'}}>
-                            €{invoice.overpayment_amount?.toFixed(2) || '0.00'}
-                          </span>
-                          <button onClick={() => {
-                            setEditingOverpaymentId(invoice.id);
-                            setEditingOverpaymentAmount(invoice.overpayment_amount || 0);
-                          }} style={{border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px', opacity: 0.5}}>✎</button>
-                        </div>
-                      )}
-                    </td>
-
-                    <td style={{padding: '14px', textAlign: 'center', borderBottom: '1px solid #f1f5f9'}}>
-                      <span style={{
+                  <tr key={inv.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '12px', fontSize: '14px' }}>{inv.invoice_number}</td>
+                    <td style={{ padding: '12px', fontSize: '14px' }}>Dz. {apt?.number}</td>
+                    <td style={{ padding: '12px', fontSize: '14px' }}>{inv.period}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700' }}>€{inv.amount.toFixed(2)}</td>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                      <span style={{ 
                         background: status.color, 
                         color: 'white', 
                         padding: '4px 10px', 
                         borderRadius: '20px', 
                         fontSize: '11px',
-                        fontWeight: '600',
-                        textTransform: 'uppercase'
+                        fontWeight: '700',
+                        display: 'inline-block',
+                        minWidth: '80px'
                       }}>
                         {status.status}
                       </span>
                     </td>
-                    <td style={{padding: '14px', textAlign: 'center', borderBottom: '1px solid #f1f5f9'}}>
-                      <div style={{display: 'flex', gap: '8px', justifyContent: 'center'}}>
-                        <button onClick={() => toggleInvoicePaid(invoice.id, invoice.paid)} style={{...styles.btnSmall, background: invoice.paid ? '#10b981' : '#f59e0b', color: 'white'}}>
-                          {invoice.paid ? 'Apmaksāts' : 'Apmaksāt'}
+                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button 
+                          title={inv.paid ? "Atzīmēt kā neapmaksātu" : "Atzīmēt kā apmaksātu"}
+                          onClick={() => toggleInvoicePaid(inv.id, inv.paid)}
+                          style={{ ...styles.btnSmall, background: inv.paid ? '#f59e0b' : '#10b981' }}
+                        >
+                          {inv.paid ? '↩️' : 'Apmaksāt'}
                         </button>
-                        <button onClick={() => handleGeneratePDF(invoice)} style={{...styles.btnSmall, background: '#334155', color: 'white'}} title="Lejupielādēt PDF">📥 PDF</button>
-                        <button onClick={() => regenerateInvoice(invoice)} style={{...styles.btnSmall, background: '#6366f1', color: 'white'}}>🔄</button>
-                        <button onClick={() => deleteInvoice(invoice.id)} style={{...styles.btnSmall, background: '#ef4444', color: 'white'}}>🗑️</button>
+                        <button 
+                          onClick={() => downloadPDF(inv)}
+                          style={{ ...styles.btnSmall, background: '#475569' }}
+                        >
+                          PDF
+                        </button>
+                        <button 
+                          onClick={() => deleteInvoice(inv.id)}
+                          style={{ ...styles.btnSmall, background: '#ef4444' }}
+                        >
+                          🗑️
+                        </button>
                       </div>
                     </td>
                   </tr>
                 );
               })}
+              {filteredInvoices.length === 0 && (
+                <tr>
+                  <td colSpan="6" style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>Netika atrasts neviens rēķins.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* ===== PIEZĪMES UN PĀRMAKSU SKATS ===== */}
-      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginTop: '32px'}}>
-          <div style={styles.card}>
-            <h3 style={styles.cardTitle}>📝 Parādu piezīmes</h3>
-            <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-              {invoices.filter(i => i.previous_debt_amount > 0).slice(0, 5).map(inv => (
-                <div key={inv.id} style={{padding: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                  <div style={{fontSize: '13px'}}>
-                    <strong style={{color: '#1e293b'}}>Dz. {apartments.find(a => a.id === inv.apartment_id)?.number}:</strong> 
-                    <span style={{color: '#64748b', marginLeft: '8px'}}>{inv.previous_debt_note || 'Nav piezīmju'}</span>
-                  </div>
-                  <button onClick={() => setDebtNoteForm({ invoiceId: inv.id, note: inv.previous_debt_note || '' })} style={{color: '#2563eb', fontSize: '12px', background: 'none', border: 'none', fontWeight: '600', cursor: 'pointer'}}>Labot</button>
+      {/* Papildus funkcijas: Piezīmes un Pārmaksas */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', marginTop: '24px' }}>
+        
+        {/* Piezīmju sadaļa */}
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>📝 Parādu piezīmes</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {invoices.filter(i => i.previous_debt_note).slice(0, 5).map(inv => (
+              <div key={inv.id} style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '700', marginBottom: '4px' }}>Dz. {apartments.find(a => a.id === inv.apartment_id)?.number} ({inv.period})</div>
+                  <div style={{ color: '#64748b', fontStyle: 'italic' }}>"{inv.previous_debt_note}"</div>
                 </div>
-              ))}
-            </div>
+                <button 
+                  onClick={() => setDebtNoteForm({ invoiceId: inv.id, note: inv.previous_debt_note || '' })}
+                  style={{ color: '#2563eb', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '12px', padding: '0 0 0 10px' }}
+                >
+                  Labot
+                </button>
+              </div>
+            ))}
+            {invoices.filter(i => i.previous_debt_note).length === 0 && (
+              <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '13px', padding: '10px' }}>Nav pievienotu piezīmju.</div>
+            )}
           </div>
+        </div>
 
-          <div style={styles.card}>
-            <h3 style={styles.cardTitle}>💰 Pārmaksu kontrole</h3>
-            <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-              {invoices.filter(i => i.overpayment_amount > 0).slice(0, 5).map(inv => (
-                <div key={inv.id} style={{padding: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                  <span style={{fontSize: '13px', fontWeight: '500'}}>Dz. {apartments.find(a => a.id === inv.apartment_id)?.number} ({inv.period})</span>
-                  <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
-                    <span style={{fontWeight: '700', color: '#10b981'}}>€{inv.overpayment_amount.toFixed(2)}</span>
-                    <button onClick={() => deleteOverpayment(inv.id)} style={{...styles.btnSmall, background: '#fee2e2', color: '#ef4444'}}>Dzēst</button>
+        {/* Pārmaksu kontrole */}
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>💰 Pārmaksu reģistrs</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {invoices.filter(inv => inv.overpayment_amount > 0).slice(0, 5).map(invoice => (
+              <div key={invoice.id} style={{ padding: '12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#166534' }}>Dz. {apartments.find(a => a.id === invoice.apartment_id)?.number} ({invoice.period})</div>
+                    <div style={{ color: '#166534', fontSize: '16px', fontWeight: '800' }}>€{invoice.overpayment_amount.toFixed(2)}</div>
                   </div>
+                  
+                  {editingOverpaymentId === invoice.id ? (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <input 
+                        type="number" 
+                        value={editingOverpaymentAmount} 
+                        onChange={e => setEditingOverpaymentAmount(e.target.value)} 
+                        style={{ ...styles.input, width: '80px', padding: '6px' }} 
+                      />
+                      <button 
+                        onClick={() => { updateOverpayment(invoice.id, parseFloat(editingOverpaymentAmount)); setEditingOverpaymentId(null); }} 
+                        style={{ ...styles.btnSmall, background: '#10b981', padding: '6px 10px' }}
+                      >
+                        ✓
+                      </button>
+                      <button 
+                        onClick={() => setEditingOverpaymentId(null)} 
+                        style={{ ...styles.btnSmall, background: '#6b7280', padding: '6px 10px' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button 
+                        title="Labot summu"
+                        onClick={() => { setEditingOverpaymentId(invoice.id); setEditingOverpaymentAmount(invoice.overpayment_amount); }} 
+                        style={{ ...styles.btnSmall, background: '#3b82f6', padding: '6px 10px' }}
+                      >
+                        ✎
+                      </button>
+                      <button 
+                        title="Dzēst pārmaksu"
+                        onClick={() => deleteOverpayment(invoice.id)} 
+                        style={{ ...styles.btnSmall, background: '#ef4444', padding: '6px 10px' }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+             {invoices.filter(inv => inv.overpayment_amount > 0).length === 0 && (
+              <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '13px', padding: '10px' }}>Nav reģistrētu pārmaksu.</div>
+            )}
           </div>
+        </div>
+
       </div>
     </div>
   );
