@@ -480,7 +480,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }).join('');
     };
 
-    const rowsWithoutVat = generateRows(invoiceDetails, d => d.type === 'tariff' || d.type === 'water' || d.type === 'waste' && (d.vat_rate === 0 || d.vat_rate === undefined));
+    const rowsWithoutVat = generateRows(invoiceDetails, d => (d.type === 'tariff' || d.type === 'water' || d.type === 'waste') && (d.vat_rate === 0 || d.vat_rate === undefined));
     const rowsWithVat = generateRows(invoiceDetails, d => (d.type === 'tariff' || d.type === 'water' || d.type === 'waste') && d.vat_rate > 0);
 
     const htmlContent = `
