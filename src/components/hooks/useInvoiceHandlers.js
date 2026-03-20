@@ -1354,8 +1354,18 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               const mmPerPx = (imgWidth / (canvas.width / scale));
 
               try {
-                pdf.setTextRenderingMode(3);
                 pdf.setFont('helvetica', 'normal');
+
+                // Ja iespējams, mēģinām iestatīt caurspīdīgumu, lai nebūtu redzams teksts uz attēla.
+                try {
+                  if (typeof pdf.GState === 'function' && typeof pdf.setGState === 'function') {
+                    const gState = new pdf.GState({ opacity: 0 });
+                    pdf.setGState(gState);
+                  }
+                } catch (gstateErr) {
+                  // ne katrā jsPDF versijā pastāv GState - turpinām bez caurspīdīguma
+                  console.warn('GState nav pieejams vai neizdevās iestatīt:', gstateErr);
+                }
 
                 const walker = hiddenContainer.ownerDocument.createTreeWalker(
                   hiddenContainer,
@@ -1402,8 +1412,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 }
               } catch (textLayerErr) {
                 console.warn('Teksta slāņa ģenerēšana neizdevās, turpinām ar attēlu:', textLayerErr);
-              } finally {
-                pdf.setTextRenderingMode(0);
               }
 
               // Saglabā
