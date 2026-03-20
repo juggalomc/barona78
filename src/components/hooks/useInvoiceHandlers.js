@@ -522,10 +522,17 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     const buildingCode = settings.building_code || '40008325768';
     const buildingAddress = settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001';
     const paymentIban = settings.payment_iban || 'LV62HABA0551064112797';
-    const paymentBank = settings.payment_bank || 'Habib Bank';
+    const paymentBank = settings.payment_bank || 'Swedbank';
     const paymentEmail = settings.payment_email || 'info@barona78.lv';
     const paymentPhone = settings.payment_phone || '+371 67800000';
     const additionalInfo = settings.additional_invoice_info || '';
+
+    // Aprēķināt perioda sākuma un beigu datumus
+    const [year, month] = invoice.period.split('-');
+    const periodStart = new Date(year, parseInt(month) - 1, 1);
+    const periodEnd = new Date(year, parseInt(month), 0);
+    const periodStartStr = periodStart.toLocaleDateString('lv-LV');
+    const periodEndStr = periodEnd.toLocaleDateString('lv-LV');
 
     const generateRows = (details, filterFn) => {
       return details.filter(filterFn).map(detail => {
@@ -560,6 +567,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               padding: 20px;
               line-height: 1.4;
               font-size: 11px;
+              color: #333;
             }
             table {
               width: 100%;
@@ -568,56 +576,110 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             }
             th {
               text-align: left;
-              padding: 6px;
-              border-bottom: 1px solid #000;
+              padding: 8px;
+              border-bottom: 2px solid #003d7a;
               font-weight: bold;
               font-size: 11px;
+              background-color: #f5f7fa;
+              color: #003d7a;
             }
             td {
-              padding: 6px;
-              border-bottom: 1px solid #ccc;
+              padding: 6px 8px;
+              border-bottom: 1px solid #ddd;
+            }
+            tr:hover {
+              background-color: #f9f9f9;
             }
             .header-row {
               display: flex;
               justify-content: space-between;
               margin-bottom: 20px;
-              border-bottom: 2px solid #000;
+              border-bottom: 3px solid #003d7a;
               padding-bottom: 15px;
             }
             .title {
-              font-size: 20px;
+              font-size: 22px;
               font-weight: bold;
+              color: #003d7a;
             }
             .company-info {
               text-align: right;
               font-size: 10px;
+              color: #666;
+            }
+            .company-info strong {
+              color: #003d7a;
+              font-size: 11px;
             }
             .invoice-details {
               margin: 15px 0;
               font-size: 11px;
+              color: #333;
+            }
+            .invoice-details strong {
+              color: #003d7a;
             }
             .recipient {
-              background-color: #f5f5f5;
-              padding: 10px;
+              background-color: #f5f7fa;
+              padding: 12px;
               margin: 15px 0;
               font-size: 11px;
+              border-left: 4px solid #003d7a;
+              color: #333;
+            }
+            .recipient strong {
+              color: #003d7a;
             }
             .amount-total {
-              font-size: 18px;
+              font-size: 16px;
               font-weight: bold;
               text-align: right;
               margin: 15px 0;
-              padding: 10px;
-              border: 2px solid #000;
+              padding: 12px;
+              border: 3px solid #003d7a;
+              background-color: #f5f7fa;
+              color: #003d7a;
             }
             .payment-info {
               margin-top: 20px;
-              padding: 15px;
-              background-color: #f0f0f0;
+              padding: 12px;
+              background-color: #f5f7fa;
               font-size: 10px;
+              border-left: 4px solid #003d7a;
+              color: #333;
+            }
+            .payment-info strong {
+              color: #003d7a;
+              display: block;
+              margin-top: 8px;
+              font-size: 11px;
+            }
+            .payment-info strong:first-child {
+              margin-top: 0;
+              font-size: 12px;
+              text-transform: uppercase;
             }
             .row {
-              margin: 5px 0;
+              margin: 4px 0;
+              color: #333;
+            }
+            .info-box {
+              background-color: #f5f7fa;
+              padding: 10px;
+              margin: 10px 0;
+              font-size: 10px;
+              border-left: 4px solid #003d7a;
+              color: #666;
+            }
+            .summary-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 6px 0;
+              border-bottom: 1px solid #ddd;
+              font-size: 11px;
+            }
+            .summary-row strong {
+              color: #003d7a;
             }
           </style>
         </head>
@@ -633,7 +695,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           <div class="invoice-details">
             <div class="row"><strong>Nr:</strong> ${invoice.invoice_number}</div>
-            <div class="row"><strong>PERIODS:</strong> ${invoice.period}</div>
+            <div class="row"><strong>PERIODS:</strong> ${periodStartStr} - ${periodEndStr}</div>
             <div class="row"><strong>TERMIŅŠ:</strong> ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}</div>
           </div>
 
@@ -667,32 +729,40 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           </table>
 
           ${invoice.previous_debt_note ? `
-            <div class="row" style="background-color: #ffe6e6; padding: 10px; margin: 10px 0;">
+            <div class="info-box">
               <strong>Parāda paskaidrojums:</strong> ${invoice.previous_debt_note}
             </div>
           ` : ''}
 
-          <div style="text-align: right; margin: 20px 0; padding-top: 15px; border-top: 2px solid #000;">
-            <div class="row"><strong>Summa bez PVN:</strong> €${amountWithoutVat.toFixed(2)}</div>
-            ${vatAmount > 0 ? `<div class="row"><strong>PVN kopā:</strong> €${vatAmount.toFixed(2)}</div>` : ''}
+          <div style="text-align: right; margin: 20px 0; padding-top: 15px; border-top: 3px solid #003d7a;">
+            <div class="summary-row">
+              <span>Summa bez PVN:</span>
+              <span><strong>€${amountWithoutVat.toFixed(2)}</strong></span>
+            </div>
+            ${vatAmount > 0 ? `
+              <div class="summary-row">
+                <span>PVN kopā:</span>
+                <span><strong>€${vatAmount.toFixed(2)}</strong></span>
+              </div>
+            ` : ''}
             <div class="amount-total">KOPĀ APMAKSAI: €${amountWithVat.toFixed(2)}</div>
           </div>
 
           ${additionalInfo ? `
-            <div style="background-color: #f5f5f5; padding: 10px; margin: 20px 0; font-size: 10px;">
+            <div class="info-box">
               ${additionalInfo.replace(/\n/g, '<br>')}
             </div>
           ` : ''}
 
           <div class="payment-info">
-            <div><strong>MAKSĀJUMA REKVIZĪTI</strong></div>
-            <div class="row"><strong>NOSAUKUMS:</strong> ${buildingName}</div>
-            <div class="row"><strong>REĢ. KODS:</strong> ${buildingCode}</div>
-            <div class="row"><strong>ADRESE:</strong> ${buildingAddress}</div>
-            <div class="row"><strong>BANKA:</strong> ${paymentBank}</div>
-            <div class="row"><strong>IBAN:</strong> ${paymentIban}</div>
-            <div class="row"><strong>E-PASTS:</strong> ${paymentEmail}</div>
-            <div class="row"><strong>TĀLRUNIS:</strong> ${paymentPhone}</div>
+            <strong>MAKSĀJUMA REKVIZĪTI</strong>
+            <strong>NOSAUKUMS:</strong> ${buildingName}
+            <div class="row">REĢ. KODS: ${buildingCode}</div>
+            <div class="row">ADRESE: ${buildingAddress}</div>
+            <div class="row">BANKA: ${paymentBank}</div>
+            <div class="row">IBAN: ${paymentIban}</div>
+            <div class="row">E-PASTS: ${paymentEmail}</div>
+            <div class="row">TĀLRUNIS: ${paymentPhone}</div>
           </div>
         </body>
       </html>
