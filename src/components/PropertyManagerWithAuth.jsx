@@ -11,8 +11,15 @@ const BUILDING_CODE = "40008325768";
 const BUILDING_ADDRESS = "Kr. Barona iela 78-14, Rīga, LV-1001";
 const TOTAL_AREA = 1959;
 
+// Latvian months for consistent display
+const LATVIAN_MONTHS = {
+  "01": "Janvāris", "02": "Februāris", "03": "Marts", "04": "Aprīlis",
+  "05": "Maijs", "06": "Jūnijs", "07": "Jūlijs", "08": "Augusts",
+  "09": "Septembris", "10": "Oktobris", "11": "Novembris", "12": "Decembris"
+};
+
 // Toast Component
-function Toast({ message, type = 'success', onClose }) {
+function Toast( message, type = 'success', onClose }) {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
     return () => clearTimeout(timer);
@@ -41,6 +48,30 @@ function Toast({ message, type = 'success', onClose }) {
       {message}
     </div>
   );
+}
+
+const LATVIAN_MONTHS = {
+  "01": "Janvāris", "02": "Februāris", "03": "Marts", "04": "Aprīlis",
+  "05": "Maijs", "06": "Jūnijs", "07": "Jūlijs", "08": "Augusts",
+  "09": "Septembris", "10": "Oktobris", "11": "Novembris", "12": "Decembris"
+};
+
+// Helper function to format date in Latvian
+function formatDateLatvian(dateString, options = {}) {
+  if (!dateString) return "-";
+  try {
+    const date = new Date(dateString + 'T00:00:00');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    
+    if (options.month === "long" && options.year === "numeric") {
+      return `${LATVIAN_MONTHS[month]} ${year}`;
+    }
+    
+    return date.toLocaleDateString('lv-LV');
+  } catch (e) {
+    return dateString;
+  }
 }
 
 export default function PropertyManager() {
@@ -2279,7 +2310,7 @@ export default function PropertyManager() {
                 
                 {copySourceMonth && (
                   <div style={{background: "#fef3c7", padding: "12px", borderRadius: "8px", marginBottom: "15px", fontSize: "13px"}}>
-                    <div style={{marginBottom: "10px"}}>📋 Kopēšanas režīms - atlasiet tarifus no <strong>{new Date(copySourceMonth + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}</strong></div>
+                    <div style={{marginBottom: "10px"}}>📋 Kopēšanas režīms - atlasiet tarifus no <strong>{formatDateLatvian(copySourceMonth + '-01')}</strong></div>
                     <button
                       onClick={() => copySelectedTariffs(copySourceMonth, tariffPeriod)}
                       style={{...styles.btn, fontSize: "12px", padding: "8px 12px", marginRight: "8px"}}
@@ -2302,7 +2333,7 @@ export default function PropertyManager() {
                     <div key={period} style={{marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e2e8f0"}}>
                       <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px"}}>
                         <div style={{fontWeight: "bold", fontSize: "14px"}}>
-                          📅 {new Date(period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
+                          📅 {formatDateLatvian(period + '-01')}
                         </div>
                         <button
                           onClick={() => setCopySourceMonth(copySourceMonth === period ? null : period)}
@@ -2467,7 +2498,7 @@ export default function PropertyManager() {
                     >
                       {uniqueTariffPeriods.map(period => (
                         <option key={period} value={period}>
-                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
+                          {formatDateLatvian(period + '-01')}
                         </option>
                       ))}
                     </select>
@@ -2527,7 +2558,7 @@ export default function PropertyManager() {
                     >
                       {uniqueTariffPeriods.map(period => (
                         <option key={period} value={period}>
-                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
+                          {formatDateLatvian(period + '-01')}
                         </option>
                       ))}
                     </select>
@@ -2568,7 +2599,7 @@ export default function PropertyManager() {
 
               {/* Waste Distribution by Declared Persons */}
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>♻️ Atkritumu Sadalījums - {new Date(wasteTariffForm.period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}</h2>
+                <h2 style={styles.cardTitle}>♻️ Atkritumu Sadalījums - {formatDateLatvian(wasteTariffForm.period + '-01')}</h2>
                 <div style={styles.list}>
                   {(() => {
                     const wasteTariff = wasteTariffs.find(w => w.period === wasteTariffForm.period);
@@ -2611,7 +2642,7 @@ export default function PropertyManager() {
 
               {/* Water Consumption - from Meter Readings */}
               <div style={styles.card}>
-                <h2 style={styles.cardTitle}>💧 Patēriņš - {new Date(tariffPeriod + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}</h2>
+                <h2 style={styles.cardTitle}>💧 Patēriņš - {formatDateLatvian(tariffPeriod + '-01')}</h2>
                 <div style={styles.list}>
                   {apartments.map(apt => {
                     // Ņem ūdens rādījumu no meter_readings (nevis water_consumption)
@@ -2664,7 +2695,7 @@ export default function PropertyManager() {
                       <option value="">-- Izvēlieties mēnesi --</option>
                       {uniqueTariffPeriods.map(period => (
                         <option key={period} value={period}>
-                          {new Date(period + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
+                          {formatDateLatvian(period + '-01')}
                         </option>
                       ))}
                     </select>
@@ -2732,7 +2763,7 @@ export default function PropertyManager() {
                           >
                             <div>
                               <div style={{fontWeight: "bold", fontSize: "14px"}}>
-                                📅 {new Date(month + '-01').toLocaleDateString('lv-LV', {month: "long", year: "numeric"})}
+                                📅 {formatDateLatvian(month + '-01')}
                               </div>
                               <div style={{fontSize: "12px", color: "#666"}}>
                                 €{monthTotal.toFixed(2)} • Parāds: €{monthUnpaid.toFixed(2)}
@@ -2860,102 +2891,11 @@ export default function PropertyManager() {
                 )}
               </div>
             </div>
-          )
-          ) : activeTab === "settings" ? (
+          ) : (
             <div>
-              <h2 style={styles.h2}>Iestatījumi</h2>
-              
-              {/* MAKSĀJUMA INFORMĀCIJA */}
-              <div style={{...styles.card, marginBottom: "20px"}}>
-                <h3 style={styles.cardTitle}>💰 Maksājuma informācija</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
-                  
-                  <div>
-                    <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold", fontSize: "13px" }}>Maksājuma termiņš (dienas):</label>
-                    <input
-                      type="number"
-                      value={invoiceSettings.payment_term_days || 14}
-                      onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_term_days: e.target.value})}
-                      style={{...styles.input, width: "100%"}}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold", fontSize: "13px" }}>Maksājuma metode (IBAN):</label>
-                    <input
-                      type="text"
-                      value={invoiceSettings.payment_method || ''}
-                      onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_method: e.target.value})}
-                      placeholder="LV62HABA0551064112797"
-                      style={{...styles.input, width: "100%"}}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold", fontSize: "13px" }}>Uzņēmuma nosaukums:</label>
-                    <input
-                      type="text"
-                      value={invoiceSettings.payment_company || ''}
-                      onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_company: e.target.value})}
-                      placeholder="BIEDRĪBA &quot;BARONA 78&quot;"
-                      style={{...styles.input, width: "100%"}}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold", fontSize: "13px" }}>Atsauces teksts:</label>
-                    <input
-                      type="text"
-                      value={invoiceSettings.payment_ref || ''}
-                      onChange={(e) => setInvoiceSettings({...invoiceSettings, payment_ref: e.target.value})}
-                      placeholder="Rēķina numurs"
-                      style={{...styles.input, width: "100%"}}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* GLOBĀLĀ PIEZĪME */}
-              <div style={{...styles.card, marginBottom: "20px"}}>
-                <h3 style={styles.cardTitle}>📝 Globālā piezīme (redzama VISOS rēķinos)</h3>
-                <textarea
-                  value={invoiceSettings.global_invoice_note || ''}
-                  onChange={(e) => setInvoiceSettings({...invoiceSettings, global_invoice_note: e.target.value})}
-                  placeholder="Piezīme, kas parādīsies visu rēķinu apakšā..."
-                  style={{
-                    width: "100%",
-                    height: "120px",
-                    padding: "10px",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "4px",
-                    fontFamily: "Arial",
-                    resize: "vertical",
-                    marginBottom: "10px"
-                  }}
-                />
-                <p style={{ fontSize: "12px", color: "#666" }}>
-                  ℹ️ Šī piezīme automātiski parādīsies visos ģenerētajos rēķinos
-                </p>
-              </div>
-
-              {/* SAGLABĀT POGU */}
-              <button
-                onClick={saveSettings}
-                style={{
-                  padding: "12px 24px",
-                  background: "#10b981",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                  fontSize: "14px"
-                }}
-              >
-                ✓ Saglabāt iestatījumus
-              </button>
+              <p style={{padding: "20px", textAlign: "center", color: "#999"}}>Settings feature coming soon...</p>
             </div>
-          )}
+          )
         </div>
       </div>
     </div>
