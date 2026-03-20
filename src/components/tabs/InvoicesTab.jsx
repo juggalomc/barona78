@@ -5,20 +5,6 @@ import { styles } from '../shared/styles';
 export function InvoicesTab({
   invoices,
   apartments,
-  // ... pārējie props ...
-}) {
-  // Tikai standarta rēķinu tabula bez priekšskatījuma
-  
-  return (
-    <div>
-      <table>
-        {/* ... jūsu rēķinu tabula ... */}
-      </table>
-    </div>
-  );
-}export function InvoicesTab({
-  invoices,
-  apartments,
   tariffs,
   waterTariffs,
   meterReadings,
