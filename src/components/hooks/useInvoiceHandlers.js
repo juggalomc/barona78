@@ -357,9 +357,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       // Atkritumi
       const wasteTariff = wasteTariffs.find(w => w.period === currentInvoiceMonth);
       if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-        const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
+        const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
         if (totalDeclaredPersons > 0) {
-          const declaredPersonsInApt = parseInt(apt.declared_persons) || 1;
+          const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
           const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
           const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
           const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
@@ -953,9 +953,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
         const wasteTariff = wasteTariffs.find(w => w.period === currentInvoiceMonth);
         if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-          const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
+          const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
           if (totalDeclaredPersons > 0) {
-            const declaredPersonsInApt = parseInt(apt.declared_persons) || 1;
+            const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
             const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
             const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
             const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
@@ -1173,9 +1173,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       const wasteTariff = wasteTariffs.find(w => w.period === invoice.period);
       if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-        const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
+        const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
         if (totalDeclaredPersons > 0) {
-          const declaredPersonsInApt = parseInt(apt.declared_persons) || 1;
+          const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
           const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
           const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
           const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
@@ -1421,9 +1421,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
         const wasteTariff = wasteTariffs.find(w => w.period === invoice.period);
         if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-          const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
+          const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
           if (totalDeclaredPersons > 0) {
-            const declaredPersonsInApt = parseInt(apt.declared_persons) || 1;
+            const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
             const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
             const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
             const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;

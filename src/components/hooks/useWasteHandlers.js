@@ -80,12 +80,12 @@ export function useWasteHandlers(supabase, apartments, wasteTariffs, fetchData, 
     const wasteTariff = wasteTariffs.find(w => w.period === period);
     if (!wasteTariff) return { distribution: [], total: 0, tariff: null };
 
-    const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
+    const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
     const totalAmountWithoutVat = parseFloat(wasteTariff.total_amount) || 0;
     const vatRate = parseFloat(wasteTariff.vat_rate) || 0;
 
     const distribution = apartments.map(apt => {
-      const declaredPersons = parseInt(apt.declared_persons) || 1;
+      const declaredPersons = parseInt(apt.declared_persons) || 0;
       // Izvairāmies no dalīšanas ar nulli
       const shareAmount = totalDeclaredPersons > 0 
         ? Math.round((totalAmountWithoutVat / totalDeclaredPersons * declaredPersons) * 100) / 100

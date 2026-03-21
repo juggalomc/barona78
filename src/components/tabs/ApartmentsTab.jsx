@@ -32,7 +32,7 @@ export function ApartmentsTab({
             <input type="tel" placeholder="Telefons" value={apartmentForm.phone} onChange={(e) => setApartmentForm({...apartmentForm, phone: e.target.value})} style={styles.input} />
           </div>
           <div style={styles.formRow}>
-            <input type="number" placeholder="Deklarēto personu skaits" min="1" value={apartmentForm.declared_persons} onChange={(e) => setApartmentForm({...apartmentForm, declared_persons: e.target.value})} style={styles.input} />
+            <input type="number" placeholder="Deklarēto personu skaits" min="0" value={apartmentForm.declared_persons} onChange={(e) => setApartmentForm({...apartmentForm, declared_persons: e.target.value})} style={styles.input} />
           </div>
           <input type="text" placeholder="Reģistrācijas numurs" value={apartmentForm.registration_number} onChange={(e) => setApartmentForm({...apartmentForm, registration_number: e.target.value})} style={styles.input} />
           <input type="text" placeholder="Dzīvokļa adrese" value={apartmentForm.apartment_address} onChange={(e) => setApartmentForm({...apartmentForm, apartment_address: e.target.value})} style={styles.input} />
@@ -52,7 +52,7 @@ export function ApartmentsTab({
                   <input type="number" step="0.01" value={editApartmentForm.area} onChange={(e) => setEditApartmentForm({...editApartmentForm, area: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="text" value={editApartmentForm.owner_name} onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="email" placeholder="E-pasts" value={editApartmentForm.email || ''} onChange={(e) => setEditApartmentForm({...editApartmentForm, email: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
-                  <input type="number" placeholder="Deklarēto personu skaits" min="1" value={editApartmentForm.declared_persons} onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                  <input type="number" placeholder="Deklarēto personu skaits" min="0" value={editApartmentForm.declared_persons} onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="text" placeholder="Reģistrācijas numurs" value={editApartmentForm.registration_number || ''} onChange={(e) => setEditApartmentForm({...editApartmentForm, registration_number: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="text" placeholder="Dzīvokļa adrese" value={editApartmentForm.apartment_address || ''} onChange={(e) => setEditApartmentForm({...editApartmentForm, apartment_address: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <div style={{display: 'flex', gap: '8px'}}>
