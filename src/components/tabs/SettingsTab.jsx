@@ -75,7 +75,7 @@ export function SettingsTab({
   };
 
   const sendMeterReadingRequest = async () => {
-    if (!confirm('Vai tiešām izsūtīt aicinājumu nodot rādījumus visiem dzīvokļiem?')) return;
+    if (!window.confirm('Vai tiešām izsūtīt aicinājumu nodot rādījumus visiem dzīvokļiem?')) return;
     
     // Izmantojam saglabāto tekstu vai noklusējuma
     const defaultMsg = `Labdien!\n\nAtgādinām, ka tuvojas skaitītāju rādījumu nodošanas laiks.\nLūdzam iesniegt ūdens skaitītāja rādījumus līdz 27. datumam portālā:\nhttps://barona78.vercel.app/\n\nPaldies!`;
