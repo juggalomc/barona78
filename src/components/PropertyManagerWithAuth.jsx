@@ -44,7 +44,14 @@ const TABS = [
 ];
 
 export default function PropertyManager() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem('currentUser');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [userApartment, setUserApartment] = useState(null);
   const [userInvoices, setUserInvoices] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
@@ -71,7 +78,19 @@ export default function PropertyManager() {
   const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings, waterHandlers.enabledMeters);
 
   useEffect(() => {
-    fetchData();
+    // Ja lietotājs ir ielādēts no localStorage, ielādējam viņa datus
+    const initialFetch = async () => {
+      if (currentUser) {
+        if (currentUser.role === 'admin') {
+          await fetchData();
+        } else if (currentUser.apartment_id) {
+          const userData = await fetchUserData(currentUser.apartment_id);
+          setUserApartment(userData.apartment);
+          setUserInvoices(userData.invoices);
+        }
+      }
+    };
+    initialFetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -94,6 +113,7 @@ export default function PropertyManager() {
       }
 
       setCurrentUser(data);
+      localStorage.setItem('currentUser', JSON.stringify(data));
       
       if (data.role === 'admin') {
         fetchData();
@@ -111,6 +131,7 @@ export default function PropertyManager() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    localStorage.removeItem('currentUser');
     setUserApartment(null);
     setUserInvoices([]);
     setActiveTab('overview');
