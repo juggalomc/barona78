@@ -18,7 +18,9 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
 
   const addTariff = async (e) => {
     e.preventDefault();
-    if (!tariffForm.name || !tariffForm.total_amount) {
+    const hasAmount = tariffForm.is_per_m2 ? tariffForm.price_per_m2 : tariffForm.total_amount;
+
+    if (!tariffForm.name || !hasAmount) {
       showToast('Aizpildiet visus laukus', 'error');
       return;
     }
