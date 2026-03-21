@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export function useWasteHandlers(supabase, apartments, fetchData, showToast) {
+export function useWasteHandlers(supabase, apartments, wasteTariffs, fetchData, showToast) {
   const today = new Date();
   const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   
@@ -11,6 +11,18 @@ export function useWasteHandlers(supabase, apartments, fetchData, showToast) {
     vat_rate: 21,
     include_in_invoice: true
   });
+
+  // Ielādē atkritumu tarifu datus formā, kad mainās periods vai ielādējas dati
+  useEffect(() => {
+    const waste = wasteTariffs.find(t => t.period === tariffPeriod);
+    setWasteTariffForm(prev => ({
+      ...prev,
+      period: tariffPeriod,
+      total_amount: waste ? waste.total_amount : '',
+      vat_rate: waste ? waste.vat_rate : 21,
+      include_in_invoice: waste ? (waste.include_in_invoice !== false) : true
+    }));
+  }, [tariffPeriod, wasteTariffs]);
 
   const saveWasteTariff = async (e) => {
     e.preventDefault();

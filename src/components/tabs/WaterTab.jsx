@@ -78,6 +78,14 @@ export function WaterTab({
               onChange={(e) => setWaterTariffForm({ ...waterTariffForm, price_per_m3: e.target.value })}
               style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #7dd3fc' }}
             />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="PVN %"
+              value={waterTariffForm.vat_rate}
+              onChange={(e) => setWaterTariffForm({ ...waterTariffForm, vat_rate: e.target.value })}
+              style={{ width: '70px', padding: '6px', borderRadius: '4px', border: '1px solid #7dd3fc' }}
+            />
             <button type="submit" style={{ background: '#0284c7', color: 'white', border: 'none', borderRadius: '4px', padding: '0 15px', cursor: 'pointer' }}>Saglabāt</button>
           </div>
         </form>
@@ -93,6 +101,14 @@ export function WaterTab({
               value={hotWaterTariffForm.price_per_m3}
               onChange={(e) => setHotWaterTariffForm({ ...hotWaterTariffForm, price_per_m3: e.target.value })}
               style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #fdba74' }}
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="PVN %"
+              value={hotWaterTariffForm.vat_rate}
+              onChange={(e) => setHotWaterTariffForm({ ...hotWaterTariffForm, vat_rate: e.target.value })}
+              style={{ width: '70px', padding: '6px', borderRadius: '4px', border: '1px solid #fdba74' }}
             />
             <button type="submit" style={{ background: '#ea580c', color: 'white', border: 'none', borderRadius: '4px', padding: '0 15px', cursor: 'pointer' }}>Saglabāt</button>
           </div>

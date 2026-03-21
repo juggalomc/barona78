@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export function useWaterHandlers(supabase, apartments, fetchData, showToast, fetchMeterReadingsOnly) {
+export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly) {
   const [enabledMeters, setEnabledMeters] = useState({ water: true, hot_water: false });
   const today = new Date();
   const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -17,6 +17,27 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast, fet
     vat_rate: 0,
     include_in_invoice: true
   });
+
+  // Ielādē tarifu datus formā, kad mainās periods vai ielādējas dati
+  useEffect(() => {
+    const water = waterTariffs.find(t => t.period === tariffPeriod);
+    setWaterTariffForm(prev => ({
+      ...prev,
+      period: tariffPeriod,
+      price_per_m3: water ? water.price_per_m3 : '',
+      vat_rate: water ? water.vat_rate : 21,
+      include_in_invoice: water ? (water.include_in_invoice !== false) : true
+    }));
+
+    const hot = hotWaterTariffs.find(t => t.period === tariffPeriod);
+    setHotWaterTariffForm(prev => ({
+      ...prev,
+      period: tariffPeriod,
+      price_per_m3: hot ? hot.price_per_m3 : '',
+      vat_rate: hot ? hot.vat_rate : 21,
+      include_in_invoice: hot ? (hot.include_in_invoice !== false) : true
+    }));
+  }, [tariffPeriod, waterTariffs, hotWaterTariffs]);
 
   const saveWaterTariff = async (e) => {
     e.preventDefault();
