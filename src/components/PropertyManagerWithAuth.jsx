@@ -230,6 +230,8 @@ export default function PropertyManager() {
                 tariffPeriod={waterHandlers.tariffPeriod}
                 setTariffPeriod={waterHandlers.setTariffPeriod}
                 {...waterHandlers}
+                settings={settings}
+                updateSetting={updateSetting}
               />
             ) : activeTab === 'invoices' ? (
               <InvoicesTab

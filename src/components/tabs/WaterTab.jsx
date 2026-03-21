@@ -1,5 +1,4 @@
 import React from 'react';
-import { styles } from '../shared/styles';
 
 export function WaterTab({
   apartments,
@@ -7,514 +6,239 @@ export function WaterTab({
   waterTariffs,
   hotWaterTariffs,
   wasteTariffs,
-  tariffPeriod, setTariffPeriod,
-  enabledMeters, setEnabledMeters,
-  waterTariffForm, setWaterTariffForm,
-  hotWaterTariffForm, setHotWaterTariffForm,
-  wasteTariffForm, setWasteTariffForm,
   uniqueTariffPeriods,
+  tariffPeriod,
+  setTariffPeriod,
+  waterTariffForm,
+  setWaterTariffForm,
+  hotWaterTariffForm,
+  setHotWaterTariffForm,
+  wasteTariffForm,
+  setWasteTariffForm,
   saveWaterTariff,
   saveHotWaterTariff,
   saveWasteTariff,
   saveWaterMeterReading,
   saveHotWaterMeterReading,
-  editMeterReading,
-  deleteMeterReading,
-  calculateWasteDistribution
+  calculateWasteDistribution,
+  getLastReading,
+  settings,
+  updateSetting
 }) {
-  const [editValues, setEditValues] = React.useState({});
-  const [selectedPeriod, setSelectedPeriod] = React.useState(tariffPeriod);
-  const [adminEditApt, setAdminEditApt] = React.useState(null);
-  const [adminAddMonth, setAdminAddMonth] = React.useState(tariffPeriod);
-  const [adminAddApt, setAdminAddApt] = React.useState('');
-  const [adminAddMeterType, setAdminAddMeterType] = React.useState('water');
-  const [adminAddValue, setAdminAddValue] = React.useState('');
-
-  // Filtrēt rādījumus pēc perioda
-  const periodReadings = meterReadings.filter(mr => mr.period === selectedPeriod);
-
-  // Izveidot paplašinātu mēnešu sarakstu (iepriekšējie + nākamie)
-  const getAllAvailablePeriods = () => {
-    const allPeriods = new Set(uniqueTariffPeriods);
-    
-    const [currentYear, currentMonth] = tariffPeriod.split('-');
-    let year = parseInt(currentYear);
-    let month = parseInt(currentMonth);
-    
-    for (let i = 0; i < 24; i++) {
-      month--;
-      if (month === 0) {
-        month = 12;
-        year--;
-      }
-      const periodStr = `${year}-${String(month).padStart(2, '0')}`;
-      allPeriods.add(periodStr);
-    }
-    
-    return Array.from(allPeriods).sort().reverse();
-  };
-
-  const allAvailablePeriods = getAllAvailablePeriods();
+  const wasteData = calculateWasteDistribution(wasteTariffs, tariffPeriod);
 
   return (
-    <div>
-      {/* ===== TARIFIEM ===== */}
-      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '30px'}}>
-        {/* SKAITĪTĀJU IESPĒJOŠANA */}
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>⚙️ Skaitītāju Iespējošana</h2>
-          <div style={styles.form}>
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', background: '#f0f9ff', borderRadius: '6px', border: '1px solid #0ea5e9'}}>
-              <label style={{fontWeight: '500', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', margin: 0}}>
-                <span style={{fontSize: '16px'}}>❄️</span> Aukstais ūdens
-              </label>
-              <input type="checkbox" checked={enabledMeters.water} onChange={(e) => setEnabledMeters({...enabledMeters, water: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
-            </div>
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fde68a', marginTop: '10px'}}>
-              <label style={{fontWeight: '500', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', margin: 0}}>
-                <span style={{fontSize: '16px'}}>🔥</span> Siltais ūdens
-              </label>
-              <input type="checkbox" checked={enabledMeters.hot_water} onChange={(e) => setEnabledMeters({...enabledMeters, hot_water: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
-            </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      
+      {/* 1. SADAĻA: PERIODS UN IESTATĪJUMI */}
+      <div style={{ background: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+        <div>
+          <label style={{ fontWeight: 'bold', fontSize: '13px', display: 'block', marginBottom: '5px' }}>📅 Izvēlētais periods:</label>
+          <select
+            value={tariffPeriod}
+            onChange={(e) => setTariffPeriod(e.target.value)}
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '14px', minWidth: '150px' }}
+          >
+            {uniqueTariffPeriods.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', gap: '20px', background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+          <div>
+            <label style={{ fontWeight: 'bold', fontSize: '12px', display: 'block', marginBottom: '5px', color: '#475569' }}>Iesniegšana no (datums):</label>
+            <input 
+              type="number" 
+              min="1" 
+              max="31" 
+              defaultValue={settings?.meter_reading_start_date || 25}
+              onBlur={(e) => updateSetting('meter_reading_start_date', e.target.value)}
+              style={{ width: '60px', padding: '5px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+            />
           </div>
-        </div>
-
-        {/* AUKSTAIS ŪDENS TARIFS */}
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>❄️ Aukstais ūdens - Tarifs</h2>
-          <form onSubmit={saveWaterTariff} style={styles.form}>
-            <div>
-              <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Periods</label>
-              <select value={waterTariffForm.period} onChange={(e) => {
-                const newPeriod = e.target.value;
-                setWaterTariffForm({...waterTariffForm, period: newPeriod});
-                const existing = waterTariffs.find(w => w.period === newPeriod);
-                if (existing) {
-                  setWaterTariffForm({period: newPeriod, price_per_m3: existing.price_per_m3 || '', vat_rate: existing.vat_rate || 0, include_in_invoice: existing.include_in_invoice !== false});
-                }
-              }} style={styles.input}>
-                {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
-              </select>
-            </div>
-            <div>
-              <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Cena par m³ (€)</label>
-              <input type="number" step="0.01" placeholder="0.00" value={waterTariffForm.price_per_m3} onChange={(e) => setWaterTariffForm({...waterTariffForm, price_per_m3: e.target.value})} style={styles.input} />
-            </div>
-            <div>
-              <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>PVN (%)</label>
-              <input type="number" step="0.01" placeholder="0" value={waterTariffForm.vat_rate} onChange={(e) => setWaterTariffForm({...waterTariffForm, vat_rate: e.target.value})} style={styles.input} />
-            </div>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
-              <input type="checkbox" checked={waterTariffForm.include_in_invoice} onChange={(e) => setWaterTariffForm({...waterTariffForm, include_in_invoice: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
-              <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>✓ Iekļaut rēķinā</label>
-            </div>
-            <button type="submit" style={styles.btn}>Saglabāt Tarifu</button>
-          </form>
-        </div>
-
-        {/* SILTAIS ŪDENS TARIFS */}
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>🔥 Siltais ūdens - Tarifs</h2>
-          <form onSubmit={saveHotWaterTariff} style={styles.form}>
-            <div>
-              <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Periods</label>
-              <select value={hotWaterTariffForm.period} onChange={(e) => {
-                const newPeriod = e.target.value;
-                setHotWaterTariffForm({...hotWaterTariffForm, period: newPeriod});
-                const existing = hotWaterTariffs.find(w => w.period === newPeriod);
-                if (existing) {
-                  setHotWaterTariffForm({period: newPeriod, price_per_m3: existing.price_per_m3 || '', vat_rate: existing.vat_rate || 0, include_in_invoice: existing.include_in_invoice !== false});
-                }
-              }} style={styles.input}>
-                {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
-              </select>
-            </div>
-            <div>
-              <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Cena par m³ (€)</label>
-              <input type="number" step="0.01" placeholder="0.00" value={hotWaterTariffForm.price_per_m3} onChange={(e) => setHotWaterTariffForm({...hotWaterTariffForm, price_per_m3: e.target.value})} style={styles.input} />
-            </div>
-            <div>
-              <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>PVN (%)</label>
-              <input type="number" step="0.01" placeholder="0" value={hotWaterTariffForm.vat_rate} onChange={(e) => setHotWaterTariffForm({...hotWaterTariffForm, vat_rate: e.target.value})} style={styles.input} />
-            </div>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
-              <input type="checkbox" checked={hotWaterTariffForm.include_in_invoice} onChange={(e) => setHotWaterTariffForm({...hotWaterTariffForm, include_in_invoice: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
-              <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>✓ Iekļaut rēķinā</label>
-            </div>
-            <button type="submit" style={styles.btn}>Saglabāt Tarifu</button>
-          </form>
-        </div>
-
-        {/* ATKRITUMU TARIFS */}
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>♻️ Atkritumi - Tarifs</h2>
-          <form onSubmit={saveWasteTariff} style={styles.form}>
-            <div>
-              <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Periods</label>
-              <select value={wasteTariffForm.period} onChange={(e) => {
-                const newPeriod = e.target.value;
-                setWasteTariffForm({...wasteTariffForm, period: newPeriod});
-                const existing = wasteTariffs.find(w => w.period === newPeriod);
-                if (existing) {
-                  setWasteTariffForm({period: newPeriod, total_amount: existing.total_amount || '', vat_rate: existing.vat_rate || 21, include_in_invoice: existing.include_in_invoice !== false});
-                }
-              }} style={styles.input}>
-                {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
-              </select>
-            </div>
-            <div>
-              <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Kopējā summa bez PVN (€)</label>
-              <input type="number" step="0.01" placeholder="0.00" value={wasteTariffForm.total_amount} onChange={(e) => setWasteTariffForm({...wasteTariffForm, total_amount: e.target.value})} style={styles.input} />
-            </div>
-            <div>
-              <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>PVN (%)</label>
-              <input type="number" step="0.01" placeholder="0" value={wasteTariffForm.vat_rate} onChange={(e) => setWasteTariffForm({...wasteTariffForm, vat_rate: e.target.value})} style={styles.input} />
-            </div>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
-              <input type="checkbox" checked={wasteTariffForm.include_in_invoice} onChange={(e) => setWasteTariffForm({...wasteTariffForm, include_in_invoice: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
-              <label style={{fontSize: '13px', cursor: 'pointer', margin: 0, flex: 1}}>✓ Iekļaut rēķinā</label>
-            </div>
-            <div style={{background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '6px', padding: '10px', fontSize: '12px', color: '#0369a1', marginBottom: '12px'}}>
-              ℹ️ Summa tiks dalīta uz deklarēto personu skaitu.
-            </div>
-            <button type="submit" style={styles.btn}>Saglabāt Tarifu</button>
-          </form>
+          <div>
+            <label style={{ fontWeight: 'bold', fontSize: '12px', display: 'block', marginBottom: '5px', color: '#475569' }}>Iesniegšana līdz (datums):</label>
+            <input 
+              type="number" 
+              min="1" 
+              max="31" 
+              defaultValue={settings?.meter_reading_end_date || 27}
+              onBlur={(e) => updateSetting('meter_reading_end_date', e.target.value)}
+              style={{ width: '60px', padding: '5px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* ===== ATKRITUMU SADALĪJUMS ===== */}
-      <div style={styles.card}>
-        <h2 style={styles.cardTitle}>♻️ Sadalījums - {new Date(wasteTariffForm.period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</h2>
-        <div style={styles.list}>
-          {(() => {
-            const { distribution, total } = calculateWasteDistribution(wasteTariffs, wasteTariffForm.period);
-            if (distribution.length === 0) {
-              return <div style={{color: '#999', textAlign: 'center', padding: '20px'}}>Nav norādīts atkritumu tarifs</div>;
-            }
-            return (
-              <>
-                <div style={{background: '#f9fafb', padding: '12px', borderRadius: '6px', marginBottom: '12px', fontSize: '13px', fontWeight: '500'}}>
-                  📊 Kopā deklarēto personu: <strong>{total}</strong>
-                </div>
-                {distribution.map(item => (
-                  <div key={item.apartment.id} style={{...styles.listItem, display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', marginBottom: '8px'}}>
-                    <div>
-                      <div style={{fontWeight: '600', fontSize: '14px'}}>Dzīv. {item.apartment.number}</div>
-                      <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>{item.declaredPersons} pers.</div>
-                    </div>
-                    <div style={{fontWeight: '600', color: '#003399', fontSize: '15px', textAlign: 'right'}}>€{item.shareTotal.toFixed(2)}</div>
-                  </div>
-                ))}
-              </>
-            );
-          })()}
-        </div>
-      </div>
+      {/* 2. SADAĻA: TARIFI */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px' }}>
+        {/* Aukstais ūdens */}
+        <form onSubmit={saveWaterTariff} style={{ background: '#f0f9ff', padding: '15px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0369a1', marginBottom: '10px', marginTop: 0 }}>❄️ Aukstais ūdens</h3>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="number"
+              step="0.0001"
+              placeholder="Cena €/m³"
+              value={waterTariffForm.price_per_m3}
+              onChange={(e) => setWaterTariffForm({ ...waterTariffForm, price_per_m3: e.target.value })}
+              style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #7dd3fc' }}
+            />
+            <button type="submit" style={{ background: '#0284c7', color: 'white', border: 'none', borderRadius: '4px', padding: '0 15px', cursor: 'pointer' }}>Saglabāt</button>
+          </div>
+        </form>
 
-      {/* ===== ADMIN - PIEVIENOT/LABOT RĀDĪJUMUS ===== */}
-      <div style={styles.card}>
-        <h2 style={styles.cardTitle}>⏮️ Admin - Pievienot/Labot Rādījumus</h2>
-        <div style={{background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#92400e'}}>
-          <strong>ℹ️</strong> Pievienojiet vai labojiet skaitītāju rādījumus jebkuram mēnesim
-        </div>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          if (!adminAddMonth || !adminAddApt || adminAddApt === '' || !adminAddValue) {
-            alert('Aizpildiet visus laukus');
-            return;
-          }
-          if (adminAddMeterType === 'water') {
-            saveWaterMeterReading(adminAddApt, adminAddValue, adminAddMonth);
-          } else if (adminAddMeterType === 'hot_water') {
-            saveHotWaterMeterReading(adminAddApt, adminAddValue, adminAddMonth);
-          }
-          setAdminAddMonth(tariffPeriod);
-          setAdminAddApt('');
-          setAdminAddValue('');
-        }} style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', alignItems: 'flex-end'}}>
-          <div>
-            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Periods</label>
-            <select value={adminAddMonth} onChange={(e) => setAdminAddMonth(e.target.value)} style={styles.input}>
-              <option value="">-- Izvēlieties --</option>
-              {allAvailablePeriods.map(period => (
-                <option key={period} value={period}>
-                  {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'short', year: 'numeric'})}
-                </option>
-              ))}
-            </select>
+        {/* Siltais ūdens */}
+        <form onSubmit={saveHotWaterTariff} style={{ background: '#fff7ed', padding: '15px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#c2410c', marginBottom: '10px', marginTop: 0 }}>🔥 Siltais ūdens</h3>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="number"
+              step="0.0001"
+              placeholder="Cena €/m³"
+              value={hotWaterTariffForm.price_per_m3}
+              onChange={(e) => setHotWaterTariffForm({ ...hotWaterTariffForm, price_per_m3: e.target.value })}
+              style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #fdba74' }}
+            />
+            <button type="submit" style={{ background: '#ea580c', color: 'white', border: 'none', borderRadius: '4px', padding: '0 15px', cursor: 'pointer' }}>Saglabāt</button>
           </div>
-          <div>
-            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Dzīvoklis</label>
-            <select value={adminAddApt} onChange={(e) => setAdminAddApt(e.target.value)} style={styles.input}>
-              <option value="">-- Izvēlieties --</option>
-              {apartments.sort((a, b) => parseInt(a.number) - parseInt(b.number)).map(apt => (<option key={apt.id} value={apt.id}>Dzīv. {apt.number}</option>))}
-            </select>
+        </form>
+
+        {/* Atkritumi */}
+        <form onSubmit={saveWasteTariff} style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#15803d', marginBottom: '10px', marginTop: 0 }}>♻️ Atkritumi</h3>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Kopā €"
+              value={wasteTariffForm.total_amount}
+              onChange={(e) => setWasteTariffForm({ ...wasteTariffForm, total_amount: e.target.value })}
+              style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #86efac' }}
+            />
+            <button type="submit" style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', padding: '0 15px', cursor: 'pointer' }}>Saglabāt</button>
           </div>
-          <div>
-            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Tips</label>
-            <select value={adminAddMeterType} onChange={(e) => setAdminAddMeterType(e.target.value)} style={styles.input}>
-              <option value="water">❄️ Aukstais</option>
-              <option value="hot_water">🔥 Siltais</option>
-            </select>
-          </div>
-          <div>
-            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Rādījums (m³)</label>
-            <input type="number" step="0.01" placeholder="0.00" value={adminAddValue} onChange={(e) => setAdminAddValue(e.target.value)} style={styles.input} />
-          </div>
-          <button type="submit" style={{...styles.btn, padding: '10px 20px', whiteSpace: 'nowrap', height: '42px'}}>💾 Saglabāt</button>
         </form>
       </div>
 
-      {/* ===== SKAITĪTĀJU PĀRVALDĪŠANA ===== */}
-      <div style={styles.card}>
-        <h2 style={styles.cardTitle}>📊 Skaitītāju Rādījumi - Pārvaldīšana</h2>
-        
-        <div style={{display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'flex-end', flexWrap: 'wrap'}}>
-          <div style={{flex: '1 1 200px'}}>
-            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Izvēlēties mēnesi</label>
-            <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} style={styles.input}>
-              {allAvailablePeriods.map(period => (
-                <option key={period} value={period}>
-                  {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{fontSize: '13px', color: '#0369a1', background: '#f0f9ff', padding: '10px 14px', borderRadius: '4px', fontWeight: '500'}}>
-            {periodReadings.length} rādījumi
-          </div>
-        </div>
+      {/* 3. SADAĻA: TABULA AR RĀDĪJUMIEM */}
+      <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead style={{ position: 'sticky', top: 0, background: '#f1f5f9', zIndex: 10 }}>
+              <tr>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0', minWidth: '50px' }}>Dz.</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0', minWidth: '150px' }}>Īpašnieks</th>
+                
+                {/* AUKSTAIS ŪDENS GALVENE */}
+                <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #0ea5e9', background: '#e0f2fe', color: '#0369a1' }} colSpan="3">
+                  ❄️ Aukstais Ūdens
+                </th>
 
-        {/* AUKSTAIS ŪDENS */}
-        <div style={{marginBottom: '30px'}}>
-          <h3 style={{fontSize: '15px', fontWeight: '600', color: '#0369a1', marginBottom: '15px', paddingBottom: '10px', borderBottom: '2px solid #0ea5e9', display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <span>❄️</span> Aukstais ūdens
-          </h3>
-          
-          <div style={{overflowX: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
-            <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}}>
-              <thead>
-                <tr style={{background: '#f0f9ff', borderBottom: '2px solid #0ea5e9'}}>
-                  <th style={{padding: '12px', textAlign: 'left', fontWeight: '600', color: '#0369a1'}}>Dzīvoklis</th>
-                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600', color: '#0369a1'}}>Vārds</th>
-                  <th style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#0369a1', minWidth: '90px'}}>Iepr. (m³)</th>
-                  <th style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#0369a1', minWidth: '90px'}}>Pašr. (m³)</th>
-                  <th style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#0369a1', minWidth: '90px'}}>Patēr. (m³)</th>
-                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600', color: '#0369a1'}}>Darbības</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apartments.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" style={{padding: '20px', textAlign: 'center', color: '#999'}}>Nav dzīvokļu</td>
+                {/* SILTAIS ŪDENS GALVENE */}
+                <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #f97316', background: '#ffedd5', color: '#c2410c' }} colSpan="3">
+                  🔥 Siltais Ūdens
+                </th>
+              </tr>
+              <tr>
+                {/* Sub-header for columns */}
+                <th style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}></th>
+                <th style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}></th>
+                
+                {/* Aukstais sub-cols */}
+                <th style={{ padding: '8px', fontSize: '11px', background: '#f0f9ff', color: '#64748b', textAlign: 'right' }}>Iepriekš</th>
+                <th style={{ padding: '8px', fontSize: '11px', background: '#f0f9ff', color: '#0369a1', fontWeight: 'bold', textAlign: 'center' }}>Tagad</th>
+                <th style={{ padding: '8px', fontSize: '11px', background: '#f0f9ff', color: '#64748b', textAlign: 'right' }}>Patēriņš</th>
+
+                {/* Siltais sub-cols */}
+                <th style={{ padding: '8px', fontSize: '11px', background: '#fff7ed', color: '#64748b', textAlign: 'right' }}>Iepriekš</th>
+                <th style={{ padding: '8px', fontSize: '11px', background: '#fff7ed', color: '#c2410c', fontWeight: 'bold', textAlign: 'center' }}>Tagad</th>
+                <th style={{ padding: '8px', fontSize: '11px', background: '#fff7ed', color: '#64748b', textAlign: 'right' }}>Patēriņš</th>
+              </tr>
+            </thead>
+            <tbody>
+              {apartments.map((apt, index) => {
+                // AUKSTAIS ŪDENS DATI
+                const coldReadingObj = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === tariffPeriod);
+                const coldCurrent = coldReadingObj ? coldReadingObj.reading_value : '';
+                
+                const coldLastObj = getLastReading(apt.id, 'water', tariffPeriod, meterReadings);
+                const coldPrev = coldLastObj ? coldLastObj.reading_value : '';
+                const coldDiff = (coldCurrent !== '' && coldPrev !== '') ? (coldCurrent - coldPrev).toFixed(2) : '-';
+
+                // SILTAIS ŪDENS DATI
+                const hotReadingObj = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === tariffPeriod);
+                const hotCurrent = hotReadingObj ? hotReadingObj.reading_value : '';
+
+                const hotLastObj = getLastReading(apt.id, 'hot_water', tariffPeriod, meterReadings);
+                const hotPrev = hotLastObj ? hotLastObj.reading_value : '';
+                const hotDiff = (hotCurrent !== '' && hotPrev !== '') ? (hotCurrent - hotPrev).toFixed(2) : '-';
+
+                const rowBg = index % 2 === 0 ? 'white' : '#f8fafc';
+
+                return (
+                  <tr key={apt.id} style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 'bold', color: '#334155' }}>{apt.number}</td>
+                    <td style={{ padding: '10px 12px', color: '#64748b', fontSize: '12px' }}>{apt.owner_name}</td>
+
+                    {/* AUKSTAIS ŪDENS IEVADE */}
+                    <td style={{ padding: '10px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', background: '#f0f9ff' }}>
+                      {coldPrev !== '' ? coldPrev : '—'}
+                    </td>
+                    <td style={{ padding: '5px', textAlign: 'center', background: '#f0f9ff' }}>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        defaultValue={coldCurrent} // Izmantojam defaultValue, lai nepārlādētu tabulu uz katru taustiņu
+                        onBlur={(e) => saveWaterMeterReading(apt.id, e.target.value, tariffPeriod)}
+                        placeholder="m³"
+                        style={{ 
+                          width: '70px', 
+                          padding: '6px', 
+                          borderRadius: '4px', 
+                          border: '1px solid #bae6fd', 
+                          textAlign: 'center',
+                          fontWeight: 'bold'
+                        }} 
+                      />
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: coldDiff > 0 ? '#0284c7' : '#cbd5e1', background: '#f0f9ff' }}>
+                      {coldDiff}
+                    </td>
+
+                    {/* SILTAIS ŪDENS IEVADE */}
+                    <td style={{ padding: '10px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', background: '#fff7ed' }}>
+                      {hotPrev !== '' ? hotPrev : '—'}
+                    </td>
+                    <td style={{ padding: '5px', textAlign: 'center', background: '#fff7ed' }}>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        defaultValue={hotCurrent}
+                        onBlur={(e) => saveHotWaterMeterReading(apt.id, e.target.value, tariffPeriod)}
+                        placeholder="m³"
+                        style={{ 
+                          width: '70px', 
+                          padding: '6px', 
+                          borderRadius: '4px', 
+                          border: '1px solid #fdba74', 
+                          textAlign: 'center',
+                          fontWeight: 'bold'
+                        }} 
+                      />
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: hotDiff > 0 ? '#ea580c' : '#cbd5e1', background: '#fff7ed' }}>
+                      {hotDiff}
+                    </td>
                   </tr>
-                ) : (
-                  apartments.map((apt, idx) => {
-                    const currentReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === selectedPeriod);
-                    
-                    const [year, month] = selectedPeriod.split('-');
-                    let prevMonth = parseInt(month) - 1;
-                    let prevYear = parseInt(year);
-                    if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
-                    const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-                    const previousReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === previousPeriod);
-                    
-                    const currentValue = currentReading?.reading_value ? parseFloat(currentReading.reading_value) : 0;
-                    const previousValue = previousReading?.reading_value ? parseFloat(previousReading.reading_value) : 0;
-                    const consumption = currentValue > 0 && previousValue > 0 ? (currentValue - previousValue) : 0;
-
-                    return (
-                      <tr key={apt.id} style={{borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#ffffff' : '#fafbfc'}}>
-                        <td style={{padding: '12px', fontWeight: '600', color: '#003399'}}>Dzīv. {apt.number}</td>
-                        <td style={{padding: '12px', textAlign: 'center', fontSize: '12px'}}>{apt.owner_name}</td>
-                        <td style={{padding: '12px', textAlign: 'right', color: '#666'}}>
-                          {previousValue > 0 ? previousValue.toFixed(2) : '—'}
-                        </td>
-                        <td style={{padding: '12px', textAlign: 'right', fontWeight: '600'}}>
-                          {adminEditApt === apt.id ? (
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editValues[apt.id] !== undefined ? editValues[apt.id] : (currentValue || '')}
-                              onChange={(e) => setEditValues({...editValues, [apt.id]: e.target.value})}
-                              style={{width: '70px', padding: '6px', border: '2px solid #0ea5e9', borderRadius: '4px', textAlign: 'right', fontSize: '13px'}}
-                              autoFocus
-                            />
-                          ) : (
-                            <span>{currentValue > 0 ? currentValue.toFixed(2) : '—'}</span>
-                          )}
-                        </td>
-                        <td style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: consumption > 0 ? '#0369a1' : '#999'}}>
-                          {consumption > 0 ? consumption.toFixed(2) : '—'}
-                        </td>
-                        <td style={{padding: '12px', textAlign: 'center'}}>
-                          {adminEditApt === apt.id ? (
-                            <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>
-                              <button
-                                onClick={() => {
-                                  if (editValues[apt.id] !== undefined) {
-                                    editMeterReading(currentReading?.id, editValues[apt.id]);
-                                  }
-                                  setAdminEditApt(null);
-                                }}
-                                style={{...styles.btn, background: '#10b981', padding: '4px 8px', fontSize: '11px', margin: 0}}
-                              >
-                                ✓
-                              </button>
-                              <button
-                                onClick={() => setAdminEditApt(null)}
-                                style={{...styles.btn, background: '#6b7280', padding: '4px 8px', fontSize: '11px', margin: 0}}
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
-                            <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>
-                              <button
-                                onClick={() => {
-                                  setAdminEditApt(apt.id);
-                                  setEditValues({...editValues, [apt.id]: currentValue});
-                                }}
-                                style={{...styles.btn, background: '#0ea5e9', padding: '4px 8px', fontSize: '11px', margin: 0}}
-                                title="Rediģēt"
-                              >
-                                ✎
-                              </button>
-                              {currentReading && (
-                                <button
-                                  onClick={() => deleteMeterReading(currentReading.id)}
-                                  style={{...styles.btn, background: '#ef4444', padding: '4px 8px', fontSize: '11px', margin: 0}}
-                                  title="Dzēst"
-                                >
-                                  🗑️
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-
-        {/* SILTAIS ŪDENS */}
-        <div>
-          <h3 style={{fontSize: '15px', fontWeight: '600', color: '#d97706', marginBottom: '15px', paddingBottom: '10px', borderBottom: '2px solid #fde68a', display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <span>🔥</span> Siltais ūdens
-          </h3>
-          
-          <div style={{overflowX: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
-            <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}}>
-              <thead>
-                <tr style={{background: '#fef3c7', borderBottom: '2px solid #fde68a'}}>
-                  <th style={{padding: '12px', textAlign: 'left', fontWeight: '600', color: '#92400e'}}>Dzīvoklis</th>
-                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600', color: '#92400e'}}>Vārds</th>
-                  <th style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#92400e', minWidth: '90px'}}>Iepr. (m³)</th>
-                  <th style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#92400e', minWidth: '90px'}}>Pašr. (m³)</th>
-                  <th style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#92400e', minWidth: '90px'}}>Patēr. (m³)</th>
-                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600', color: '#92400e'}}>Darbības</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apartments.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" style={{padding: '20px', textAlign: 'center', color: '#999'}}>Nav dzīvokļu</td>
-                  </tr>
-                ) : (
-                  apartments.map((apt, idx) => {
-                    const currentReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === selectedPeriod);
-                    
-                    const [year, month] = selectedPeriod.split('-');
-                    let prevMonth = parseInt(month) - 1;
-                    let prevYear = parseInt(year);
-                    if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
-                    const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-                    const previousReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === previousPeriod);
-                    
-                    const currentValue = currentReading?.reading_value ? parseFloat(currentReading.reading_value) : 0;
-                    const previousValue = previousReading?.reading_value ? parseFloat(previousReading.reading_value) : 0;
-                    const consumption = currentValue > 0 && previousValue > 0 ? (currentValue - previousValue) : 0;
-
-                    return (
-                      <tr key={apt.id + '-hot'} style={{borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#ffffff' : '#fafbfc'}}>
-                        <td style={{padding: '12px', fontWeight: '600', color: '#d97706'}}>Dzīv. {apt.number}</td>
-                        <td style={{padding: '12px', textAlign: 'center', fontSize: '12px'}}>{apt.owner_name}</td>
-                        <td style={{padding: '12px', textAlign: 'right', color: '#666'}}>
-                          {previousValue > 0 ? previousValue.toFixed(2) : '—'}
-                        </td>
-                        <td style={{padding: '12px', textAlign: 'right', fontWeight: '600'}}>
-                          {adminEditApt === apt.id + '-hot' ? (
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editValues[apt.id + '-hot'] !== undefined ? editValues[apt.id + '-hot'] : (currentValue || '')}
-                              onChange={(e) => setEditValues({...editValues, [apt.id + '-hot']: e.target.value})}
-                              style={{width: '70px', padding: '6px', border: '2px solid #f59e0b', borderRadius: '4px', textAlign: 'right', fontSize: '13px'}}
-                              autoFocus
-                            />
-                          ) : (
-                            <span>{currentValue > 0 ? currentValue.toFixed(2) : '—'}</span>
-                          )}
-                        </td>
-                        <td style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: consumption > 0 ? '#d97706' : '#999'}}>
-                          {consumption > 0 ? consumption.toFixed(2) : '—'}
-                        </td>
-                        <td style={{padding: '12px', textAlign: 'center'}}>
-                          {adminEditApt === apt.id + '-hot' ? (
-                            <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>
-                              <button
-                                onClick={() => {
-                                  if (editValues[apt.id + '-hot'] !== undefined) {
-                                    editMeterReading(currentReading?.id, editValues[apt.id + '-hot']);
-                                  }
-                                  setAdminEditApt(null);
-                                }}
-                                style={{...styles.btn, background: '#10b981', padding: '4px 8px', fontSize: '11px', margin: 0}}
-                              >
-                                ✓
-                              </button>
-                              <button
-                                onClick={() => setAdminEditApt(null)}
-                                style={{...styles.btn, background: '#6b7280', padding: '4px 8px', fontSize: '11px', margin: 0}}
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
-                            <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>
-                              <button
-                                onClick={() => {
-                                  setAdminEditApt(apt.id + '-hot');
-                                  setEditValues({...editValues, [apt.id + '-hot']: currentValue});
-                                }}
-                                style={{...styles.btn, background: '#f59e0b', padding: '4px 8px', fontSize: '11px', margin: 0}}
-                                title="Rediģēt"
-                              >
-                                ✎
-                              </button>
-                              {currentReading && (
-                                <button
-                                  onClick={() => deleteMeterReading(currentReading.id)}
-                                  style={{...styles.btn, background: '#ef4444', padding: '4px 8px', fontSize: '11px', margin: 0}}
-                                  title="Dzēst"
-                                >
-                                  🗑️
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div style={{ padding: '10px', background: '#f1f5f9', borderTop: '1px solid #e2e8f0', fontSize: '12px', color: '#64748b', textAlign: 'center' }}>
+          Kopā reģistrēti dzīvokļi: {apartments.length}
         </div>
       </div>
     </div>

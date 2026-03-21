@@ -2,7 +2,9 @@ import { useState } from 'react';
 
 export function useWaterHandlers(supabase, apartments, fetchData, showToast, fetchMeterReadingsOnly) {
   const [enabledMeters, setEnabledMeters] = useState({ water: true, hot_water: false });
-  const [tariffPeriod, setTariffPeriod] = useState('2026-01');
+  const today = new Date();
+  const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const [tariffPeriod, setTariffPeriod] = useState(currentMonth);
   const [waterTariffForm, setWaterTariffForm] = useState({
     period: '2026-01',
     price_per_m3: '',
@@ -394,6 +396,17 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast, fet
     }
   };
 
+  const getLastReading = (apartmentId, meterType, currentPeriod, readings) => {
+    const relevant = readings
+      .filter(mr => 
+        mr.apartment_id === apartmentId && 
+        mr.meter_type === meterType && 
+        mr.period < currentPeriod
+      )
+      .sort((a, b) => b.period.localeCompare(a.period));
+    return relevant.length > 0 ? relevant[0] : null;
+  };
+
   return {
     enabledMeters, setEnabledMeters,
     tariffPeriod, setTariffPeriod,
@@ -407,6 +420,7 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast, fet
     saveHotWaterMeterReading,
     editMeterReading,
     deleteMeterReading,
-    calculateWasteDistribution
+    calculateWasteDistribution,
+    getLastReading
   };
 }
