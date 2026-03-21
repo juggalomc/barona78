@@ -25,8 +25,6 @@ export function WaterTab({
   settings,
   updateSetting
 }) {
-  const wasteData = calculateWasteDistribution(wasteTariffs, tariffPeriod);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
