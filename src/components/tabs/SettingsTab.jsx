@@ -92,6 +92,8 @@ export function SettingsTab({
     // Bet labāk izsaukt sūtīšanu tieši ar parametriem, nevis caur state
     try {
       await handleSendCustomEmail({ preventDefault: () => {} });
+    } catch (error) {
+      console.error(error);
     }
   };
 
