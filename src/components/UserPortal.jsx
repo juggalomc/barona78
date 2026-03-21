@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Toast } from './shared/Toast';
 
-export function UserPortal({ userApartment, userInvoices, meterReadings, waterTariffs, hotWaterTariffs, onLogout, onDownloadPDF, onViewAsHTML, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, currentPeriod, settings, showToast }) {
+export function UserPortal({ userApartment, userInvoices, meterReadings, onLogout, onDownloadPDF, onViewAsHTML, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, settings, showToast }) {
+  // Rādījumu ievadei vienmēr izmantojam esošo mēnesi (reālā laika)
+  const today = new Date();
+  const currentPeriod = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
   const getInvoiceStatus = (invoice) => {
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
@@ -15,17 +19,29 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
     }
   };
 
-  const [year, month] = currentPeriod.split('-');
-  let prevMonth = parseInt(month, 10) - 1;
-  let prevYear = parseInt(year, 10);
-  if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
-  const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+  // Atrodam pēdējo pieejamo rādījumu, kas ir vecāks par šo periodu
+  const findLastReading = (meterType) => {
+    const relevantReadings = meterReadings
+      .filter(mr => 
+        mr.apartment_id === userApartment?.id && 
+        mr.meter_type === meterType && 
+        mr.period < currentPeriod
+      )
+      .sort((a, b) => b.period.localeCompare(a.period)); // Sort descending by period
+
+    return relevantReadings.length > 0 ? relevantReadings[0] : null;
+  };
 
   // Ūdens rādījumi
   const coldCurrentReading = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'water' && mr.period === currentPeriod)?.reading_value || '';
-  const coldPrevious = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'water' && mr.period === previousPeriod)?.reading_value || '';
   const hotCurrentReading = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'hot_water' && mr.period === currentPeriod)?.reading_value || '';
-  const hotPrevious = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'hot_water' && mr.period === previousPeriod)?.reading_value || '';
+
+  const lastColdReading = findLastReading('water');
+  const coldPrevious = lastColdReading?.reading_value || '';
+  const coldPreviousPeriod = lastColdReading ? new Date(lastColdReading.period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'}) : 'nav datos';
+  const lastHotReading = findLastReading('hot_water');
+  const hotPrevious = lastHotReading?.reading_value || '';
+  const hotPreviousPeriod = lastHotReading ? new Date(lastHotReading.period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'}) : 'nav datos';
 
   const [coldCurrent, setColdCurrent] = useState(coldCurrentReading);
   const [hotCurrent, setHotCurrent] = useState(hotCurrentReading);
@@ -41,13 +57,6 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
   // Aprēķināt patēriņu
   const coldConsumption = (coldCurrent && coldPrevious) ? (parseFloat(coldCurrent) - parseFloat(coldPrevious)).toFixed(2) : '—';
   const hotConsumption = (hotCurrent && hotPrevious) ? (parseFloat(hotCurrent) - parseFloat(hotPrevious)).toFixed(2) : '—';
-
-  // Aprēķināt cenas
-  const waterTariff = waterTariffs.find(w => w.period === currentPeriod);
-  const hotWaterTariff = hotWaterTariffs.find(w => w.period === currentPeriod);
-
-  const coldPrice = (coldConsumption !== '—' && waterTariff) ? (parseFloat(coldConsumption) * parseFloat(waterTariff.price_per_m3 || 0)).toFixed(2) : '—';
-  const hotPrice = (hotConsumption !== '—' && hotWaterTariff) ? (parseFloat(hotConsumption) * parseFloat(hotWaterTariff.price_per_m3 || 0)).toFixed(2) : '—';
 
   const todayDate = new Date();
   const currentDay = todayDate.getDate();
@@ -159,27 +168,22 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
                 style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', marginBottom: '8px' }}
               />
               <div style={{ fontSize: '11px', color: '#0369a1', background: '#dbeafe', padding: '8px', borderRadius: '4px' }}>
-                📊 <strong>Iepriekšējais mēnesis:</strong> {coldPrevious ? `${coldPrevious} m³` : 'nav datos'}
+                📊 <strong>Iepriekšējais rādījums ({coldPreviousPeriod}):</strong> {coldPrevious ? `${coldPrevious} m³` : 'nav datos'}
               </div>
             </div>
 
             {/* Aprēķinātais patēriņš */}
             {coldConsumption !== '—' && (
-              <div style={{ padding: '10px', background: '#ecfdf5', borderRadius: '4px', border: '1px solid #d1fae5', marginBottom: '8px' }}>
+              <div style={{ padding: '10px', background: '#ecfdf5', borderRadius: '4px', border: '1px solid #d1fae5' }}>
                 <div style={{ fontSize: '12px', color: '#065f46', fontWeight: '600' }}>
                   ✓ Aprēķinātais patēriņš: <strong>{coldConsumption} m³</strong>
                 </div>
-                {coldPrice !== '—' && (
-                  <div style={{ fontSize: '12px', color: '#065f46', marginTop: '4px' }}>
-                    Paredzamā summa: <strong>€{coldPrice}</strong>
-                  </div>
-                )}
               </div>
             )}
           </div>
 
           {/* SILTAIS ŪDENS */}
-          <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fde68a' }}>
+          <div style={{ padding: '12px', background: '#fffbeb', borderRadius: '6px', border: '1px solid #fef08a' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#d97706', marginBottom: '12px' }}>🔥 Siltais ūdens</label>
             
             {/* Rādījumu ievade */}
@@ -195,21 +199,16 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
                 style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', marginBottom: '8px' }}
               />
               <div style={{ fontSize: '11px', color: '#92400e', background: '#fed7aa', padding: '8px', borderRadius: '4px' }}>
-                📊 <strong>Iepriekšējais mēnesis:</strong> {hotPrevious ? `${hotPrevious} m³` : 'nav datos'}
+                📊 <strong>Iepriekšējais rādījums ({hotPreviousPeriod}):</strong> {hotPrevious ? `${hotPrevious} m³` : 'nav datos'}
               </div>
             </div>
 
             {/* Aprēķinātais patēriņš */}
             {hotConsumption !== '—' && (
-              <div style={{ padding: '10px', background: '#ffe4e6', borderRadius: '4px', border: '1px solid #fecdd3' }}>
+              <div style={{ padding: '10px', background: '#fff1f2', borderRadius: '4px', border: '1px solid #fecdd3' }}>
                 <div style={{ fontSize: '12px', color: '#9f1239', fontWeight: '600' }}>
                   ✓ Aprēķinātais patēriņš: <strong>{hotConsumption} m³</strong>
                 </div>
-                {hotPrice !== '—' && (
-                  <div style={{ fontSize: '12px', color: '#9f1239', marginTop: '4px' }}>
-                    Paredzamā summa: <strong>€{hotPrice}</strong>
-                  </div>
-                )}
               </div>
             )}
           </div>

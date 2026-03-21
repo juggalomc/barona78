@@ -152,7 +152,6 @@ export default function PropertyManager() {
           onSaveHotWaterMeterReading={waterHandlers.saveHotWaterMeterReading}
           toast={toast}
           onCloseToast={() => setToast(null)}
-          currentPeriod={waterHandlers.tariffPeriod}
           settings={settings}
           showToast={showToast}
         />
