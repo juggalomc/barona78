@@ -133,6 +133,19 @@ export default function PropertyManager() {
     }
   };
 
+  const resetUserPassword = async (userId, email) => {
+    const defaultPass = 'barona123';
+    if (!window.confirm(`Vai tiešām atiestatīt paroli lietotājam ${email} uz "${defaultPass}"?`)) return;
+    
+    try {
+      const { error } = await supabase.from('users').update({ password: defaultPass }).eq('id', userId);
+      if (error) throw error;
+      showToast(`✓ Parole atiestatīta uz "${defaultPass}"`);
+    } catch (error) {
+      showToast('Kļūda atiestatot paroli: ' + error.message, 'error');
+    }
+  };
+
   const getInvoiceStatus = (invoice) => {
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
@@ -243,6 +256,7 @@ export default function PropertyManager() {
                 users={users}
                 apartments={apartments}
                 {...userHandlers}
+                resetUserPassword={resetUserPassword}
               />
             ) : activeTab === 'tariffs' ? (
               <TariffsTab

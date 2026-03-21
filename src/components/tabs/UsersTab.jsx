@@ -10,7 +10,8 @@ export function UsersTab({
   addUser,
   startEditUser,
   saveEditUser,
-  deleteUser
+  deleteUser,
+  resetUserPassword
 }) {
   return (
     <div style={styles.twoCol}>
@@ -66,6 +67,7 @@ export function UsersTab({
                       <div style={{fontSize: '13px', color: '#666'}}>{apt ? `Dzīv. ${apt.number}` : 'Nav dzīvokļa'} • {user.role === 'admin' ? '👤 Administrators' : 'Lietotājs'}</div>
                     </div>
                     <div style={{display: 'flex', gap: '4px'}}>
+                      <button onClick={() => resetUserPassword(user.id, user.email)} style={{...styles.btnSmall, padding: '4px 8px', background: '#f59e0b', color: 'white'}} title="Atiestatīt paroli">🔑</button>
                       <button onClick={() => startEditUser(user)} style={{...styles.btnSmall, padding: '4px 8px'}} title="Rediģēt">✏️</button>
                       <button onClick={() => deleteUser(user.id)} style={styles.btnSmall}>🗑️</button>
                     </div>
