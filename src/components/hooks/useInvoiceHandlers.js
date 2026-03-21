@@ -565,7 +565,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
     const overpaymentRows = invoiceDetails
       .filter(d => d.type === 'overpayment')
-      .map(detail => `<tr style="background: #dcfce7;"><td style="color: #166534; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #166534; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`)
+      .map(detail => `<tr style="background: #dbeafe;"><td style="color: #1e40af; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #1e40af; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`)
       .join('');
 
     return `
@@ -656,31 +656,31 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px; color: #4b5563;">Maksājuma rekvizīti</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">NOSAUKUMS</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">NOSAUKUMS</div>
                 <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${buildingName}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">REĢ. KODS</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">REĢ. KODS</div>
                 <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${buildingCode}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">ADRESE</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">ADRESE</div>
                 <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${buildingAddress}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">BANKA</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">BANKA</div>
                 <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentBank}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">IBAN</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">IBAN</div>
                 <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentIban}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">E-PASTS</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">E-PASTS</div>
                 <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentEmail}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">TĀLRUNIS</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">TĀLRUNIS</div>
                 <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentPhone}</div>
               </div>
             </div>
@@ -1328,26 +1328,93 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
           ]);
 
-          invoiceDetails.forEach(detail => {
-            let quantity = '';
-            let unitPrice = '';
-
-            if (detail.type === 'water') {
-              quantity = detail.consumption_m3 + ' m³';
-              unitPrice = '€' + detail.price_per_m3.toFixed(4);
-            } else if (detail.type === 'waste') {
-              quantity = detail.declared_persons + ' pers.';
-              unitPrice = '€' + (detail.amount_without_vat / detail.declared_persons).toFixed(4);
-            } else {
-              quantity = apt.area + ' m²';
-              unitPrice = '€' + (detail.amount_without_vat / apt.area).toFixed(4);
-            }
-
+          // Pakalpojumi BEZ PVN
+          const rowsWithoutVat = invoiceDetails.filter(d => 
+            (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
+            (d.vat_rate === 0 || d.vat_rate === undefined)
+          );
+          
+          if (rowsWithoutVat.length > 0) {
             tableRows.push([
-              { text: detail.tariff_name, style: 'tableBody' },
-              { text: quantity, alignment: 'center', style: 'tableBody' },
-              { text: unitPrice, alignment: 'right', style: 'tableBody' },
-              { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'tableBody' }
+              { text: 'Pakalpojumi bez PVN', colSpan: 4, style: 'sectionHeader' },
+              {}, {}, {}
+            ]);
+            
+            rowsWithoutVat.forEach(detail => {
+              let quantity = '';
+              let unitPrice = '';
+              if (detail.type === 'water' || detail.type === 'hot_water') {
+                quantity = detail.consumption_m3 + ' m³';
+                unitPrice = '€' + detail.price_per_m3.toFixed(4);
+              } else if (detail.type === 'waste') {
+                quantity = detail.declared_persons + ' pers.';
+                unitPrice = '€' + (detail.amount_without_vat / detail.declared_persons).toFixed(4);
+              } else {
+                quantity = apt.area + ' m²';
+                unitPrice = '€' + (detail.amount_without_vat / apt.area).toFixed(4);
+              }
+              tableRows.push([
+                { text: detail.tariff_name, style: 'tableBody' },
+                { text: quantity, alignment: 'center', style: 'tableBody' },
+                { text: unitPrice, alignment: 'right', style: 'tableBody' },
+                { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'tableBody' }
+              ]);
+            });
+          }
+
+          // Pakalpojumi AR PVN
+          const rowsWithVat = invoiceDetails.filter(d => 
+            (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
+            d.vat_rate > 0
+          );
+          
+          if (rowsWithVat.length > 0) {
+            tableRows.push([
+              { text: 'Pakalpojumi ar PVN (21%)', colSpan: 4, style: 'sectionHeader' },
+              {}, {}, {}
+            ]);
+            
+            rowsWithVat.forEach(detail => {
+              let quantity = '';
+              let unitPrice = '';
+              if (detail.type === 'water' || detail.type === 'hot_water') {
+                quantity = detail.consumption_m3 + ' m³';
+                unitPrice = '€' + detail.price_per_m3.toFixed(4);
+              } else if (detail.type === 'waste') {
+                quantity = detail.declared_persons + ' pers.';
+                unitPrice = '€' + (detail.amount_without_vat / detail.declared_persons).toFixed(4);
+              } else {
+                quantity = apt.area + ' m²';
+                unitPrice = '€' + (detail.amount_without_vat / apt.area).toFixed(4);
+              }
+              tableRows.push([
+                { text: detail.tariff_name, style: 'tableBody' },
+                { text: quantity, alignment: 'center', style: 'tableBody' },
+                { text: unitPrice, alignment: 'right', style: 'tableBody' },
+                { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'tableBody' }
+              ]);
+            });
+          }
+
+          // PARĀDS (sarkanā krāsā)
+          const debtRows = invoiceDetails.filter(d => d.type === 'debt');
+          debtRows.forEach(detail => {
+            tableRows.push([
+              { text: detail.tariff_name, style: 'debt', bold: true },
+              { text: '' },
+              { text: '' },
+              { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'debt', bold: true }
+            ]);
+          });
+
+          // PĀRMAKSA (zilā krāsā)
+          const overpaymentRows = invoiceDetails.filter(d => d.type === 'overpayment');
+          overpaymentRows.forEach(detail => {
+            tableRows.push([
+              { text: detail.tariff_name, style: 'overpayment', bold: true },
+              { text: '' },
+              { text: '' },
+              { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'overpayment', bold: true }
             ]);
           });
 
@@ -1491,8 +1558,20 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 color: '#000000',
                 fillColor: '#f5f5f5'
               },
+              sectionHeader: {
+                fontSize: 11,
+                bold: true,
+                color: '#333',
+                fillColor: '#f5f5f5'
+              },
               tableBody: {
                 fontSize: 10
+              },
+              debt: {
+                color: '#991b1b'
+              },
+              overpayment: {
+                color: '#1e40af'
               }
             }
           };
@@ -1837,7 +1916,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                   color: '#991b1b'
                 },
                 overpayment: {
-                  color: '#166534'
+                  color: '#1e40af'
                 }
               }
             };
