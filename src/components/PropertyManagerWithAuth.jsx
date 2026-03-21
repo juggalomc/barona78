@@ -153,6 +153,8 @@ export default function PropertyManager() {
           toast={toast}
           onCloseToast={() => setToast(null)}
           currentPeriod={waterHandlers.tariffPeriod}
+          settings={settings}
+          showToast={showToast}
         />
       </>
     );

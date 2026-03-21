@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Toast } from './shared/Toast';
 
-export function UserPortal({ userApartment, userInvoices, meterReadings, waterTariffs, hotWaterTariffs, onLogout, onDownloadPDF, onViewAsHTML, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, currentPeriod }) {
+export function UserPortal({ userApartment, userInvoices, meterReadings, waterTariffs, hotWaterTariffs, onLogout, onDownloadPDF, onViewAsHTML, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, currentPeriod, settings, showToast }) {
   const getInvoiceStatus = (invoice) => {
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
@@ -48,6 +48,38 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
 
   const coldPrice = (coldConsumption !== '—' && waterTariff) ? (parseFloat(coldConsumption) * parseFloat(waterTariff.price_per_m3 || 0)).toFixed(2) : '—';
   const hotPrice = (hotConsumption !== '—' && hotWaterTariff) ? (parseFloat(hotConsumption) * parseFloat(hotWaterTariff.price_per_m3 || 0)).toFixed(2) : '—';
+
+  const todayDate = new Date();
+  const currentDay = todayDate.getDate();
+  const startDay = parseInt(settings?.meter_reading_start_date) || 25;
+  const endDay = parseInt(settings?.meter_reading_end_date) || 27;
+  const isSubmissionAllowed = currentDay >= startDay && currentDay <= endDay;
+
+  const handleColdBlur = (val) => {
+    if (val !== '' && coldPrevious !== '') {
+      const current = parseFloat(val);
+      const prev = parseFloat(coldPrevious);
+      if (!isNaN(current) && !isNaN(prev) && current < prev) {
+        showToast('Kļūda: Rādījums nevar būt mazāks par iepriekšējo mēnesi', 'error');
+        setColdCurrent(coldCurrentReading);
+        return;
+      }
+    }
+    onSaveWaterMeterReading(userApartment?.id, val, currentPeriod);
+  };
+
+  const handleHotBlur = (val) => {
+    if (val !== '' && hotPrevious !== '') {
+      const current = parseFloat(val);
+      const prev = parseFloat(hotPrevious);
+      if (!isNaN(current) && !isNaN(prev) && current < prev) {
+        showToast('Kļūda: Rādījums nevar būt mazāks par iepriekšējo mēnesi', 'error');
+        setHotCurrent(hotCurrentReading);
+        return;
+      }
+    }
+    onSaveHotWaterMeterReading(userApartment?.id, val, currentPeriod);
+  };
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', background: '#f8fafc' }}>
@@ -104,6 +136,12 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
           <h2>💧 Skaitītāju Rādījumi</h2>
           <p style={{ fontSize: '12px', color: '#666', marginBottom: '16px' }}>{new Date(currentPeriod + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</p>
           
+          {!isSubmissionAllowed && (
+            <div style={{ marginBottom: '15px', padding: '10px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>⚠️</span> <strong>Rādījumus var iesniegt tikai no {startDay}. līdz {endDay}. datumam.</strong>
+            </div>
+          )}
+
           {/* AUKSTAIS ŪDENS */}
           <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '6px', border: '1px solid #e0f2fe' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#003399', marginBottom: '12px' }}>❄️ Aukstais ūdens</label>
@@ -116,7 +154,8 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
                 placeholder="Skaitītāja rādījums (m³)"
                 value={coldCurrent}
                 onChange={(e) => setColdCurrent(e.target.value)}
-                onBlur={(e) => onSaveWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
+                onBlur={(e) => handleColdBlur(e.target.value)}
+                disabled={!isSubmissionAllowed}
                 style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', marginBottom: '8px' }}
               />
               <div style={{ fontSize: '11px', color: '#0369a1', background: '#dbeafe', padding: '8px', borderRadius: '4px' }}>
@@ -151,7 +190,8 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
                 placeholder="Skaitītāja rādījums (m³)"
                 value={hotCurrent}
                 onChange={(e) => setHotCurrent(e.target.value)}
-                onBlur={(e) => onSaveHotWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
+                onBlur={(e) => handleHotBlur(e.target.value)}
+                disabled={!isSubmissionAllowed}
                 style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', marginBottom: '8px' }}
               />
               <div style={{ fontSize: '11px', color: '#92400e', background: '#fed7aa', padding: '8px', borderRadius: '4px' }}>
@@ -173,6 +213,34 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* REKVIZĪTI */}
+      <div style={{ marginTop: '20px', background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px', color: '#333' }}>💳 Rekvizīti apmaksai</h2>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', fontSize: '14px' }}>
+          <div>
+            <div style={{ color: '#666', fontSize: '12px', marginBottom: '2px' }}>Saņēmējs</div>
+            <div style={{ fontWeight: 'bold' }}>{settings?.building_name || 'BIEDRĪBA "BARONA 78"'}</div>
+            <div style={{ fontSize: '12px', color: '#4b5563' }}>Reģ. Nr. {settings?.building_code || '40008325768'}</div>
+          </div>
+          
+          <div>
+            <div style={{ color: '#666', fontSize: '12px', marginBottom: '2px' }}>Banka</div>
+            <div style={{ fontWeight: 'bold' }}>{settings?.payment_bank || 'Habib Bank'}</div>
+          </div>
+
+          <div>
+            <div style={{ color: '#666', fontSize: '12px', marginBottom: '2px' }}>IBAN</div>
+            <div style={{ fontWeight: 'bold', fontFamily: 'monospace', fontSize: '15px', color: '#003399' }}>{settings?.payment_iban || 'LV62HABA0551064112797'}</div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '15px', padding: '12px', background: '#fffbeb', borderRadius: '6px', border: '1px solid #fcd34d', color: '#92400e', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '18px' }}>ℹ️</span>
+          <strong>Lūdzam, veicot apmaksu, maksājuma mērķī obligāti norādīt rēķina numuru!</strong>
         </div>
       </div>
 
