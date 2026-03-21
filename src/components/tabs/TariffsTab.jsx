@@ -54,10 +54,22 @@ export function TariffsTab({
             <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>Nosaukums *</label>
             <input type="text" placeholder="Piem., Apsaimniekošana" value={tariffForm.name} onChange={(e) => setTariffForm({...tariffForm, name: e.target.value})} style={{ ...styles.input, width: '100%' }} />
           </div>
+          
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>Summa mājai (€) *</label>
-            <input type="number" step="0.01" placeholder="0.00" value={tariffForm.total_amount} onChange={(e) => setTariffForm({...tariffForm, total_amount: e.target.value})} style={{ ...styles.input, width: '100%' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+               <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>{tariffForm.is_per_m2 ? 'Cena par m² (€) *' : 'Summa mājai (€) *'}</label>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                 <input type="checkbox" checked={tariffForm.is_per_m2} onChange={(e) => setTariffForm({...tariffForm, is_per_m2: e.target.checked})} style={{ width: '12px', height: '12px', cursor: 'pointer' }} />
+                 <span style={{ fontSize: '10px', color: '#666' }}>Ievadīt m² cenu</span>
+               </div>
+            </div>
+            {tariffForm.is_per_m2 ? (
+              <input type="number" step="0.0001" placeholder="0.0000" value={tariffForm.price_per_m2} onChange={(e) => setTariffForm({...tariffForm, price_per_m2: e.target.value})} style={{ ...styles.input, width: '100%' }} />
+            ) : (
+              <input type="number" step="0.01" placeholder="0.00" value={tariffForm.total_amount} onChange={(e) => setTariffForm({...tariffForm, total_amount: e.target.value})} style={{ ...styles.input, width: '100%' }} />
+            )}
           </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>PVN (%)</label>
             <input type="number" step="0.01" placeholder="0" value={tariffForm.vat_rate} onChange={(e) => setTariffForm({...tariffForm, vat_rate: e.target.value})} style={{ ...styles.input, width: '100%' }} />
@@ -175,8 +187,19 @@ export function TariffsTab({
                     {isEditing ? (
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', padding: '5px' }} onClick={(e) => e.stopPropagation()}>
                         <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                        
+                        <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px'}}>
+                           <input type="checkbox" checked={editForm.is_per_m2} onChange={(e) => setEditForm({...editForm, is_per_m2: e.target.checked})} id={`edit-m2-${tar.id}`} style={{ width: '14px', height: '14px' }} />
+                           <label htmlFor={`edit-m2-${tar.id}`} style={{ fontSize: '11px', color: '#666', cursor: 'pointer' }}>Rediģēt m² cenu</label>
+                        </div>
+
                         <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
-                          <input type="number" step="0.01" value={editForm.total_amount} onChange={(e) => setEditForm({...editForm, total_amount: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                          {editForm.is_per_m2 ? (
+                             <input type="number" step="0.0001" placeholder="€/m²" value={editForm.price_per_m2} onChange={(e) => setEditForm({...editForm, price_per_m2: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                          ) : (
+                             <input type="number" step="0.01" placeholder="Kopā €" value={editForm.total_amount} onChange={(e) => setEditForm({...editForm, total_amount: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                          )}
+                          
                           <input type="number" step="0.01" placeholder="PVN %" value={editForm.vat_rate} onChange={(e) => setEditForm({...editForm, vat_rate: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                         </div>
                         <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: '#f9fafb', borderRadius: '4px'}}>

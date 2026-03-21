@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { TOTAL_AREA } from '../shared/constants';
 
 export function useTariffHandlers(supabase, fetchData, showToast) {
   const [tariffPeriod, setTariffPeriod] = useState('2026-01');
   const [tariffForm, setTariffForm] = useState({
     name: '',
     total_amount: '',
+    price_per_m2: '',
+    is_per_m2: false,
     vat_rate: 0,
     include_in_invoice: true
   });
@@ -23,7 +26,9 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
     try {
       const dataToInsert = {
         name: tariffForm.name.trim(),
-        total_amount: parseFloat(tariffForm.total_amount),
+        total_amount: tariffForm.is_per_m2 
+          ? parseFloat(tariffForm.price_per_m2) * TOTAL_AREA 
+          : parseFloat(tariffForm.total_amount),
         vat_rate: parseFloat(tariffForm.vat_rate) || 0,
         period: tariffPeriod,
         include_in_invoice: tariffForm.include_in_invoice
@@ -32,7 +37,7 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
       const { error } = await supabase.from('tariffs').insert([dataToInsert]);
       if (error) throw error;
       
-      setTariffForm({ name: '', total_amount: '', vat_rate: 0, include_in_invoice: true });
+      setTariffForm({ name: '', total_amount: '', price_per_m2: '', is_per_m2: false, vat_rate: 0, include_in_invoice: true });
       fetchData();
       showToast('✓ Tarifs pievienots');
     } catch (error) {
@@ -45,6 +50,8 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
     setEditForm({
       name: tariff.name,
       total_amount: tariff.total_amount,
+      price_per_m2: (parseFloat(tariff.total_amount) / TOTAL_AREA).toFixed(4),
+      is_per_m2: false, // Pēc noklusējuma rediģējam kopējo summu, lietotājs var pārslēgt
       vat_rate: tariff.vat_rate || 0,
       include_in_invoice: tariff.include_in_invoice !== false
     });
@@ -52,11 +59,15 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
 
   const saveEditTariff = async (id) => {
     try {
+      const totalAmount = editForm.is_per_m2 
+        ? parseFloat(editForm.price_per_m2) * TOTAL_AREA 
+        : parseFloat(editForm.total_amount);
+
       const { error } = await supabase
         .from('tariffs')
         .update({
           name: editForm.name,
-          total_amount: parseFloat(editForm.total_amount),
+          total_amount: totalAmount,
           vat_rate: parseFloat(editForm.vat_rate) || 0,
           include_in_invoice: editForm.include_in_invoice
         })

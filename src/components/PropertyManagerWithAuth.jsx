@@ -117,6 +117,22 @@ export default function PropertyManager() {
     showToast('✓ Izrakstīts');
   };
 
+  const handleChangePassword = async (newPassword) => {
+    try {
+      if (!currentUser) return;
+      
+      const { error } = await supabase
+        .from('users')
+        .update({ password: newPassword })
+        .eq('id', currentUser.id);
+
+      if (error) throw error;
+      showToast('✓ Parole veiksmīgi nomainīta');
+    } catch (error) {
+      showToast('Kļūda mainot paroli: ' + error.message, 'error');
+    }
+  };
+
   const getInvoiceStatus = (invoice) => {
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
@@ -166,6 +182,7 @@ export default function PropertyManager() {
           onSaveHotWaterMeterReading={waterHandlers.saveHotWaterMeterReading}
           toast={toast}
           onCloseToast={() => setToast(null)}
+          onChangePassword={handleChangePassword}
           settings={settings}
           showToast={showToast}
         />

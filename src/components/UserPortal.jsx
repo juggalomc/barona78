@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Toast } from './shared/Toast';
 
-export function UserPortal({ userApartment, userInvoices, meterReadings, onLogout, onDownloadPDF, onViewAsHTML, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, settings, showToast }) {
+export function UserPortal({ userApartment, userInvoices, meterReadings, onLogout, onDownloadPDF, onViewAsHTML, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, settings, showToast, onChangePassword }) {
   // Rādījumu ievadei vienmēr izmantojam esošo mēnesi (reālā laika)
   const today = new Date();
   const currentPeriod = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -90,6 +90,27 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
     onSaveHotWaterMeterReading(userApartment?.id, val, currentPeriod);
   };
 
+  // Paroles maiņas stāvoklis
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      showToast('Paroles nesakrīt!', 'error');
+      return;
+    }
+    if (newPassword.length < 4) {
+      showToast('Parolei jābūt vismaz 4 simbolus garai', 'error');
+      return;
+    }
+    onChangePassword(newPassword);
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowPasswordChange(false);
+  };
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', background: '#f8fafc' }}>
       <div style={{ background: '#003399', color: 'white', padding: '30px', borderRadius: '8px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -103,7 +124,10 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4ade80' }}>€{userInvoices.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
             <div style={{ fontSize: '11px', color: '#ccc', marginTop: '4px' }}>Parāds: €{userInvoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
           </div>
-          <button onClick={onLogout} style={{ padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Izrakstīties</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+             <button onClick={() => setShowPasswordChange(!showPasswordChange)} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>🔑 Mainīt paroli</button>
+             <button onClick={onLogout} style={{ padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Izrakstīties</button>
+          </div>
         </div>
       </div>
 
@@ -242,6 +266,29 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
           <strong>Lūdzam, veicot apmaksu, maksājuma mērķī obligāti norādīt rēķina numuru!</strong>
         </div>
       </div>
+
+      {/* PAROLES MAIŅAS MODĀLAIS LOGS */}
+      {showPasswordChange && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'white', padding: '25px', borderRadius: '8px', width: '300px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ marginTop: 0, color: '#333' }}>Mainīt paroli</h3>
+            <form onSubmit={handlePasswordSubmit}>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px' }}>Jaunā parole</label>
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} required />
+              </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px' }}>Atkārtot paroli</label>
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} required />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setShowPasswordChange(false)} style={{ padding: '8px 12px', background: '#e5e7eb', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Atcelt</button>
+                <button type="submit" style={{ padding: '8px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Saglabāt</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={onCloseToast} />}
     </div>
