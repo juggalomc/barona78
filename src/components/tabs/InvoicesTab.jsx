@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { styles } from '../shared/styles';
 
 export function InvoicesTab({
@@ -26,8 +26,6 @@ export function InvoicesTab({
   invoiceToDate, setInvoiceToDate,
   generateInvoices
 }) {
-  const [selectedInvoices, setSelectedInvoices] = useState([]);
-
   // Grupējam rēķinus pa mēnešiem
   const invoicesByMonth = invoices.reduce((acc, inv) => {
     const month = inv.period;
