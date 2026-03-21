@@ -168,16 +168,25 @@ export function SettingsTab({
       {/* GMAIL INTEGRACIJA */}
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>📧 Gmail - E-pastu Nosūtīšana</h2>
+        
+        <SettingField label="Google Client ID" prop="google_client_id" icon="🔑" />
+
         <div style={{fontSize: '12px', lineHeight: '1.8', color: '#666', marginBottom: '15px'}}>
           <p><strong>Lai sūtītu rēķinus pa e-pastu:</strong></p>
-          <p>1. Nospiediet "Pierakstīties ar Google"</p>
-          <p>2. Atļaujiet piekļuvi Gmail kontam</p>
-          <p>3. Rēķini tiks sūtīti uz dzīvokļu e-pasta adresēm</p>
+          <p>1. Iegūstiet Client ID no Google Cloud Console</p>
+          <p>2. Ievadiet to augstāk norādītajā laukā un saglabājiet</p>
+          <p>3. Nospiediet "Pierakstīties ar Google"</p>
         </div>
         <button
           onClick={() => {
+            const clientId = settings.google_client_id;
+            
+            if (!clientId) {
+              showToast('Vispirms ievadiet un saglabājiet Google Client ID', 'error');
+              return;
+            }
+
             // Google OAuth flow
-            const clientId = 'YOUR_GOOGLE_CLIENT_ID'; // Jāpievienō
             const redirectUri = window.location.origin + '/oauth-callback';
             const scope = 'https://www.googleapis.com/auth/gmail.send';
             const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
