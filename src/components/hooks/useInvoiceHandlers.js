@@ -2111,10 +2111,31 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       showToast('Dzīvoklis nav atrasts', 'error');
       return;
     }
-    const htmlContent = generateInvoicePdfHtml(invoice, apt);
+    
+    let htmlContent = generateInvoicePdfHtml(invoice, apt);
+
+    // Pievieno drukāšanas pogu un stilus, kas to paslēpj drukāšanas brīdī
+    const printButtonHtml = `
+      <style>
+        @media print { .no-print { display: none !important; } }
+        .no-print { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .print-btn { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-family: sans-serif; font-size: 14px; transition: background 0.2s; }
+        .print-btn:hover { background: #1d4ed8; }
+      </style>
+      <div class="no-print">
+        <button onclick="window.print()" class="print-btn">🖨️ Drukāt</button>
+      </div>
+    `;
+
+    htmlContent = htmlContent.replace('</body>', `${printButtonHtml}</body>`);
+
     const newWindow = window.open('', '_blank');
-    newWindow.document.write(htmlContent);
-    newWindow.document.close();
+    if (newWindow) {
+      newWindow.document.write(htmlContent);
+      newWindow.document.close();
+    } else {
+      showToast('Lūdzu, atļaujiet uznirstošos logus (pop-ups)', 'error');
+    }
   };
 
   return {
