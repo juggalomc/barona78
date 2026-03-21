@@ -5,7 +5,6 @@ export function WaterTab({
   meterReadings,
   waterTariffs,
   hotWaterTariffs,
-  wasteTariffs,
   uniqueTariffPeriods,
   tariffPeriod,
   setTariffPeriod,
@@ -13,14 +12,10 @@ export function WaterTab({
   setWaterTariffForm,
   hotWaterTariffForm,
   setHotWaterTariffForm,
-  wasteTariffForm,
-  setWasteTariffForm,
   saveWaterTariff,
   saveHotWaterTariff,
-  saveWasteTariff,
   saveWaterMeterReading,
   saveHotWaterMeterReading,
-  calculateWasteDistribution,
   getLastReading,
   settings,
   updateSetting
@@ -100,22 +95,6 @@ export function WaterTab({
               style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #fdba74' }}
             />
             <button type="submit" style={{ background: '#ea580c', color: 'white', border: 'none', borderRadius: '4px', padding: '0 15px', cursor: 'pointer' }}>Saglabāt</button>
-          </div>
-        </form>
-
-        {/* Atkritumi */}
-        <form onSubmit={saveWasteTariff} style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#15803d', marginBottom: '10px', marginTop: 0 }}>♻️ Atkritumi</h3>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Kopā €"
-              value={wasteTariffForm.total_amount}
-              onChange={(e) => setWasteTariffForm({ ...wasteTariffForm, total_amount: e.target.value })}
-              style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #86efac' }}
-            />
-            <button type="submit" style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', padding: '0 15px', cursor: 'pointer' }}>Saglabāt</button>
           </div>
         </form>
       </div>

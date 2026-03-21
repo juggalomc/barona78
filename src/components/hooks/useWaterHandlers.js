@@ -17,12 +17,6 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast, fet
     vat_rate: 0,
     include_in_invoice: true
   });
-  const [wasteTariffForm, setWasteTariffForm] = useState({
-    period: '2026-01',
-    total_amount: '',
-    vat_rate: 21,
-    include_in_invoice: true
-  });
 
   const saveWaterTariff = async (e) => {
     e.preventDefault();
@@ -123,58 +117,6 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast, fet
 
       fetchData();
       showToast('✓ Siltais ūdens tarifs saglabāts');
-    } catch (error) {
-      showToast('Kļūda: ' + error.message, 'error');
-    }
-  };
-
-  const saveWasteTariff = async (e) => {
-    e.preventDefault();
-    try {
-      const totalAmount = parseFloat(wasteTariffForm.total_amount || 0);
-      const vatRate = parseFloat(wasteTariffForm.vat_rate || 0);
-      const period = wasteTariffForm.period;
-      const includeInvoice = wasteTariffForm.include_in_invoice;
-
-      if (isNaN(totalAmount) || totalAmount <= 0) {
-        showToast('Summa jābūt lielāka par 0', 'error');
-        return;
-      }
-
-      if (isNaN(vatRate) || vatRate < 0 || vatRate > 100) {
-        showToast('PVN jābūt no 0 līdz 100%', 'error');
-        return;
-      }
-
-      const { data: existing } = await supabase
-        .from('waste_tariffs')
-        .select('*')
-        .eq('period', period);
-
-      if (existing && existing.length > 0) {
-        const { error } = await supabase
-          .from('waste_tariffs')
-          .update({
-            total_amount: totalAmount,
-            vat_rate: vatRate,
-            include_in_invoice: includeInvoice
-          })
-          .eq('id', existing[0].id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('waste_tariffs')
-          .insert([{
-            period: period,
-            total_amount: totalAmount,
-            vat_rate: vatRate,
-            include_in_invoice: includeInvoice
-          }]);
-        if (error) throw error;
-      }
-
-      fetchData();
-      showToast('✓ Atkritumu tarifs saglabāts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -326,31 +268,6 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast, fet
     }
   };
 
-  const calculateWasteDistribution = (wasteTariffs, period) => {
-    const wasteTariff = wasteTariffs.find(w => w.period === period);
-    if (!wasteTariff) return { distribution: [], total: 0 };
-
-    const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
-    const totalAmountWithoutVat = parseFloat(wasteTariff.total_amount) || 0;
-    const vatRate = parseFloat(wasteTariff.vat_rate) || 0;
-
-    const distribution = apartments.map(apt => {
-      const declaredPersons = parseInt(apt.declared_persons) || 1;
-      const shareAmount = Math.round((totalAmountWithoutVat / totalDeclaredPersons * declaredPersons) * 100) / 100;
-      const shareVat = Math.round(shareAmount * vatRate / 100 * 100) / 100;
-      const shareTotal = shareAmount + shareVat;
-
-      return {
-        apartment: apt,
-        declaredPersons,
-        shareAmount,
-        shareVat,
-        shareTotal
-      };
-    });
-
-    return { distribution, total: totalDeclaredPersons };
-  };
 
   const editMeterReading = async (meterReadingId, newValue) => {
     try {
@@ -412,15 +329,12 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast, fet
     tariffPeriod, setTariffPeriod,
     waterTariffForm, setWaterTariffForm,
     hotWaterTariffForm, setHotWaterTariffForm,
-    wasteTariffForm, setWasteTariffForm,
     saveWaterTariff,
     saveHotWaterTariff,
-    saveWasteTariff,
     saveWaterMeterReading,
     saveHotWaterMeterReading,
     editMeterReading,
     deleteMeterReading,
-    calculateWasteDistribution,
     getLastReading
   };
 }

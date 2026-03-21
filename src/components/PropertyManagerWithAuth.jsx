@@ -10,11 +10,11 @@ import { ApartmentsTab } from './tabs/ApartmentsTab';
 import { UsersTab } from './tabs/UsersTab';
 import { TariffsTab } from './tabs/TariffsTab';
 import { WaterTab } from './tabs/WaterTab';
+import { WasteTab } from './tabs/WasteTab';
 import { InvoicesTab } from './tabs/InvoicesTab';
 import { SettingsTab } from './tabs/SettingsTab';
 
 // Konstantes un stili
-import { TABS } from './shared/constants';
 import { styles } from './shared/styles';
 
 // Hooks
@@ -23,12 +23,25 @@ import { useApartmentHandlers } from './hooks/useApartmentHandlers';
 import { useUserHandlers } from './hooks/useUserHandlers';
 import { useTariffHandlers } from './hooks/useTariffHandlers';
 import { useWaterHandlers } from './hooks/useWaterHandlers';
+import { useWasteHandlers } from './hooks/useWasteHandlers';
 import { useInvoiceHandlers } from './hooks/useInvoiceHandlers';
 import { useSettings } from './hooks/useSettings';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Definējam tabus lokāli, lai pievienotu Atkritumu sadaļu
+const TABS = [
+  { id: 'overview', label: 'Pārskats' },
+  { id: 'apartments', label: 'Dzīvokļi' },
+  { id: 'users', label: 'Lietotāji' },
+  { id: 'tariffs', label: 'Tarifi' },
+  { id: 'water', label: 'Ūdens' },
+  { id: 'waste', label: 'Atkritumi' },
+  { id: 'invoices', label: 'Rēķini' },
+  { id: 'settings', label: 'Iestatījumi' }
+];
 
 export default function PropertyManager() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -54,6 +67,7 @@ export default function PropertyManager() {
   const userHandlers = useUserHandlers(supabase, fetchData, showToast);
   const tariffHandlers = useTariffHandlers(supabase, fetchData, showToast);
   const waterHandlers = useWaterHandlers(supabase, apartments, fetchData, showToast, fetchMeterReadingsOnly);
+  const wasteHandlers = useWasteHandlers(supabase, apartments, fetchData, showToast);
   const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings, waterHandlers.enabledMeters);
 
   useEffect(() => {
@@ -225,13 +239,18 @@ export default function PropertyManager() {
                 meterReadings={meterReadings}
                 waterTariffs={waterTariffs}
                 hotWaterTariffs={hotWaterTariffs}
-                wasteTariffs={wasteTariffs}
                 uniqueTariffPeriods={uniqueTariffPeriods}
                 tariffPeriod={waterHandlers.tariffPeriod}
                 setTariffPeriod={waterHandlers.setTariffPeriod}
                 {...waterHandlers}
                 settings={settings}
                 updateSetting={updateSetting}
+              />
+            ) : activeTab === 'waste' ? (
+              <WasteTab
+                wasteTariffs={wasteTariffs}
+                uniqueTariffPeriods={uniqueTariffPeriods}
+                {...wasteHandlers}
               />
             ) : activeTab === 'invoices' ? (
               <InvoicesTab
