@@ -650,40 +650,40 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             <div class="amount-total">€${amountWithVat.toFixed(2)}</div>
           </div>
 
-          ${additionalInfo ? `<div style="background: #f5f5f5; padding: 15px; margin: 30px 0; border-radius: 4px; font-size: 12px; line-height: 1.6;">${additionalInfo.replace(/\n/g, '<br>')}</div>` : ''}
+          ${additionalInfo ? `<div style="background: #f5f5f5; padding: 15px; margin: 30px 0; border-radius: 4px; font-size: 12px; line-height: 1.6;">📝 <strong>Papildus Informācija:</strong><br>${additionalInfo.replace(/\n/g, '<br>')}</div>` : ''}
 
-          <div class="payment-info-box">
-            <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px; color: #4b5563;">Maksājuma rekvizīti</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">NOSAUKUMS</div>
-                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${buildingName}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">REĢ. KODS</div>
-                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${buildingCode}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">ADRESE</div>
-                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${buildingAddress}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">BANKA</div>
-                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentBank}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">IBAN</div>
-                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentIban}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">E-PASTS</div>
-                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentEmail}</div>
-              </div>
-              <div>
-                <div style="margin-bottom: 5px; font-size: 11px; color: #6b7280;">TĀLRUNIS</div>
-                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentPhone}</div>
-              </div>
-            </div>
+          <div style="margin-top: 30px;">
+            <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px; color: #4b5563; font-size: 12px;">Maksājuma rekvizīti</div>
+            <table style="width: 100%; border-collapse: collapse; background: #f9fafb; border: 1px solid #e5e7eb;">
+              <tr style="background: #f3f4f6; border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 8px 12px; font-size: 11px; color: #6b7280; font-weight: bold; width: 40%;">NOSAUKUMS</td>
+                <td style="padding: 8px 12px; font-size: 11px; color: #4b5563; font-weight: bold;">${buildingName}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 8px 12px; font-size: 11px; color: #6b7280; font-weight: bold;">REĢISTRĀCIJAS KODS</td>
+                <td style="padding: 8px 12px; font-size: 11px; color: #4b5563; font-weight: bold;">${buildingCode}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 8px 12px; font-size: 11px; color: #6b7280; font-weight: bold;">ADRESE</td>
+                <td style="padding: 8px 12px; font-size: 11px; color: #4b5563; font-weight: bold;">${buildingAddress}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 8px 12px; font-size: 11px; color: #6b7280; font-weight: bold;">BANKA</td>
+                <td style="padding: 8px 12px; font-size: 11px; color: #4b5563; font-weight: bold;">${paymentBank}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 8px 12px; font-size: 11px; color: #6b7280; font-weight: bold;">IBAN</td>
+                <td style="padding: 8px 12px; font-size: 11px; color: #4b5563; font-weight: bold;">${paymentIban}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 8px 12px; font-size: 11px; color: #6b7280; font-weight: bold;">E-PASTS</td>
+                <td style="padding: 8px 12px; font-size: 11px; color: #4b5563; font-weight: bold;">${paymentEmail}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 12px; font-size: 11px; color: #6b7280; font-weight: bold;">TĀLRUNIS</td>
+                <td style="padding: 8px 12px; font-size: 11px; color: #4b5563; font-weight: bold;">${paymentPhone}</td>
+              </tr>
+            </table>
           </div>
         </body>
       </html>
@@ -1533,6 +1533,20 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 marginBottom: 30
               },
 
+              // Papildus informācija
+              ...(settings.additional_invoice_info ? [{
+                text: '📝 Papildus Informācija:',
+                fontSize: 12,
+                bold: true,
+                marginBottom: 8,
+                marginTop: 20
+              },
+              {
+                text: settings.additional_invoice_info,
+                fontSize: 10,
+                marginBottom: 20
+              }] : []),
+
               // Maksājuma rekvizīti
               {
                 text: 'MAKSĀJUMA REKVIZĪTI',
@@ -1543,12 +1557,20 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               {
                 table: {
                   widths: ['30%', '70%'],
-                  body: paymentRows.map(row => [
-                    { text: row[0], bold: true, fontSize: 10 },
-                    { text: row[1], fontSize: 10 }
+                  body: paymentRows.map((row, idx) => [
+                    { text: row[0], bold: true, fontSize: 10, color: '#6b7280', fillColor: '#f3f4f6' },
+                    { text: row[1], fontSize: 10, color: '#4b5563', fillColor: '#f9fafb' }
                   ])
                 },
-                layout: 'noBorders',
+                layout: {
+                  hLineWidth: function() { return 1; },
+                  vLineWidth: function() { return 1; },
+                  hLineColor: function() { return '#e5e7eb'; },
+                  vLineColor: function() { return '#e5e7eb'; },
+                  fillColor: function(i, node) {
+                    return i % 2 === 0 ? '#f3f4f6' : '#f9fafb';
+                  }
+                },
                 marginBottom: 10
               }
             ],
@@ -1886,15 +1908,44 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                   marginBottom: 30
                 },
 
+                // Papildus informācija
+                ...(settings.additional_invoice_info ? [{
+                  text: '📝 Papildus Informācija:',
+                  fontSize: 12,
+                  bold: true,
+                  marginBottom: 8
+                },
+                {
+                  text: settings.additional_invoice_info,
+                  fontSize: 10,
+                  marginBottom: 20
+                }] : []),
+
+                // Maksājuma rekvizīti
+                {
+                  text: 'MAKSĀJUMA REKVIZĪTI',
+                  fontSize: 12,
+                  bold: true,
+                  marginBottom: 10
+                },
                 {
                   table: {
                     widths: ['30%', '70%'],
-                    body: paymentRows.map(row => [
-                      { text: row[0], bold: true, fontSize: 10, color: '#4b5563' },
-                      { text: row[1], fontSize: 10, color: '#5a6c7d' }
+                    body: paymentRows.map((row, idx) => [
+                      { text: row[0], bold: true, fontSize: 10, color: '#6b7280', fillColor: '#f3f4f6' },
+                      { text: row[1], fontSize: 10, color: '#4b5563', fillColor: '#f9fafb' }
                     ])
                   },
-                  layout: 'noBorders'
+                  layout: {
+                    hLineWidth: function() { return 1; },
+                    vLineWidth: function() { return 1; },
+                    hLineColor: function() { return '#e5e7eb'; },
+                    vLineColor: function() { return '#e5e7eb'; },
+                    fillColor: function(i, node) {
+                      return i % 2 === 0 ? '#f3f4f6' : '#f9fafb';
+                    }
+                  },
+                  marginBottom: 10
                 }
               ],
               styles: {
