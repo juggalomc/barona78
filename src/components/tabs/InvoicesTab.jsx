@@ -207,6 +207,12 @@ export function InvoicesTab({
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>📤 Nosūtīšana un lejuplāde</h2>
           <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+            <button onClick={(e) => sendInvoicesByEmail(e, 'period-' + batchMonth)} style={{...styles.btn, background: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
+              📤 Izsūtīt rēķinus e-pastā
+              <span style={{background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px'}}>
+                {invoices.filter(inv => inv.period === batchMonth).length}
+              </span>
+            </button>
             <button onClick={() => downloadMonthAsZip(batchMonth)} style={{...styles.btn, background: '#8b5cf6'}}>📦 ZIP lejuplāde ({invoices.filter(inv => inv.period === batchMonth).length})</button>
             <button onClick={sendAllReminders} style={{...styles.btn, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
               📧 Sūtīt atgādinājumus kavētajiem
@@ -333,9 +339,12 @@ export function InvoicesTab({
                           <button onClick={() => toggleInvoicePaid(invoice.id, invoice.paid)} style={{...styles.btnSmall, padding: '4px 6px', background: invoice.paid ? '#10b981' : '#f59e0b', borderRadius: '3px', color: 'white', fontWeight: '600'}} title={invoice.paid ? 'Neapmaksāts' : 'Apmaksāts'}>
                             {invoice.paid ? '✓' : '○'}
                           </button>
+                          <button onClick={(e) => sendInvoicesByEmail(e, invoice.id)} style={{...styles.btnSmall, padding: '4px 6px', background: '#3b82f6', color: 'white'}} title="Nosūtīt e-pastā (PDF)">
+                            📧
+                          </button>
                           {!invoice.paid && (
                             <button onClick={() => openReminderModal(invoice)} style={{...styles.btnSmall, padding: '4px 6px', background: '#ef4444', color: 'white'}} title="Sūtīt atgādinājumu">
-                              📧
+                              
                             </button>
                           )}
                           <button onClick={() => viewAsHTML(invoice)} style={{...styles.btnSmall, padding: '4px 6px'}} title="Skatīt HTML">👁️</button>
