@@ -1580,311 +1580,312 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       let generatedCount = 0;
 
-      (async () => {
-        for (let i = 0; i < monthInvoices.length; i++) {
+      for (let i = 0; i < monthInvoices.length; i++) {
+        // eslint-disable-next-line no-loop-func
+        (function() {
           const invoice = monthInvoices[i];
           const apt = apartments.find(a => a.id === invoice.apartment_id);
           
-          if (!apt) continue;
+          if (!apt) return;
 
           try {
-          const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
-          const amountWithoutVat = invoice.amount_without_vat || 0;
-          const vatAmount = invoice.vat_amount || 0;
-          const amountWithVat = invoice.amount_with_vat || invoice.amount;
+            const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
+            const amountWithoutVat = invoice.amount_without_vat || 0;
+            const vatAmount = invoice.vat_amount || 0;
+            const amountWithVat = invoice.amount_with_vat || invoice.amount;
 
-          const buildingName = settings.building_name || 'BIEDRĪBA "BARONA 78"';
-          const buildingCode = settings.building_code || '40008325768';
-          const buildingAddress = settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001';
-          const paymentBank = settings.payment_bank || 'Habib Bank';
-          const paymentIban = settings.payment_iban || 'LV62HABA0551064112797';
-          const paymentEmail = settings.payment_email || 'info@barona78.lv';
-          const paymentPhone = settings.payment_phone || '+371 67800000';
+            const buildingName = settings.building_name || 'BIEDRĪBA "BARONA 78"';
+            const buildingCode = settings.building_code || '40008325768';
+            const buildingAddress = settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001';
+            const paymentBank = settings.payment_bank || 'Habib Bank';
+            const paymentIban = settings.payment_iban || 'LV62HABA0551064112797';
+            const paymentEmail = settings.payment_email || 'info@barona78.lv';
+            const paymentPhone = settings.payment_phone || '+371 67800000';
 
-          const tableRows = [];
-          tableRows.push([
-            { text: 'PAKALPOJUMS', bold: true, style: 'tableHeader' },
-            { text: 'DAUDZUMS', bold: true, style: 'tableHeader', alignment: 'center' },
-            { text: 'CENA', bold: true, style: 'tableHeader', alignment: 'right' },
-            { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
-          ]);
-
-          // Pakalpojumi BEZ PVN
-          const rowsWithoutVat = invoiceDetails.filter(d => 
-            (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
-            (d.vat_rate === 0 || d.vat_rate === undefined)
-          );
-          
-          if (rowsWithoutVat.length > 0) {
+            const tableRows = [];
             tableRows.push([
-              { text: 'Pakalpojumi bez PVN', colSpan: 4, style: 'sectionHeader' },
-              {}, {}, {}
+              { text: 'PAKALPOJUMS', bold: true, style: 'tableHeader' },
+              { text: 'DAUDZUMS', bold: true, style: 'tableHeader', alignment: 'center' },
+              { text: 'CENA', bold: true, style: 'tableHeader', alignment: 'right' },
+              { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
             ]);
+
+            // Pakalpojumi BEZ PVN
+            const rowsWithoutVat = invoiceDetails.filter(d => 
+              (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
+              (d.vat_rate === 0 || d.vat_rate === undefined)
+            );
             
-            rowsWithoutVat.forEach(detail => {
-              let quantity = '';
-              let unitPrice = '';
-              if (detail.type === 'water' || detail.type === 'hot_water') {
-                quantity = detail.consumption_m3 + ' m³';
-                unitPrice = '€' + detail.price_per_m3.toFixed(4);
-              } else if (detail.type === 'waste') {
-                quantity = detail.declared_persons + ' pers.';
-                unitPrice = '€' + (detail.amount_without_vat / detail.declared_persons).toFixed(4);
-              } else {
-                quantity = apt.area + ' m²';
-                unitPrice = '€' + (detail.amount_without_vat / apt.area).toFixed(4);
-              }
+            if (rowsWithoutVat.length > 0) {
               tableRows.push([
-                { text: detail.tariff_name, style: 'tableBody' },
-                { text: quantity, alignment: 'center', style: 'tableBody' },
-                { text: unitPrice, alignment: 'right', style: 'tableBody' },
-                { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'tableBody' }
+                { text: 'Pakalpojumi bez PVN', colSpan: 4, style: 'sectionHeader' },
+                {}, {}, {}
+              ]);
+              
+              rowsWithoutVat.forEach(detail => {
+                let quantity = '';
+                let unitPrice = '';
+                if (detail.type === 'water' || detail.type === 'hot_water') {
+                  quantity = detail.consumption_m3 + ' m³';
+                  unitPrice = '€' + detail.price_per_m3.toFixed(4);
+                } else if (detail.type === 'waste') {
+                  quantity = detail.declared_persons + ' pers.';
+                  unitPrice = '€' + (detail.amount_without_vat / detail.declared_persons).toFixed(4);
+                } else {
+                  quantity = apt.area + ' m²';
+                  unitPrice = '€' + (detail.amount_without_vat / apt.area).toFixed(4);
+                }
+                tableRows.push([
+                  { text: detail.tariff_name, style: 'tableBody' },
+                  { text: quantity, alignment: 'center', style: 'tableBody' },
+                  { text: unitPrice, alignment: 'right', style: 'tableBody' },
+                  { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'tableBody' }
+                ]);
+              });
+            }
+
+            // Pakalpojumi AR PVN
+            const rowsWithVat = invoiceDetails.filter(d => 
+              (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
+              d.vat_rate > 0
+            );
+            
+            if (rowsWithVat.length > 0) {
+              tableRows.push([
+                { text: 'Pakalpojumi ar PVN (21%)', colSpan: 4, style: 'sectionHeader' },
+                {}, {}, {}
+              ]);
+              
+              rowsWithVat.forEach(detail => {
+                let quantity = '';
+                let unitPrice = '';
+                if (detail.type === 'water' || detail.type === 'hot_water') {
+                  quantity = detail.consumption_m3 + ' m³';
+                  unitPrice = '€' + detail.price_per_m3.toFixed(4);
+                } else if (detail.type === 'waste') {
+                  quantity = detail.declared_persons + ' pers.';
+                  unitPrice = '€' + (detail.amount_without_vat / detail.declared_persons).toFixed(4);
+                } else {
+                  quantity = apt.area + ' m²';
+                  unitPrice = '€' + (detail.amount_without_vat / apt.area).toFixed(4);
+                }
+                tableRows.push([
+                  { text: detail.tariff_name, style: 'tableBody' },
+                  { text: quantity, alignment: 'center', style: 'tableBody' },
+                  { text: unitPrice, alignment: 'right', style: 'tableBody' },
+                  { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'tableBody' }
+                ]);
+              });
+            }
+
+            // PARĀDS (sarkanā krāsā)
+            const debtRows = invoiceDetails.filter(d => d.type === 'debt');
+            debtRows.forEach(detail => {
+              tableRows.push([
+                { text: detail.tariff_name, style: 'debt', bold: true },
+                { text: '' },
+                { text: '' },
+                { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'debt', bold: true }
               ]);
             });
-          }
 
-          // Pakalpojumi AR PVN
-          const rowsWithVat = invoiceDetails.filter(d => 
-            (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
-            d.vat_rate > 0
-          );
-          
-          if (rowsWithVat.length > 0) {
-            tableRows.push([
-              { text: 'Pakalpojumi ar PVN (21%)', colSpan: 4, style: 'sectionHeader' },
-              {}, {}, {}
-            ]);
-            
-            rowsWithVat.forEach(detail => {
-              let quantity = '';
-              let unitPrice = '';
-              if (detail.type === 'water' || detail.type === 'hot_water') {
-                quantity = detail.consumption_m3 + ' m³';
-                unitPrice = '€' + detail.price_per_m3.toFixed(4);
-              } else if (detail.type === 'waste') {
-                quantity = detail.declared_persons + ' pers.';
-                unitPrice = '€' + (detail.amount_without_vat / detail.declared_persons).toFixed(4);
-              } else {
-                quantity = apt.area + ' m²';
-                unitPrice = '€' + (detail.amount_without_vat / apt.area).toFixed(4);
-              }
+            // PĀRMAKSA (zaļā krāsā)
+            const overpaymentRows = invoiceDetails.filter(d => d.type === 'overpayment');
+            overpaymentRows.forEach(detail => {
               tableRows.push([
-                { text: detail.tariff_name, style: 'tableBody' },
-                { text: quantity, alignment: 'center', style: 'tableBody' },
-                { text: unitPrice, alignment: 'right', style: 'tableBody' },
-                { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'tableBody' }
+                { text: detail.tariff_name, style: 'overpayment', bold: true },
+                { text: '' },
+                { text: '' },
+                { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'overpayment', bold: true }
               ]);
             });
-          }
 
-          // PARĀDS (sarkanā krāsā)
-          const debtRows = invoiceDetails.filter(d => d.type === 'debt');
-          debtRows.forEach(detail => {
-            tableRows.push([
-              { text: detail.tariff_name, style: 'debt', bold: true },
-              { text: '' },
-              { text: '' },
-              { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'debt', bold: true }
-            ]);
-          });
+            const paymentRows = [
+              ['NOSAUKUMS:', buildingName],
+              ['REĢISTRĀCIJAS KODS:', buildingCode],
+              ['ADRESE:', buildingAddress],
+              ['BANKA:', paymentBank],
+              ['IBAN:', paymentIban],
+              ['E-PASTS:', paymentEmail],
+              ['TĀLRUNIS:', paymentPhone]
+            ];
 
-          // PĀRMAKSA (zaļā krāsā)
-          const overpaymentRows = invoiceDetails.filter(d => d.type === 'overpayment');
-          overpaymentRows.forEach(detail => {
-            tableRows.push([
-              { text: detail.tariff_name, style: 'overpayment', bold: true },
-              { text: '' },
-              { text: '' },
-              { text: '€' + detail.amount_without_vat.toFixed(2), alignment: 'right', style: 'overpayment', bold: true }
-            ]);
-          });
-
-          const paymentRows = [
-            ['NOSAUKUMS:', buildingName],
-            ['REĢISTRĀCIJAS KODS:', buildingCode],
-            ['ADRESE:', buildingAddress],
-            ['BANKA:', paymentBank],
-            ['IBAN:', paymentIban],
-            ['E-PASTS:', paymentEmail],
-            ['TĀLRUNIS:', paymentPhone]
-          ];
-
-          const docDefinition = {
-            pageSize: 'A4',
-            pageMargins: [15, 15, 15, 15],
-            content: [
-              {
-                columns: [
-                  { text: 'RĒĶINS', fontSize: 32, bold: true },
-                  {
-                    text: buildingName + '\n' + buildingCode + '\n' + buildingAddress,
-                    fontSize: 10,
-                    alignment: 'right'
-                  }
-                ],
-                marginBottom: 20
-              },
-
-              {
-                columns: [
-                  {
-                    width: '50%',
-                    text: [
-                      { text: 'Rēķina numurs:\n', bold: true },
-                      invoice.invoice_number + '\n\n',
-                      { text: 'Periods:\n', bold: true },
-                      invoice.period + '\n\n',
-                      { text: 'Termiņš:\n', bold: true },
-                      new Date(invoice.due_date).toLocaleDateString('lv-LV')
-                    ],
-                    fontSize: 11
-                  }
-                ],
-                marginBottom: 20
-              },
-
-              {
-                text: 'SAŅĒMĒJS',
-                fontSize: 12,
-                bold: true,
-                marginBottom: 8
-              },
-              {
-                text: 'Dzīvoklis Nr. ' + apt.number + '\n' +
-                      (apt.owner_name ? 'Vārds: ' + apt.owner_name + '\n' : '') +
-                      (apt.owner_surname ? 'Uzvārds: ' + apt.owner_surname + '\n' : '') +
-                      (apt.email ? 'E-pasts: ' + apt.email + '\n' : '') +
-                      (apt.declared_persons ? 'Deklarēto personu skaits: ' + apt.declared_persons + '\n' : '') +
-                      (apt.registration_number ? 'Reģistrācijas numurs: ' + apt.registration_number + '\n' : '') +
-                      (apt.apartment_address ? 'Adrese: ' + apt.apartment_address + '\n' : '') +
-                      'Platība: ' + apt.area + ' m²',
-                fontSize: 10,
-                marginBottom: 20
-              },
-
-              {
-                table: {
-                  headerRows: 1,
-                  widths: ['*', 90, 80, 80],
-                  body: tableRows
+            const docDefinition = {
+              pageSize: 'A4',
+              pageMargins: [15, 15, 15, 15],
+              content: [
+                {
+                  columns: [
+                    { text: 'RĒĶINS', fontSize: 32, bold: true },
+                    {
+                      text: buildingName + '\n' + buildingCode + '\n' + buildingAddress,
+                      fontSize: 10,
+                      alignment: 'right'
+                    }
+                  ],
+                  marginBottom: 20
                 },
-                layout: {
-                  hLineWidth: function() { return 0.5; },
-                  vLineWidth: function() { return 0.5; },
-                  hLineColor: function() { return '#cccccc'; },
-                  vLineColor: function() { return '#cccccc'; }
-                },
-                marginBottom: 15
-              },
 
-              {
-                alignment: 'right',
-                columns: [
-                  { width: '70%', text: '' },
-                  {
-                    width: '30%',
-                    table: {
-                      widths: ['*', '*'],
-                      body: [
-                        [
-                          { text: 'Summa bez PVN:', bold: true },
-                          { text: '€' + amountWithoutVat.toFixed(2), alignment: 'right' }
-                        ],
-                        ...(vatAmount > 0 ? [[
-                          { text: 'PVN:', bold: true },
-                          { text: '€' + vatAmount.toFixed(2), alignment: 'right' }
-                        ]] : []),
-                        [
-                          { text: 'KOPĀ:', fontSize: 14, bold: true, color: '#003399' },
-                          { text: '€' + amountWithVat.toFixed(2), fontSize: 14, bold: true, color: '#003399', alignment: 'right' }
+                {
+                  columns: [
+                    {
+                      width: '50%',
+                      text: [
+                        { text: 'Rēķina numurs:\n', bold: true },
+                        invoice.invoice_number + '\n\n',
+                        { text: 'Periods:\n', bold: true },
+                        invoice.period + '\n\n',
+                        { text: 'Termiņš:\n', bold: true },
+                        new Date(invoice.due_date).toLocaleDateString('lv-LV')
+                      ],
+                      fontSize: 11
+                    }
+                  ],
+                  marginBottom: 20
+                },
+
+                {
+                  text: 'SAŅĒMĒJS',
+                  fontSize: 12,
+                  bold: true,
+                  marginBottom: 8
+                },
+                {
+                  text: 'Dzīvoklis Nr. ' + apt.number + '\n' +
+                        (apt.owner_name ? 'Vārds: ' + apt.owner_name + '\n' : '') +
+                        (apt.owner_surname ? 'Uzvārds: ' + apt.owner_surname + '\n' : '') +
+                        (apt.email ? 'E-pasts: ' + apt.email + '\n' : '') +
+                        (apt.declared_persons ? 'Deklarēto personu skaits: ' + apt.declared_persons + '\n' : '') +
+                        (apt.registration_number ? 'Reģistrācijas numurs: ' + apt.registration_number + '\n' : '') +
+                        (apt.apartment_address ? 'Adrese: ' + apt.apartment_address + '\n' : '') +
+                        'Platība: ' + apt.area + ' m²',
+                  fontSize: 10,
+                  marginBottom: 20
+                },
+
+                {
+                  table: {
+                    headerRows: 1,
+                    widths: ['*', 90, 80, 80],
+                    body: tableRows
+                  },
+                  layout: {
+                    hLineWidth: function() { return 0.5; },
+                    vLineWidth: function() { return 0.5; },
+                    hLineColor: function() { return '#cccccc'; },
+                    vLineColor: function() { return '#cccccc'; }
+                  },
+                  marginBottom: 15
+                },
+
+                {
+                  alignment: 'right',
+                  columns: [
+                    { width: '70%', text: '' },
+                    {
+                      width: '30%',
+                      table: {
+                        widths: ['*', '*'],
+                        body: [
+                          [
+                            { text: 'Summa bez PVN:', bold: true },
+                            { text: '€' + amountWithoutVat.toFixed(2), alignment: 'right' }
+                          ],
+                          ...(vatAmount > 0 ? [[
+                            { text: 'PVN:', bold: true },
+                            { text: '€' + vatAmount.toFixed(2), alignment: 'right' }
+                          ]] : []),
+                          [
+                            { text: 'KOPĀ:', fontSize: 14, bold: true, color: '#003399' },
+                            { text: '€' + amountWithVat.toFixed(2), fontSize: 14, bold: true, color: '#003399', alignment: 'right' }
+                          ]
                         ]
-                      ]
-                    },
-                    layout: 'noBorders'
-                  }
-                ],
-                marginBottom: 30
-              },
-
-              {
-                table: {
-                  widths: ['30%', '70%'],
-                  body: paymentRows.map(row => [
-                    { text: row[0], bold: true, fontSize: 10, color: '#4b5563' },
-                    { text: row[1], fontSize: 10, color: '#5a6c7d' }
-                  ])
+                      },
+                      layout: 'noBorders'
+                    }
+                  ],
+                  marginBottom: 30
                 },
-                layout: 'noBorders'
-              }
-            ],
-            styles: {
-              tableHeader: {
-                fontSize: 10,
-                color: '#000000',
-                fillColor: '#f5f5f5'
-              },
-              sectionHeader: {
-                fontSize: 11,
-                bold: true,
-                color: '#333',
-                fillColor: '#f5f5f5'
-              },
-              tableBody: {
-                fontSize: 10
-              },
-              debt: {
-                color: '#991b1b'
-              },
-              overpayment: {
-                color: '#166534'
-              }
-            }
-          };
 
-          const pdfDoc = window.pdfMake.createPdf(docDefinition);
-          
-          pdfDoc.getBase64((base64) => {
-            const binaryString = atob(base64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-            
-            const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
-            zip.file(`${safeFileName}.pdf`, blob);
-            
-            generatedCount++;
-            showToast(`📄 Ģenerēts ${generatedCount}/${monthInvoices.length}`, 'info');
-            
-            if (generatedCount === monthInvoices.length) {
-              setTimeout(() => {
-                zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }).then(zipContent => {
-                  const zipUrl = URL.createObjectURL(zipContent);
-                  const link = document.createElement('a');
-                  link.href = zipUrl;
-                  link.download = `recini_${period}.zip`;
-                  document.body.appendChild(link);
-                  link.click();
-                  
-                  setTimeout(() => {
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(zipUrl);
-                    showToast(`✓ ZIP lejuplādes ar ${generatedCount} PDF rēķiniem`);
-                  }, 200);
-                }).catch(err => {
-                  console.error('ZIP ģenerēšanas kļūda:', err);
-                  showToast('Kļūda ZIP ģenerēšanā', 'error');
-                });
-              }, 500);
-            }
-          });
+                {
+                  table: {
+                    widths: ['30%', '70%'],
+                    body: paymentRows.map(row => [
+                      { text: row[0], bold: true, fontSize: 10, color: '#4b5563' },
+                      { text: row[1], fontSize: 10, color: '#5a6c7d' }
+                    ])
+                  },
+                  layout: 'noBorders'
+                }
+              ],
+              styles: {
+                tableHeader: {
+                  fontSize: 10,
+                  color: '#000000',
+                  fillColor: '#f5f5f5'
+                },
+                sectionHeader: {
+                  fontSize: 11,
+                  bold: true,
+                  color: '#333',
+                  fillColor: '#f5f5f5'
+                },
+                tableBody: {
+                  fontSize: 10
+                },
+                debt: {
+                  color: '#991b1b'
+                },
+                overpayment: {
+                  color: '#166534'
+                }
+              }
+            };
 
-        } catch (err) {
-          console.error(`Kļūda rēķinam ${invoice.invoice_number}:`, err);
-        }
+            const pdfDoc = window.pdfMake.createPdf(docDefinition);
+            
+            pdfDoc.getBase64((base64) => {
+              const binaryString = atob(base64);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let j = 0; j < binaryString.length; j++) {
+                bytes[j] = binaryString.charCodeAt(j);
+              }
+              const blob = new Blob([bytes], { type: 'application/pdf' });
+              
+              const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
+              zip.file(`${safeFileName}.pdf`, blob);
+              
+              generatedCount++;
+              showToast(`📄 Ģenerēts ${generatedCount}/${monthInvoices.length}`, 'info');
+              
+              if (generatedCount === monthInvoices.length) {
+                setTimeout(() => {
+                  zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }).then(zipContent => {
+                    const zipUrl = URL.createObjectURL(zipContent);
+                    const link = document.createElement('a');
+                    link.href = zipUrl;
+                    link.download = `recini_${period}.zip`;
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    setTimeout(() => {
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(zipUrl);
+                      showToast(`✓ ZIP lejuplādes ar ${generatedCount} PDF rēķiniem`);
+                    }, 200);
+                  }).catch(err => {
+                    console.error('ZIP ģenerēšanas kļūda:', err);
+                    showToast('Kļūda ZIP ģenerēšanā', 'error');
+                  });
+                }, 500);
+              }
+            });
+
+          } catch (err) {
+            console.error(`Kļūda rēķinam ${invoice.invoice_number}:`, err);
+          }
+        })();
       }
-      })();
       
     } catch (error) {
       console.error('ZIP lejuplādes kļūda:', error);
