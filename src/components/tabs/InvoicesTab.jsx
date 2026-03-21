@@ -76,7 +76,8 @@ export function InvoicesTab({
   regenerateInvoices,
   updateOverpayment,
   deleteOverpayment,
-  downloadMonthAsZip
+  downloadMonthAsZip,
+  viewAsHTML
 }) {
   const [selectedApartmentForGen, setSelectedApartmentForGen] = React.useState('');
   const [selectedInvoices, setSelectedInvoices] = React.useState(new Set());
@@ -296,6 +297,7 @@ export function InvoicesTab({
                           <button onClick={() => toggleInvoicePaid(invoice.id, invoice.paid)} style={{...styles.btnSmall, padding: '4px 6px', background: invoice.paid ? '#10b981' : '#f59e0b', borderRadius: '3px', color: 'white', fontWeight: '600'}} title={invoice.paid ? 'Neapmaksāts' : 'Apmaksāts'}>
                             {invoice.paid ? '✓' : '○'}
                           </button>
+                          <button onClick={() => viewAsHTML(invoice)} style={{...styles.btnSmall, padding: '4px 6px'}} title="Skatīt HTML">👁️</button>
                           <button onClick={() => downloadPDF(invoice)} style={{...styles.btnSmall, padding: '4px 6px'}} title="PDF">📥</button>
                           <button onClick={() => regenerateInvoice(invoice)} style={{...styles.btnSmall, padding: '4px 6px'}} title="Reģenerēt">🔄</button>
                           <button onClick={() => deleteInvoice(invoice.id)} style={{...styles.btnSmall, padding: '4px 6px'}} title="Dzēst">🗑️</button>

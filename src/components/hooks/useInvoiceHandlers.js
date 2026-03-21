@@ -2105,6 +2105,18 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
   };
 
+  const viewAsHTML = (invoice) => {
+    const apt = apartments.find(a => a.id === invoice.apartment_id);
+    if (!apt) {
+      showToast('Dzīvoklis nav atrasts', 'error');
+      return;
+    }
+    const htmlContent = generateInvoicePdfHtml(invoice, apt);
+    const newWindow = window.open('', '_blank');
+    newWindow.document.write(htmlContent);
+    newWindow.document.close();
+  };
+
   return {
     invoiceMonth, setInvoiceMonth,
     invoiceFromDate, setInvoiceFromDate,
@@ -2128,6 +2140,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     deleteInvoices,
     downloadPDF,
     exportInvoicesToCSV,
-    downloadMonthAsZip
+    downloadMonthAsZip,
+    viewAsHTML
   };
 }
