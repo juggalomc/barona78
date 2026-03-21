@@ -31,7 +31,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       : `${currentYear}-${String(currentMonth - 1).padStart(2, '0')}`;
     
     try {
-      // Meklē iepriekšējā mēneša rēķinu šim dzīvoklim
       const previousInvoice = invoices.find(inv => 
         inv.apartment_id === apartmentId && 
         inv.period === previousMonth
@@ -42,7 +41,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         return 0;
       }
 
-      // Pārmaksa eksistē, ja rēķina gala summa ir negatīva (vērtības < 0)
       const finalAmount = parseFloat(previousInvoice.amount_with_vat) || 0;
       if (finalAmount < 0) {
         const overpay = Math.abs(finalAmount);
@@ -92,7 +90,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         return;
       }
 
-      // Parsē esošos rēķina detaļus
       let invoiceDetails = [];
       if (invoice.invoice_details) {
         try {
@@ -102,10 +99,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
       }
 
-      // Noņem vecāko pārmaksu detaļu, ja tāda pastāv
       invoiceDetails = invoiceDetails.filter(d => d.type !== 'overpayment');
 
-      // Pievieno jauno pārmaksu detaļu
       invoiceDetails.push({
         tariff_id: null,
         tariff_name: '💰 Pārmaksa',
@@ -115,7 +110,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         type: 'overpayment'
       });
 
-      // Pārrēķina kopējo summu
       let newAmountWithoutVat = 0;
       let newVatAmount = 0;
       
@@ -130,7 +124,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       const newAmountWithVat = Math.round((newAmountWithoutVat + newVatAmount) * 100) / 100;
 
-      // Atjaunina rēķinu
       const { error } = await supabase
         .from('invoices')
         .update({
@@ -160,7 +153,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         return;
       }
 
-      // Parsē esošos rēķina detaļus
       let invoiceDetails = [];
       if (invoice.invoice_details) {
         try {
@@ -170,19 +162,16 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
       }
 
-      // Noņem vecāko pārmaksu detaļu
       invoiceDetails = invoiceDetails.filter(d => d.type !== 'overpayment');
 
       let updatedAmountWithoutVat = 0;
       let updatedVatAmount = 0;
 
-      // Pārrēķina summu bez pārmaksas
       invoiceDetails.forEach(detail => {
         updatedAmountWithoutVat += parseFloat(detail.amount_without_vat) || 0;
         updatedVatAmount += parseFloat(detail.vat_amount) || 0;
       });
 
-      // Pievieno jauno pārmaksu detaļu
       if (newAmount > 0) {
         invoiceDetails.push({
           tariff_id: null,
@@ -197,7 +186,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       const updatedAmountWithVat = Math.round((updatedAmountWithoutVat + updatedVatAmount) * 100) / 100;
 
-      // Atjaunina rēķinu
       const { error } = await supabase
         .from('invoices')
         .update({
@@ -273,12 +261,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         });
       }
 
-      // Aukstais ūdens
+      // ✅ AUKSTAIS ŪDENS - ATSEVIŠĶI
       const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === currentInvoiceMonth);
       const waterTariff = waterTariffs.find(w => w.period === currentInvoiceMonth);
 
       if (waterReading && waterTariff && waterTariff.include_in_invoice !== false) {
-        // Calculate previous month period
         const [year, month] = currentInvoiceMonth.split('-');
         let prevMonth = parseInt(month) - 1;
         let prevYear = parseInt(year);
@@ -288,7 +275,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
         const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
         
-        // Get current and previous readings
         const currentReading = parseFloat(waterReading.reading_value) || 0;
         const previousWaterReading = meterReadings.find(mr => 
           mr.apartment_id === apt.id && 
@@ -297,7 +283,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         );
         const previousReadingValue = previousWaterReading ? parseFloat(previousWaterReading.reading_value) || 0 : 0;
         
-        // Calculate consumption as meter difference (current - previous)
         const waterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
         const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
         const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
@@ -309,7 +294,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
         invoiceDetails.push({
           tariff_id: waterTariff.id,
-          tariff_name: `Aukstais ūdens (${waterConsumptionM3} m³)`,
+          tariff_name: `❄️ Aukstais ūdens (${waterConsumptionM3} m³)`,
           consumption_m3: waterConsumptionM3,
           price_per_m3: waterPricePerM3,
           amount_without_vat: waterAmountWithoutVat,
@@ -319,12 +304,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         });
       }
 
-      // Siltais ūdens
+      // ✅ SILTAIS ŪDENS - ATSEVIŠĶI
       const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === currentInvoiceMonth);
       const hotWaterTariff = hotWaterTariffs.find(w => w.period === currentInvoiceMonth);
 
       if (hotWaterReading && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
-        // Calculate previous month period
         const [year, month] = currentInvoiceMonth.split('-');
         let prevMonth = parseInt(month) - 1;
         let prevYear = parseInt(year);
@@ -334,7 +318,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
         const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
         
-        // Get current and previous readings
         const currentReading = parseFloat(hotWaterReading.reading_value) || 0;
         const previousHotWaterReading = meterReadings.find(mr => 
           mr.apartment_id === apt.id && 
@@ -343,7 +326,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         );
         const previousReadingValue = previousHotWaterReading ? parseFloat(previousHotWaterReading.reading_value) || 0 : 0;
         
-        // Calculate consumption as meter difference (current - previous)
         const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
         const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
         const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
@@ -355,7 +337,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
         invoiceDetails.push({
           tariff_id: hotWaterTariff.id,
-          tariff_name: `Siltais ūdens (${hotWaterConsumptionM3} m³)`,
+          tariff_name: `🔥 Siltais ūdens (${hotWaterConsumptionM3} m³)`,
           consumption_m3: hotWaterConsumptionM3,
           price_per_m3: hotWaterPricePerM3,
           amount_without_vat: hotWaterAmountWithoutVat,
@@ -476,7 +458,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     try {
-      // Izmantojam Gmail API
       const accessToken = localStorage.getItem('gmail_access_token');
       
       if (!accessToken) {
@@ -491,10 +472,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           continue;
         }
 
-        // Ģenerēt PDF HTML
         const pdfHtml = generateInvoicePdfHtml(invoice, apt);
         
-        // Nosūtīt pa e-pastu
         await sendEmailViaGmail(
           apt.email,
           `Rēķins ${invoice.invoice_number}`,
@@ -532,9 +511,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       .filter(d => (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && (d.vat_rate === 0 || d.vat_rate === undefined))
       .map(detail => {
         if (detail.type === 'water') {
-          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+          return `<tr><td>❄️ ${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else if (detail.type === 'hot_water') {
-          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+          return `<tr><td>🔥 ${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else if (detail.type === 'waste') {
           return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.declared_persons} pers.</td><td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else {
@@ -547,9 +526,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       .filter(d => (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && d.vat_rate > 0)
       .map(detail => {
         if (detail.type === 'water') {
-          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+          return `<tr><td>❄️ ${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else if (detail.type === 'hot_water') {
-          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+          return `<tr><td>🔥 ${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else if (detail.type === 'waste') {
           return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.declared_persons} pers.</td><td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else {
@@ -763,11 +742,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           });
         }
 
+        // ✅ AUKSTAIS ŪDENS - ATSEVIŠĶI
         const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === currentInvoiceMonth);
         const waterTariff = waterTariffs.find(w => w.period === currentInvoiceMonth);
 
         if (waterReading && waterTariff && enabledMeters.water && waterTariff.include_in_invoice !== false) {
-          // Calculate previous month period
           const [year, month] = currentInvoiceMonth.split('-');
           let prevMonth = parseInt(month) - 1;
           let prevYear = parseInt(year);
@@ -777,7 +756,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           }
           const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
           
-          // Get current and previous readings
           const currentReading = parseFloat(waterReading.reading_value) || 0;
           const previousWaterReading = meterReadings.find(mr => 
             mr.apartment_id === apt.id && 
@@ -786,7 +764,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           );
           const previousReadingValue = previousWaterReading ? parseFloat(previousWaterReading.reading_value) || 0 : 0;
           
-          // Calculate consumption as meter difference (current - previous)
           const waterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
           const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
           const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
@@ -798,7 +775,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           invoiceDetails.push({
             tariff_id: waterTariff.id,
-            tariff_name: `Aukstais ūdens (${waterConsumptionM3} m³)`,
+            tariff_name: `❄️ Aukstais ūdens (${waterConsumptionM3} m³)`,
             consumption_m3: waterConsumptionM3,
             price_per_m3: waterPricePerM3,
             amount_without_vat: waterAmountWithoutVat,
@@ -808,11 +785,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           });
         }
 
+        // ✅ SILTAIS ŪDENS - ATSEVIŠĶI
         const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === currentInvoiceMonth);
         const hotWaterTariff = hotWaterTariffs.find(w => w.period === currentInvoiceMonth);
 
         if (hotWaterReading && hotWaterTariff && enabledMeters.hot_water && hotWaterTariff.include_in_invoice !== false) {
-          // Calculate previous month period
           const [year, month] = currentInvoiceMonth.split('-');
           let prevMonth = parseInt(month) - 1;
           let prevYear = parseInt(year);
@@ -822,7 +799,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           }
           const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
           
-          // Get current and previous readings
           const currentReading = parseFloat(hotWaterReading.reading_value) || 0;
           const previousHotWaterReading = meterReadings.find(mr => 
             mr.apartment_id === apt.id && 
@@ -831,7 +807,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           );
           const previousReadingValue = previousHotWaterReading ? parseFloat(previousHotWaterReading.reading_value) || 0 : 0;
           
-          // Calculate consumption as meter difference (current - previous)
           const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
           const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
           const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
@@ -843,7 +818,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           invoiceDetails.push({
             tariff_id: hotWaterTariff.id,
-            tariff_name: `Siltais ūdens (${hotWaterConsumptionM3} m³)`,
+            tariff_name: `🔥 Siltais ūdens (${hotWaterConsumptionM3} m³)`,
             consumption_m3: hotWaterConsumptionM3,
             price_per_m3: hotWaterPricePerM3,
             amount_without_vat: hotWaterAmountWithoutVat,
@@ -987,11 +962,29 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         });
       }
 
+      // ✅ AUKSTAIS ŪDENS - ATSEVIŠĶI
       const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === invoice.period);
       const waterTariff = waterTariffs.find(w => w.period === invoice.period);
 
       if (waterReading && waterTariff && waterTariff.include_in_invoice !== false) {
-        const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
+        const [year, month] = invoice.period.split('-');
+        let prevMonth = parseInt(month) - 1;
+        let prevYear = parseInt(year);
+        if (prevMonth === 0) {
+          prevMonth = 12;
+          prevYear -= 1;
+        }
+        const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+        
+        const currentReading = parseFloat(waterReading.reading_value) || 0;
+        const previousWaterReading = meterReadings.find(mr => 
+          mr.apartment_id === apt.id && 
+          mr.meter_type === 'water' &&
+          mr.period === previousPeriod
+        );
+        const previousReadingValue = previousWaterReading ? parseFloat(previousWaterReading.reading_value) || 0 : 0;
+        
+        const waterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
         const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
         const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
         const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
@@ -1002,13 +995,56 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
         invoiceDetails.push({
           tariff_id: waterTariff.id,
-          tariff_name: `Ūdens (${waterConsumptionM3} m³)`,
+          tariff_name: `❄️ Aukstais ūdens (${waterConsumptionM3} m³)`,
           consumption_m3: waterConsumptionM3,
           price_per_m3: waterPricePerM3,
           amount_without_vat: waterAmountWithoutVat,
           vat_rate: waterVatRate,
           vat_amount: waterVatAmount,
           type: 'water'
+        });
+      }
+
+      // ✅ SILTAIS ŪDENS - ATSEVIŠĶI
+      const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === invoice.period);
+      const hotWaterTariff = hotWaterTariffs.find(w => w.period === invoice.period);
+
+      if (hotWaterReading && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
+        const [year, month] = invoice.period.split('-');
+        let prevMonth = parseInt(month) - 1;
+        let prevYear = parseInt(year);
+        if (prevMonth === 0) {
+          prevMonth = 12;
+          prevYear -= 1;
+        }
+        const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+        
+        const currentReading = parseFloat(hotWaterReading.reading_value) || 0;
+        const previousHotWaterReading = meterReadings.find(mr => 
+          mr.apartment_id === apt.id && 
+          mr.meter_type === 'hot_water' &&
+          mr.period === previousPeriod
+        );
+        const previousReadingValue = previousHotWaterReading ? parseFloat(previousHotWaterReading.reading_value) || 0 : 0;
+        
+        const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
+        const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
+        const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
+        const hotWaterVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+        const hotWaterVatAmount = Math.round(hotWaterAmountWithoutVat * hotWaterVatRate / 100 * 100) / 100;
+
+        totalAmountWithoutVat += hotWaterAmountWithoutVat;
+        totalVatAmount += hotWaterVatAmount;
+
+        invoiceDetails.push({
+          tariff_id: hotWaterTariff.id,
+          tariff_name: `🔥 Siltais ūdens (${hotWaterConsumptionM3} m³)`,
+          consumption_m3: hotWaterConsumptionM3,
+          price_per_m3: hotWaterPricePerM3,
+          amount_without_vat: hotWaterAmountWithoutVat,
+          vat_rate: hotWaterVatRate,
+          vat_amount: hotWaterVatAmount,
+          type: 'hot_water'
         });
       }
 
@@ -1148,7 +1184,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           continue;
         }
 
-        // Izdzēst veco rēķinu
         await supabase.from('invoices').delete().eq('id', invoice.id);
 
         let totalAmountWithoutVat = 0;
@@ -1156,7 +1191,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         let invoiceDetails = [];
         const [year, month] = invoice.period.split('-');
 
-        // Tarifi
         for (const tariff of periodTariffs) {
           const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
           const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
@@ -1176,12 +1210,29 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           });
         }
 
-        // Ūdens
+        // ✅ AUKSTAIS ŪDENS - ATSEVIŠĶI
         const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === invoice.period);
         const waterTariff = waterTariffs.find(w => w.period === invoice.period);
 
         if (waterReading && waterTariff && waterTariff.include_in_invoice !== false) {
-          const waterConsumptionM3 = parseFloat(waterReading.reading_value) || 0;
+          const [year, month] = invoice.period.split('-');
+          let prevMonth = parseInt(month) - 1;
+          let prevYear = parseInt(year);
+          if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear -= 1;
+          }
+          const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+          
+          const currentReading = parseFloat(waterReading.reading_value) || 0;
+          const previousWaterReading = meterReadings.find(mr => 
+            mr.apartment_id === apt.id && 
+            mr.meter_type === 'water' &&
+            mr.period === previousPeriod
+          );
+          const previousReadingValue = previousWaterReading ? parseFloat(previousWaterReading.reading_value) || 0 : 0;
+          
+          const waterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
           const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
           const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
           const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
@@ -1192,7 +1243,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           invoiceDetails.push({
             tariff_id: waterTariff.id,
-            tariff_name: `Ūdens (${waterConsumptionM3} m³)`,
+            tariff_name: `❄️ Aukstais ūdens (${waterConsumptionM3} m³)`,
             consumption_m3: waterConsumptionM3,
             price_per_m3: waterPricePerM3,
             amount_without_vat: waterAmountWithoutVat,
@@ -1202,7 +1253,49 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           });
         }
 
-        // Atkritumi
+        // ✅ SILTAIS ŪDENS - ATSEVIŠĶI
+        const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === invoice.period);
+        const hotWaterTariff = hotWaterTariffs.find(w => w.period === invoice.period);
+
+        if (hotWaterReading && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
+          const [year, month] = invoice.period.split('-');
+          let prevMonth = parseInt(month) - 1;
+          let prevYear = parseInt(year);
+          if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear -= 1;
+          }
+          const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+          
+          const currentReading = parseFloat(hotWaterReading.reading_value) || 0;
+          const previousHotWaterReading = meterReadings.find(mr => 
+            mr.apartment_id === apt.id && 
+            mr.meter_type === 'hot_water' &&
+            mr.period === previousPeriod
+          );
+          const previousReadingValue = previousHotWaterReading ? parseFloat(previousHotWaterReading.reading_value) || 0 : 0;
+          
+          const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
+          const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
+          const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
+          const hotWaterVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+          const hotWaterVatAmount = Math.round(hotWaterAmountWithoutVat * hotWaterVatRate / 100 * 100) / 100;
+
+          totalAmountWithoutVat += hotWaterAmountWithoutVat;
+          totalVatAmount += hotWaterVatAmount;
+
+          invoiceDetails.push({
+            tariff_id: hotWaterTariff.id,
+            tariff_name: `🔥 Siltais ūdens (${hotWaterConsumptionM3} m³)`,
+            consumption_m3: hotWaterConsumptionM3,
+            price_per_m3: hotWaterPricePerM3,
+            amount_without_vat: hotWaterAmountWithoutVat,
+            vat_rate: hotWaterVatRate,
+            vat_amount: hotWaterVatAmount,
+            type: 'hot_water'
+          });
+        }
+
         const wasteTariff = wasteTariffs.find(w => w.period === invoice.period);
         if (wasteTariff && wasteTariff.include_in_invoice !== false) {
           const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 1), 0);
@@ -1228,7 +1321,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           }
         }
 
-        // Parāds
         const previousDebt = calculatePreviousDebt(apt.id, invoice.period);
         if (previousDebt > 0) {
           totalAmountWithoutVat += previousDebt;
@@ -1242,7 +1334,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           });
         }
 
-        // Pārmaksa
         const overpayment = await calculateOverpayment(apt.id, invoice.period);
         if (overpayment > 0) {
           totalAmountWithoutVat -= overpayment;
@@ -1298,7 +1389,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     try {
-      // Ielādēt pdfmake bibliotēku
       const loadScript = (src) => new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = src;
@@ -1319,7 +1409,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const vatAmount = invoice.vat_amount || 0;
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
 
-          // Veidot tabulas rindas pakalpojumiem
           const tableRows = [];
           tableRows.push([
             { text: 'PAKALPOJUMS', bold: true, style: 'tableHeader' },
@@ -1328,7 +1417,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
           ]);
 
-          // Pakalpojumi BEZ PVN
           const rowsWithoutVat = invoiceDetails.filter(d => 
             (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
             (d.vat_rate === 0 || d.vat_rate === undefined)
@@ -1343,7 +1431,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             rowsWithoutVat.forEach(detail => {
               let quantity = '';
               let unitPrice = '';
-              if (detail.type === 'water' || detail.type === 'hot_water') {
+              if (detail.type === 'water') {
+                quantity = detail.consumption_m3 + ' m³';
+                unitPrice = '€' + detail.price_per_m3.toFixed(4);
+              } else if (detail.type === 'hot_water') {
                 quantity = detail.consumption_m3 + ' m³';
                 unitPrice = '€' + detail.price_per_m3.toFixed(4);
               } else if (detail.type === 'waste') {
@@ -1362,7 +1453,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             });
           }
 
-          // Pakalpojumi AR PVN
           const rowsWithVat = invoiceDetails.filter(d => 
             (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
             d.vat_rate > 0
@@ -1377,7 +1467,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             rowsWithVat.forEach(detail => {
               let quantity = '';
               let unitPrice = '';
-              if (detail.type === 'water' || detail.type === 'hot_water') {
+              if (detail.type === 'water') {
+                quantity = detail.consumption_m3 + ' m³';
+                unitPrice = '€' + detail.price_per_m3.toFixed(4);
+              } else if (detail.type === 'hot_water') {
                 quantity = detail.consumption_m3 + ' m³';
                 unitPrice = '€' + detail.price_per_m3.toFixed(4);
               } else if (detail.type === 'waste') {
@@ -1396,7 +1489,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             });
           }
 
-          // PARĀDS (sarkanā krāsā)
           const debtRows = invoiceDetails.filter(d => d.type === 'debt');
           debtRows.forEach(detail => {
             tableRows.push([
@@ -1407,7 +1499,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             ]);
           });
 
-          // PĀRMAKSA (zilā krāsā)
           const overpaymentRows = invoiceDetails.filter(d => d.type === 'overpayment');
           overpaymentRows.forEach(detail => {
             tableRows.push([
@@ -1418,7 +1509,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             ]);
           });
 
-          // Maksājuma rekvizīti
           const paymentRows = [
             ['NOSAUKUMS:', settings.building_name || 'BIEDRĪBA "BARONA 78"'],
             ['REĢISTRĀCIJAS KODS:', settings.building_code || '40008325768'],
@@ -1433,7 +1523,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             pageSize: 'A4',
             pageMargins: [15, 15, 15, 15],
             content: [
-              // Galvene
               {
                 columns: [
                   { text: 'RĒĶINS', fontSize: 32, bold: true },
@@ -1448,7 +1537,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 marginBottom: 20
               },
 
-              // Rēķina detaļas
               {
                 columns: [
                   {
@@ -1467,7 +1555,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 marginBottom: 20
               },
 
-              // Saņēmējs
               {
                 text: 'SAŅĒMĒJS',
                 fontSize: 12,
@@ -1487,7 +1574,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 marginBottom: 20
               },
 
-              // Pakalpojumu tabula
               {
                 table: {
                   headerRows: 1,
@@ -1503,7 +1589,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 marginBottom: 15
               },
 
-              // Kopsummas
               {
                 alignment: 'right',
                 columns: [
@@ -1533,7 +1618,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 marginBottom: 30
               },
 
-              // Papildus informācija
               ...(settings.additional_invoice_info ? [{
                 text: '📝 Papildus Informācija:',
                 fontSize: 12,
@@ -1547,7 +1631,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 marginBottom: 20
               }] : []),
 
-              // Maksājuma rekvizīti
               {
                 text: 'MAKSĀJUMA REKVIZĪTI',
                 fontSize: 12,
@@ -1598,7 +1681,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             }
           };
 
-          // Ģenerēt PDF
           window.pdfMake.createPdf(docDefinition).download('rekins_' + invoice.invoice_number + '.pdf');
           showToast('✓ PDF lejuplādēts: rekins_' + invoice.invoice_number + '.pdf');
 
@@ -1711,7 +1793,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
             ]);
 
-            // Pakalpojumi BEZ PVN
             const rowsWithoutVat = invoiceDetails.filter(d => 
               (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
               (d.vat_rate === 0 || d.vat_rate === undefined)
@@ -1726,7 +1807,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               rowsWithoutVat.forEach(detail => {
                 let quantity = '';
                 let unitPrice = '';
-                if (detail.type === 'water' || detail.type === 'hot_water') {
+                if (detail.type === 'water') {
+                  quantity = detail.consumption_m3 + ' m³';
+                  unitPrice = '€' + detail.price_per_m3.toFixed(4);
+                } else if (detail.type === 'hot_water') {
                   quantity = detail.consumption_m3 + ' m³';
                   unitPrice = '€' + detail.price_per_m3.toFixed(4);
                 } else if (detail.type === 'waste') {
@@ -1745,7 +1829,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               });
             }
 
-            // Pakalpojumi AR PVN
             const rowsWithVat = invoiceDetails.filter(d => 
               (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && 
               d.vat_rate > 0
@@ -1760,7 +1843,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               rowsWithVat.forEach(detail => {
                 let quantity = '';
                 let unitPrice = '';
-                if (detail.type === 'water' || detail.type === 'hot_water') {
+                if (detail.type === 'water') {
+                  quantity = detail.consumption_m3 + ' m³';
+                  unitPrice = '€' + detail.price_per_m3.toFixed(4);
+                } else if (detail.type === 'hot_water') {
                   quantity = detail.consumption_m3 + ' m³';
                   unitPrice = '€' + detail.price_per_m3.toFixed(4);
                 } else if (detail.type === 'waste') {
@@ -1779,7 +1865,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               });
             }
 
-            // PARĀDS (sarkanā krāsā)
             const debtRows = invoiceDetails.filter(d => d.type === 'debt');
             debtRows.forEach(detail => {
               tableRows.push([
@@ -1790,7 +1875,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               ]);
             });
 
-            // PĀRMAKSA (zaļā krāsā)
             const overpaymentRows = invoiceDetails.filter(d => d.type === 'overpayment');
             overpaymentRows.forEach(detail => {
               tableRows.push([
@@ -1908,7 +1992,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                   marginBottom: 30
                 },
 
-                // Papildus informācija
                 ...(settings.additional_invoice_info ? [{
                   text: '📝 Papildus Informācija:',
                   fontSize: 12,
@@ -1921,7 +2004,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                   marginBottom: 20
                 }] : []),
 
-                // Maksājuma rekvizīti
                 {
                   text: 'MAKSĀJUMA REKVIZĪTI',
                   fontSize: 12,
