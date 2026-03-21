@@ -564,7 +564,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           pageSize: 'A4', pageMargins: [15, 15, 15, 15],
           content: [
             { columns: [ { text: 'RĒĶINS', fontSize: 32, bold: true }, { text: `${settings.building_name||'BIEDRĪBA "BARONA 78"'}\n${settings.building_code||'40008325768'}\n${settings.building_address||'Kr. Barona iela 78-14, Rīga, LV-1001'}`, fontSize: 10, alignment: 'right' } ], marginBottom: 20 },
-            { columns: [ { width: '50%', text: [ { text: 'Rēķina numurs:\n', bold: true }, `${invoice.invoice_number}\n\n`, { text: 'Periods:\n', bold: true }, `${invoice.period}\n\n`, { text: 'Termiņš:\n', bold: true }, new Date(invoice.due_date).toLocaleDateString('lv-LV') ], fontSize: 11 } ], marginBottom: 20 },
+            { columns: [ { width: '50%', text: [ { text: 'Rēķina numurs:\n', bold: true }, `${invoice.invoice_number}\n\n`, { text: 'Periods:\n', bold: true }, `${invoice.period} (${new Date(invoice.date_from).toLocaleDateString('lv-LV')} - ${new Date(invoice.date_to).toLocaleDateString('lv-LV')})\n\n`, { text: 'Izrakstīts:\n', bold: true }, `${new Date(invoice.created_at).toLocaleDateString('lv-LV')}\n\n`, { text: 'Termiņš:\n', bold: true }, new Date(invoice.due_date).toLocaleDateString('lv-LV') ], fontSize: 11 } ], marginBottom: 20 },
             { text: 'SAŅĒMĒJS', fontSize: 12, bold: true, marginBottom: 8 },
             { text: `Dzīvoklis Nr. ${apt.number}\n${apt.owner_name ? 'Vārds: '+apt.owner_name+'\n':''}${apt.email ? 'E-pasts: '+apt.email+'\n':''}`, fontSize: 10, marginBottom: 20 },
             { table: { headerRows: 1, widths: ['*', 90, 80, 80], body: tableRows }, layout: { hLineWidth: ()=>0.5, vLineWidth: ()=>0.5, hLineColor: ()=>'#cccccc', vLineColor: ()=>'#cccccc' }, marginBottom: 15 },
@@ -700,7 +700,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           <div style="font-size: 12px;">
             <p><strong>Nr:</strong> ${invoice.invoice_number}</p>
-            <p><strong>PERIODS:</strong> ${invoice.period}</p>
+            <p><strong>PERIODS:</strong> ${invoice.period} (${new Date(invoice.date_from).toLocaleDateString('lv-LV')} - ${new Date(invoice.date_to).toLocaleDateString('lv-LV')})</p>
+            <p><strong>IZRAKSTĪTS:</strong> ${new Date(invoice.created_at).toLocaleDateString('lv-LV')}</p>
             <p><strong>TERMIŅŠ:</strong> ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}</p>
           </div>
 
@@ -1668,7 +1669,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                       { text: 'Rēķina numurs:\n', bold: true },
                       invoice.invoice_number + '\n\n',
                       { text: 'Periods:\n', bold: true },
-                      invoice.period + '\n\n',
+                    `${invoice.period} (${new Date(invoice.date_from).toLocaleDateString('lv-LV')} - ${new Date(invoice.date_to).toLocaleDateString('lv-LV')})\n\n`,
+                    { text: 'Izrakstīts:\n', bold: true },
+                    `${new Date(invoice.created_at).toLocaleDateString('lv-LV')}\n\n`,
                       { text: 'Termiņš:\n', bold: true },
                       new Date(invoice.due_date).toLocaleDateString('lv-LV')
                     ],
