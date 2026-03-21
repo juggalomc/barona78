@@ -1580,13 +1580,14 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       let generatedCount = 0;
 
-      for (let i = 0; i < monthInvoices.length; i++) {
-        const invoice = monthInvoices[i];
-        const apt = apartments.find(a => a.id === invoice.apartment_id);
-        
-        if (!apt) continue;
+      (async () => {
+        for (let i = 0; i < monthInvoices.length; i++) {
+          const invoice = monthInvoices[i];
+          const apt = apartments.find(a => a.id === invoice.apartment_id);
+          
+          if (!apt) continue;
 
-        try {
+          try {
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
           const amountWithoutVat = invoice.amount_without_vat || 0;
           const vatAmount = invoice.vat_amount || 0;
@@ -1883,6 +1884,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           console.error(`Kļūda rēķinam ${invoice.invoice_number}:`, err);
         }
       }
+      })();
       
     } catch (error) {
       console.error('ZIP lejuplādes kļūda:', error);
