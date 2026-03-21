@@ -44,6 +44,30 @@ const styles = {
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer'
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0,0,0,0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  },
+  modalContent: {
+    background: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    width: '600px',
+    maxWidth: '90%',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px'
   }
 };
 
@@ -73,11 +97,16 @@ export function InvoicesTab({
   generateInvoiceForApartment,
   sendInvoicesByEmail,
   deleteInvoices,
-  regenerateInvoices,
   updateOverpayment,
   deleteOverpayment,
   downloadMonthAsZip,
-  viewAsHTML
+  viewAsHTML,
+  openReminderModal,
+  closeReminderModal,
+  sendReminderFromModal,
+  reminderModal,
+  setReminderModal,
+  sendAllReminders
 }) {
   const [selectedApartmentForGen, setSelectedApartmentForGen] = React.useState('');
   const [selectedInvoices, setSelectedInvoices] = React.useState(new Set());
@@ -178,6 +207,12 @@ export function InvoicesTab({
           <h2 style={styles.cardTitle}>📤 Nosūtīšana un lejuplāde</h2>
           <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
             <button onClick={() => downloadMonthAsZip(batchMonth)} style={{...styles.btn, background: '#8b5cf6'}}>📦 ZIP lejuplāde ({invoices.filter(inv => inv.period === batchMonth).length})</button>
+            <button onClick={sendAllReminders} style={{...styles.btn, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
+              📧 Sūtīt atgādinājumus kavētajiem
+              <span style={{background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px'}}>
+                {invoices.filter(inv => !inv.paid && inv.due_date < new Date().toISOString().split('T')[0]).length}
+              </span>
+            </button>
             <button onClick={exportInvoicesToCSV} style={{...styles.btn, background: '#10b981'}}>📊 CSV eksports</button>
           </div>
         </div>
@@ -297,6 +332,11 @@ export function InvoicesTab({
                           <button onClick={() => toggleInvoicePaid(invoice.id, invoice.paid)} style={{...styles.btnSmall, padding: '4px 6px', background: invoice.paid ? '#10b981' : '#f59e0b', borderRadius: '3px', color: 'white', fontWeight: '600'}} title={invoice.paid ? 'Neapmaksāts' : 'Apmaksāts'}>
                             {invoice.paid ? '✓' : '○'}
                           </button>
+                          {!invoice.paid && (
+                            <button onClick={() => openReminderModal(invoice)} style={{...styles.btnSmall, padding: '4px 6px', background: '#ef4444', color: 'white'}} title="Sūtīt atgādinājumu">
+                              📧
+                            </button>
+                          )}
                           <button onClick={() => viewAsHTML(invoice)} style={{...styles.btnSmall, padding: '4px 6px'}} title="Skatīt HTML">👁️</button>
                           <button onClick={() => downloadPDF(invoice)} style={{...styles.btnSmall, padding: '4px 6px'}} title="PDF">📥</button>
                           <button onClick={() => regenerateInvoice(invoice)} style={{...styles.btnSmall, padding: '4px 6px'}} title="Reģenerēt">🔄</button>
@@ -381,6 +421,35 @@ export function InvoicesTab({
           )}
         </div>
       </div>
+
+      {/* ===== ATGĀDINĀJUMA MODĀLAIS LOGS ===== */}
+      {reminderModal.open && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <h2 style={{fontSize: '18px', margin: 0}}>📧 Sūtīt atgādinājumu</h2>
+            
+            <div>
+              <label style={{display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px'}}>Saņēmējs:</label>
+              <input type="email" value={reminderModal.to} onChange={(e) => setReminderModal({...reminderModal, to: e.target.value})} style={styles.input} />
+            </div>
+            
+            <div>
+              <label style={{display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px'}}>Tēma:</label>
+              <input type="text" value={reminderModal.subject} onChange={(e) => setReminderModal({...reminderModal, subject: e.target.value})} style={styles.input} />
+            </div>
+            
+            <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
+              <label style={{display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px'}}>Saturs (HTML):</label>
+              <textarea value={reminderModal.body} onChange={(e) => setReminderModal({...reminderModal, body: e.target.value})} style={{...styles.input, minHeight: '300px', resize: 'vertical', fontFamily: 'monospace', fontSize: '12px'}} />
+            </div>
+
+            <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
+              <button onClick={sendReminderFromModal} style={{...styles.btn, flex: 1, background: '#10b981'}}>✓ Nosūtīt</button>
+              <button onClick={closeReminderModal} style={{...styles.btn, flex: 1, background: '#6b7280'}}>✕ Atcelt</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,6 +8,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
   const [expandedInvoiceMonth, setExpandedInvoiceMonth] = useState(null);
   const [debtNoteForm, setDebtNoteForm] = useState({ invoiceId: null, note: '' });
   const [overpaymentForm, setOverpaymentForm] = useState({ invoiceId: '', amount: '' });
+  const [reminderModal, setReminderModal] = useState({
+    open: false,
+    invoiceId: null,
+    to: '',
+    subject: '',
+    body: ''
+  });
 
   const calculatePreviousDebt = (apartmentId, currentPeriod) => {
     const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
@@ -2138,6 +2145,152 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
   };
 
+  const openReminderModal = (invoice) => {
+    if (!invoice) {
+      showToast('Rēķins nav atrasts', 'error');
+      return;
+    }
+    if (invoice.paid) {
+      showToast('Rēķins jau ir apmaksāts.', 'info');
+      return;
+    }
+
+    const apt = apartments.find(a => a.id === invoice.apartment_id);
+    if (!apt || !apt.email) {
+      showToast(`Dzīvoklim ${apt?.number || ''} nav norādīts e-pasts.`, 'error');
+      return;
+    }
+
+    const subject = `Atgādinājums par neapmaksātu rēķinu: ${invoice.invoice_number}`;
+    const emailBodyHtml = `
+      <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: #d9534f;">Atgādinājums par apmaksu</h2>
+            <p>Labdien, ${apt.owner_name || 'cien. klient'},</p>
+            <p>Vēlamies Jums atgādināt par neapmaksātu rēķinu par apsaimniekošanas pakalpojumiem.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <tr style="background-color: #f9f9f9;"><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Rēķina nr.:</td><td style="padding: 8px; border: 1px solid #ddd;">${invoice.invoice_number}</td></tr>
+              <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Periods:</td><td style="padding: 8px; border: 1px solid #ddd;">${invoice.period}</td></tr>
+              <tr style="background-color: #f9f9f9;"><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Summa:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #d9534f;">€${invoice.amount.toFixed(2)}</td></tr>
+              <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Apmaksas termiņš:</td><td style="padding: 8px; border: 1px solid #ddd;">${new Date(invoice.due_date).toLocaleDateString('lv-LV')}</td></tr>
+            </table>
+            <p>Lūdzam veikt apmaksu tuvākajā laikā. Ja esat jau veicis apmaksu, lūdzu, ignorējiet šo atgādinājumu.</p>
+            <div style="background: #f5f5f5; padding: 15px; margin-top: 20px; border-radius: 4px; font-size: 12px;">
+              <strong>Maksājuma rekvizīti:</strong><br>
+              Saņēmējs: ${settings.building_name || 'BIEDRĪBA "BARONA 78"'}<br>
+              Reģ. nr.: ${settings.building_code || '40008325768'}<br>
+              Banka: ${settings.payment_bank || 'Habib Bank'}<br>
+              IBAN: ${settings.payment_iban || 'LV62HABA0551064112797'}<br>
+              Maksājuma mērķī norādiet rēķina numuru: ${invoice.invoice_number}
+            </div>
+            <p style="margin-top: 20px;">Ar cieņu,<br><strong>${settings.building_name || 'Biedrība "Barona 78"'}</strong></p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    setReminderModal({
+      open: true,
+      invoiceId: invoice.id,
+      to: apt.email,
+      subject: subject,
+      body: emailBodyHtml
+    });
+  };
+
+  const closeReminderModal = () => {
+    setReminderModal(prev => ({ ...prev, open: false }));
+  };
+
+  const sendReminderFromModal = async () => {
+    const accessToken = localStorage.getItem('gmail_access_token');
+    if (!accessToken) {
+      showToast('Vispirms pierakstieties ar Google kontā (iestatījumos)', 'error');
+      return;
+    }
+
+    try {
+      showToast(`Sūta atgādinājumu uz ${reminderModal.to}...`, 'info');
+      await sendEmailViaGmail(reminderModal.to, reminderModal.subject, reminderModal.body, accessToken);
+      showToast('✓ Atgādinājums nosūtīts!');
+      closeReminderModal();
+    } catch (error) {
+      console.error('Atgādinājuma nosūtīšanas kļūda:', error);
+      showToast('Kļūda nosūtot atgādinājumu: ' + error.message, 'error');
+    }
+  };
+
+  const sendAllReminders = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const overdueInvoices = invoices.filter(inv => !inv.paid && inv.due_date < today);
+
+    if (overdueInvoices.length === 0) {
+      showToast('Nav kavētu rēķinu', 'info');
+      return;
+    }
+
+    if (!window.confirm(`Vai tiešām vēlaties nosūtīt atgādinājumus ${overdueInvoices.length} kavētiem rēķiniem?`)) {
+      return;
+    }
+
+    const accessToken = localStorage.getItem('gmail_access_token');
+    if (!accessToken) {
+      showToast('Vispirms pierakstieties ar Google kontā (iestatījumos)', 'error');
+      return;
+    }
+
+    showToast(`Sāk sūtīt ${overdueInvoices.length} atgādinājumus...`, 'info');
+    
+    let sentCount = 0;
+
+    for (const invoice of overdueInvoices) {
+      const apt = apartments.find(a => a.id === invoice.apartment_id);
+      if (!apt || !apt.email) continue;
+
+      const subject = `Atgādinājums par neapmaksātu rēķinu: ${invoice.invoice_number}`;
+      const emailBodyHtml = `
+        <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+              <h2 style="color: #d9534f;">Atgādinājums par apmaksu</h2>
+              <p>Labdien, ${apt.owner_name || 'cien. klient'},</p>
+              <p>Vēlamies Jums atgādināt par neapmaksātu rēķinu par apsaimniekošanas pakalpojumiem.</p>
+              <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr style="background-color: #f9f9f9;"><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Rēķina nr.:</td><td style="padding: 8px; border: 1px solid #ddd;">${invoice.invoice_number}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Periods:</td><td style="padding: 8px; border: 1px solid #ddd;">${invoice.period}</td></tr>
+                <tr style="background-color: #f9f9f9;"><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Summa:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #d9534f;">€${invoice.amount.toFixed(2)}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Apmaksas termiņš:</td><td style="padding: 8px; border: 1px solid #ddd;">${new Date(invoice.due_date).toLocaleDateString('lv-LV')}</td></tr>
+              </table>
+              <p>Lūdzam veikt apmaksu tuvākajā laikā. Ja esat jau veicis apmaksu, lūdzu, ignorējiet šo atgādinājumu.</p>
+              <div style="background: #f5f5f5; padding: 15px; margin-top: 20px; border-radius: 4px; font-size: 12px;">
+                <strong>Maksājuma rekvizīti:</strong><br>
+                Saņēmējs: ${settings.building_name || 'BIEDRĪBA "BARONA 78"'}<br>
+                Reģ. nr.: ${settings.building_code || '40008325768'}<br>
+                Banka: ${settings.payment_bank || 'Habib Bank'}<br>
+                IBAN: ${settings.payment_iban || 'LV62HABA0551064112797'}<br>
+                Maksājuma mērķī norādiet rēķina numuru: ${invoice.invoice_number}
+              </div>
+              <p style="margin-top: 20px;">Ar cieņu,<br><strong>${settings.building_name || 'Biedrība "Barona 78"'}</strong></p>
+            </div>
+          </body>
+        </html>
+      `;
+
+      try {
+        await sendEmailViaGmail(apt.email, subject, emailBodyHtml, accessToken);
+        sentCount++;
+      } catch (error) {
+        console.error(`Kļūda sūtot uz ${apt.email}:`, error);
+      }
+      
+      // Neliela pauze, lai nepārslogotu API
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    showToast(`Pabeigts. Nosūtīti ${sentCount} atgādinājumi.`);
+  };
+
   return {
     invoiceMonth, setInvoiceMonth,
     invoiceFromDate, setInvoiceFromDate,
@@ -2162,6 +2315,12 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     downloadPDF,
     exportInvoicesToCSV,
     downloadMonthAsZip,
-    viewAsHTML
+    viewAsHTML,
+    openReminderModal,
+    closeReminderModal,
+    sendReminderFromModal,
+    reminderModal,
+    setReminderModal,
+    sendAllReminders
   };
 }
