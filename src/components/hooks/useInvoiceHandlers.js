@@ -527,26 +527,46 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     const paymentPhone = settings.payment_phone || '+371 67800000';
     const additionalInfo = settings.additional_invoice_info || '';
 
-    const generateRows = (details, filterFn) => {
-      return details.filter(filterFn).map(detail => {
+    // ===== RINDAS GRUPĒŠANA =====
+    const rowsWithoutVat = invoiceDetails
+      .filter(d => (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && (d.vat_rate === 0 || d.vat_rate === undefined))
+      .map(detail => {
         if (detail.type === 'water') {
+          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+        } else if (detail.type === 'hot_water') {
           return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else if (detail.type === 'waste') {
           return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.declared_persons} pers.</td><td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
-        } else if (detail.type === 'debt') {
-          return `<tr style="background: #fee2e2;"><td style="color: #991b1b; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #991b1b; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
-        } else if (detail.type === 'overpayment') {
-          return `<tr style="background: #dbeafe;"><td style="color: #0369a1; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #0369a1; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         } else {
           return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${apt.area} m²</td><td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
         }
-      }).join('');
-    };
+      })
+      .join('');
 
-    const rowsWithoutVat = generateRows(invoiceDetails, d => (d.type === 'tariff' || d.type === 'water' || d.type === 'waste') && (d.vat_rate === 0 || d.vat_rate === undefined));
-    const rowsWithVat = generateRows(invoiceDetails, d => (d.type === 'tariff' || d.type === 'water' || d.type === 'waste') && d.vat_rate > 0);
-    const debtRows = generateRows(invoiceDetails, d => d.type === 'debt');
-    const overpaymentRows = generateRows(invoiceDetails, d => d.type === 'overpayment');
+    const rowsWithVat = invoiceDetails
+      .filter(d => (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste') && d.vat_rate > 0)
+      .map(detail => {
+        if (detail.type === 'water') {
+          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+        } else if (detail.type === 'hot_water') {
+          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+        } else if (detail.type === 'waste') {
+          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.declared_persons} pers.</td><td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+        } else {
+          return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${apt.area} m²</td><td style="text-align: right;">€${(detail.amount_without_vat / apt.area).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
+        }
+      })
+      .join('');
+
+    const debtRows = invoiceDetails
+      .filter(d => d.type === 'debt')
+      .map(detail => `<tr style="background: #fee2e2;"><td style="color: #991b1b; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #991b1b; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`)
+      .join('');
+
+    const overpaymentRows = invoiceDetails
+      .filter(d => d.type === 'overpayment')
+      .map(detail => `<tr style="background: #dcfce7;"><td style="color: #166534; font-weight: bold;">${detail.tariff_name}</td><td></td><td></td><td style="text-align: right; color: #166534; font-weight: bold;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`)
+      .join('');
 
     return `
       <html>
@@ -559,10 +579,12 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             .title { font-size: 24px; font-weight: bold; letter-spacing: 0.1em; }
             .company-info { text-align: right; font-size: 12px; }
             .divider { border-top: 3px solid #000; margin: 20px 0; }
-            .payment-info-box { background: #003399; color: white; padding: 20px; margin: 20px 0; font-size: 12px; }
+            .payment-info-box { background: #f9fafb; color: #5a6c7d; padding: 20px; margin: 20px 0; font-size: 12px; border: 1px solid #d1d5db; }
+            .payment-info-box strong { color: #4b5563; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             th { text-align: left; padding: 8px; border-bottom: 1px solid #000; font-size: 11px; font-weight: bold; }
             td { padding: 8px; font-size: 11px; }
+            .section-header { background: #f5f5f5; font-weight: bold; color: #333; padding: 6px 8px; font-size: 11px; }
             .amount-total { font-size: 26px; font-weight: bold; color: #003399; text-align: right; margin: 15px 0; }
             .text-sm { font-size: 10px; }
             .nowrap { white-space: nowrap; }
@@ -606,8 +628,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               <th style="text-align: right;">CENA</th>
               <th style="text-align: right;">SUMMA</th>
             </tr>
-            ${rowsWithoutVat}
-            ${rowsWithVat}
+            ${rowsWithoutVat ? `<tr><td colspan="4" class="section-header">Pakalpojumi bez PVN</td></tr>${rowsWithoutVat}` : ''}
+            ${rowsWithVat ? `<tr><td colspan="4" class="section-header">Pakalpojumi ar PVN (21%)</td></tr>${rowsWithVat}` : ''}
             ${debtRows}
             ${overpaymentRows}
           </table>
@@ -631,35 +653,35 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           ${additionalInfo ? `<div style="background: #f5f5f5; padding: 15px; margin: 30px 0; border-radius: 4px; font-size: 12px; line-height: 1.6;">${additionalInfo.replace(/\n/g, '<br>')}</div>` : ''}
 
           <div class="payment-info-box">
-            <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px;">Maksājuma rekvizīti</div>
+            <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 15px; color: #4b5563;">Maksājuma rekvizīti</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">NOSAUKUMS</div>
-                <div style="font-weight: bold; font-size: 12px;">${buildingName}</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">NOSAUKUMS</div>
+                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${buildingName}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">REĢ. KODS</div>
-                <div style="font-weight: bold; font-size: 12px;">${buildingCode}</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">REĢ. KODS</div>
+                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${buildingCode}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">ADRESE</div>
-                <div style="font-weight: bold; font-size: 12px;">${buildingAddress}</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">ADRESE</div>
+                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${buildingAddress}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">BANKA</div>
-                <div style="font-weight: bold; font-size: 12px;">${paymentBank}</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">BANKA</div>
+                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentBank}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">IBAN</div>
-                <div style="font-weight: bold; font-size: 12px;">${paymentIban}</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">IBAN</div>
+                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentIban}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">E-PASTS</div>
-                <div style="font-weight: bold; font-size: 12px;">${paymentEmail}</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">E-PASTS</div>
+                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentEmail}</div>
               </div>
               <div>
-                <div style="margin-bottom: 5px; font-size: 11px;">TĀLRUNIS</div>
-                <div style="font-weight: bold; font-size: 12px;">${paymentPhone}</div>
+                <div style="margin-bottom: 5px; font-size: 11px; color: #7a8692;">TĀLRUNIS</div>
+                <div style="font-weight: bold; font-size: 12px; color: #4b5563;">${paymentPhone}</div>
               </div>
             </div>
           </div>
