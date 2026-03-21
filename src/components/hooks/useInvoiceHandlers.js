@@ -465,27 +465,23 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     try {
-      const accessToken = localStorage.getItem('gmail_access_token');
-      
-      if (!accessToken) {
-        showToast('Vispirms pierakstieties ar Google kontā (iestatījumos)', 'error');
+      const scriptUrl = settings.google_apps_script_url;
+      if (!scriptUrl) {
+        showToast('Vispirms iestatījumos norādiet Google Apps Script URL', 'error');
         return;
       }
 
       for (const invoice of invoicesToSend) {
         const apt = apartments.find(a => a.id === invoice.apartment_id);
-        if (!apt || !apt.email) {
-          console.warn(`Dzīv. ${apt?.number} nav e-pasta adreses`);
-          continue;
-        }
+        if (!apt || !apt.email) continue;
 
         const pdfHtml = generateInvoicePdfHtml(invoice, apt);
         
-        await sendEmailViaGmail(
+        await sendEmailViaAppsScript(
           apt.email,
           `Rēķins ${invoice.invoice_number}`,
           pdfHtml,
-          accessToken
+          scriptUrl
         );
 
         console.log(`✓ Rēķins nosūtīts uz ${apt.email}`);
@@ -676,27 +672,31 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     `;
   };
 
-  const sendEmailViaGmail = async (to, subject, htmlContent, accessToken) => {
-    const email = `To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/html; charset="UTF-8"\r\n\r\n${htmlContent}`;
-    
-    const encodedMessage = btoa(email).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const sendEmailViaAppsScript = async (to, subject, htmlContent, scriptUrl) => {
+    if (!scriptUrl) {
+      throw new Error('Nav norādīts Google Apps Script URL iestatījumos.');
+    }
 
-    const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
+    const response = await fetch(scriptUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/plain;charset=utf-8',
       },
       body: JSON.stringify({
-        raw: encodedMessage
+        to: to,
+        subject: subject,
+        htmlBody: htmlContent,
       })
     });
 
     if (!response.ok) {
-      throw new Error('Gmail API kļūda: ' + response.statusText);
+      throw new Error('Google Apps Script kļūda: ' + response.statusText);
     }
 
-    return response.json();
+    const result = await response.json();
+    if (result.status !== 'success') throw new Error('Apps Script ziņoja par kļūdu: ' + result.message);
+
+    return result;
   };
 
   const generateInvoices = async (e, periodTariffs, currentInvoiceMonth, enabledMeters) => {
@@ -2204,15 +2204,15 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
   };
 
   const sendReminderFromModal = async () => {
-    const accessToken = localStorage.getItem('gmail_access_token');
-    if (!accessToken) {
-      showToast('Vispirms pierakstieties ar Google kontā (iestatījumos)', 'error');
+    const scriptUrl = settings.google_apps_script_url;
+    if (!scriptUrl) {
+      showToast('Vispirms iestatījumos norādiet Google Apps Script URL', 'error');
       return;
     }
 
     try {
       showToast(`Sūta atgādinājumu uz ${reminderModal.to}...`, 'info');
-      await sendEmailViaGmail(reminderModal.to, reminderModal.subject, reminderModal.body, accessToken);
+      await sendEmailViaAppsScript(reminderModal.to, reminderModal.subject, reminderModal.body, scriptUrl);
       showToast('✓ Atgādinājums nosūtīts!');
       closeReminderModal();
     } catch (error) {
@@ -2234,9 +2234,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       return;
     }
 
-    const accessToken = localStorage.getItem('gmail_access_token');
-    if (!accessToken) {
-      showToast('Vispirms pierakstieties ar Google kontā (iestatījumos)', 'error');
+    const scriptUrl = settings.google_apps_script_url;
+    if (!scriptUrl) {
+      showToast('Vispirms iestatījumos norādiet Google Apps Script URL', 'error');
       return;
     }
 
@@ -2278,7 +2278,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       `;
 
       try {
-        await sendEmailViaGmail(apt.email, subject, emailBodyHtml, accessToken);
+        await sendEmailViaAppsScript(apt.email, subject, emailBodyHtml, scriptUrl);
         sentCount++;
       } catch (error) {
         console.error(`Kļūda sūtot uz ${apt.email}:`, error);

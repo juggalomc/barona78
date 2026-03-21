@@ -168,45 +168,18 @@ export function SettingsTab({
       {/* GMAIL INTEGRACIJA */}
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>📧 Gmail - E-pastu Nosūtīšana</h2>
-        
-        <SettingField label="Google Client ID" prop="google_client_id" icon="🔑" />
 
         <div style={{fontSize: '12px', lineHeight: '1.8', color: '#666', marginBottom: '15px'}}>
           <p><strong>Lai sūtītu rēķinus pa e-pastu:</strong></p>
-          <p>1. Iegūstiet Client ID no Google Cloud Console</p>
-          <p>2. Ievadiet to augstāk norādītajā laukā un saglabājiet</p>
-          <p>3. Nospiediet "Pierakstīties ar Google"</p>
+          <p>1. Izveidojiet Google Apps Script (sekojiet instrukcijām).</p>
+          <p>2. Publicējiet to kā Web App un nokopējiet iegūto URL.</p>
+          <p>3. Ievadiet un saglabājiet šo URL zemāk.</p>
         </div>
-        <button
-          onClick={() => {
-            const clientId = settings.google_client_id;
-            
-            if (!clientId) {
-              showToast('Vispirms ievadiet un saglabājiet Google Client ID', 'error');
-              return;
-            }
 
-            // Google OAuth flow
-            const redirectUri = window.location.origin + '/oauth-callback';
-            const scope = 'https://www.googleapis.com/auth/gmail.send';
-            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
-            window.location.href = authUrl;
-          }}
-          style={{
-            padding: '12px 24px',
-            background: '#4285f4',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '600'
-          }}
-        >
-          🔐 Pierakstīties ar Google
-        </button>
+        <SettingField label="Google Apps Script URL" prop="google_apps_script_url" icon="🚀" />
+
         <div style={{marginTop: '12px', fontSize: '12px', color: '#0369a1', background: '#f0f9ff', padding: '8px', borderRadius: '4px'}}>
-          ℹ️ Šobrīd nepieciešams manuāli konfigurēt Google OAuth Client ID
+          ℹ️ Šī metode ir vienkāršāka un stabilāka par iepriekšējo. Nav nepieciešams pierakstīties ar Google no šīs aplikācijas.
         </div>
       </div>
 
