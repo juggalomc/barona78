@@ -180,6 +180,12 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
 
   const saveWaterMeterReading = async (apartmentId, readingValue, period) => {
     try {
+      // ✅ VALIDĒT apartment_id
+      if (!apartmentId || apartmentId === '') {
+        showToast('Dzīvoklis nav izvēlēts', 'error');
+        return;
+      }
+
       const value = parseFloat(readingValue);
       
       if (readingValue === '' || readingValue === null) {
@@ -243,6 +249,12 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
 
   const saveHotWaterMeterReading = async (apartmentId, readingValue, period) => {
     try {
+      // ✅ VALIDĒT apartment_id
+      if (!apartmentId || apartmentId === '') {
+        showToast('Dzīvoklis nav izvēlēts', 'error');
+        return;
+      }
+
       const value = parseFloat(readingValue);
       
       if (readingValue === '' || readingValue === null) {
