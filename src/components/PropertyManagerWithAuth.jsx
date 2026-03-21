@@ -40,7 +40,7 @@ export default function PropertyManager() {
   // Data hooks
   const {
     apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, users, loading,
-    fetchData, fetchUserData
+    fetchData, fetchUserData, fetchMeterReadingsOnly
   } = useDataFetching(supabase);
 
   const { settings, editForm, setEditForm, updateSetting } = useSettings(supabase);
@@ -53,7 +53,7 @@ export default function PropertyManager() {
   const apartmentHandlers = useApartmentHandlers(supabase, fetchData, showToast);
   const userHandlers = useUserHandlers(supabase, fetchData, showToast);
   const tariffHandlers = useTariffHandlers(supabase, fetchData, showToast);
-  const waterHandlers = useWaterHandlers(supabase, apartments, fetchData, showToast);
+  const waterHandlers = useWaterHandlers(supabase, apartments, fetchData, showToast, fetchMeterReadingsOnly);
   const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings, waterHandlers.enabledMeters);
 
   useEffect(() => {
@@ -147,6 +147,7 @@ export default function PropertyManager() {
           hotWaterTariffs={hotWaterTariffs}
           onLogout={handleLogout}
           onDownloadPDF={invoiceHandlers.downloadPDF}
+          onViewAsHTML={invoiceHandlers.viewAsHTML}
           onSaveWaterMeterReading={waterHandlers.saveWaterMeterReading}
           onSaveHotWaterMeterReading={waterHandlers.saveHotWaterMeterReading}
           toast={toast}

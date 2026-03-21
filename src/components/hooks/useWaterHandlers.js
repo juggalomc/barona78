@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
+export function useWaterHandlers(supabase, apartments, fetchData, showToast, fetchMeterReadingsOnly) {
   const [enabledMeters, setEnabledMeters] = useState({ water: true, hot_water: false });
   const [tariffPeriod, setTariffPeriod] = useState('2026-01');
   const [waterTariffForm, setWaterTariffForm] = useState({
@@ -196,9 +196,11 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
           .eq('meter_type', 'water')
           .eq('period', period);
         
+        const fetchReadings = fetchMeterReadingsOnly || fetchData;
+
         if (existing && existing.length > 0) {
           await supabase.from('meter_readings').delete().eq('id', existing[0].id);
-          fetchData();
+          fetchReadings();
         }
         return;
       }
@@ -212,6 +214,8 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
         showToast('Patēriņš nevar būt lielāks par 9999.99', 'error');
         return;
       }
+
+      const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
       const { data: existing } = await supabase
         .from('meter_readings')
@@ -240,7 +244,7 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
         if (error) throw error;
       }
 
-      fetchData();
+      fetchReadings();
       showToast('✓ Aukstā ūdens rādījums saglabāts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
@@ -265,9 +269,11 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
           .eq('meter_type', 'hot_water')
           .eq('period', period);
         
+        const fetchReadings = fetchMeterReadingsOnly || fetchData;
+
         if (existing && existing.length > 0) {
           await supabase.from('meter_readings').delete().eq('id', existing[0].id);
-          fetchData();
+          fetchReadings();
         }
         return;
       }
@@ -281,6 +287,8 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
         showToast('Patēriņš nevar būt lielāks par 9999.99', 'error');
         return;
       }
+
+      const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
       const { data: existing } = await supabase
         .from('meter_readings')
@@ -309,7 +317,7 @@ export function useWaterHandlers(supabase, apartments, fetchData, showToast) {
         if (error) throw error;
       }
 
-      fetchData();
+      fetchReadings();
       showToast('✓ Siltā ūdens rādījums saglabāts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');

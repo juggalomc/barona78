@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toast } from './shared/Toast';
 
-export function UserPortal({ userApartment, userInvoices, meterReadings, waterTariffs, hotWaterTariffs, onLogout, onDownloadPDF, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, currentPeriod }) {
+export function UserPortal({ userApartment, userInvoices, meterReadings, waterTariffs, hotWaterTariffs, onLogout, onDownloadPDF, onViewAsHTML, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, currentPeriod }) {
   const getInvoiceStatus = (invoice) => {
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
@@ -22,10 +22,21 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
   const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
 
   // Ūdens rādījumi
-  const coldCurrent = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'water' && mr.period === currentPeriod)?.reading_value || '';
+  const coldCurrentReading = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'water' && mr.period === currentPeriod)?.reading_value || '';
   const coldPrevious = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'water' && mr.period === previousPeriod)?.reading_value || '';
-  const hotCurrent = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'hot_water' && mr.period === currentPeriod)?.reading_value || '';
+  const hotCurrentReading = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'hot_water' && mr.period === currentPeriod)?.reading_value || '';
   const hotPrevious = meterReadings.find(mr => mr.apartment_id === userApartment?.id && mr.meter_type === 'hot_water' && mr.period === previousPeriod)?.reading_value || '';
+
+  const [coldCurrent, setColdCurrent] = useState(coldCurrentReading);
+  const [hotCurrent, setHotCurrent] = useState(hotCurrentReading);
+
+  useEffect(() => {
+    setColdCurrent(coldCurrentReading);
+  }, [coldCurrentReading]);
+
+  useEffect(() => {
+    setHotCurrent(hotCurrentReading);
+  }, [hotCurrentReading]);
 
   // Aprēķināt patēriņu
   const coldConsumption = (coldCurrent && coldPrevious) ? (parseFloat(coldCurrent) - parseFloat(coldPrevious)).toFixed(2) : '—';
@@ -76,7 +87,10 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontWeight: 'bold', color: inv.paid ? '#10b981' : '#ef4444' }}>€{inv.amount.toFixed(2)}</div>
-                      <button onClick={() => onDownloadPDF(inv)} style={{ fontSize: '12px', marginTop: '8px', padding: '4px 8px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>📥 PDF</button>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button onClick={() => onViewAsHTML(inv)} style={{ fontSize: '12px', padding: '4px 8px', background: '#64748b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>👁️ Skatīt</button>
+                        <button onClick={() => onDownloadPDF(inv)} style={{ fontSize: '12px', padding: '4px 8px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>📥 PDF</button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -101,7 +115,8 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
                 step="0.01"
                 placeholder="Skaitītāja rādījums (m³)"
                 value={coldCurrent}
-                onChange={(e) => onSaveWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
+                onChange={(e) => setColdCurrent(e.target.value)}
+                onBlur={(e) => onSaveWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
                 style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', marginBottom: '8px' }}
               />
               <div style={{ fontSize: '11px', color: '#0369a1', background: '#dbeafe', padding: '8px', borderRadius: '4px' }}>
@@ -135,7 +150,8 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, waterTa
                 step="0.01"
                 placeholder="Skaitītāja rādījums (m³)"
                 value={hotCurrent}
-                onChange={(e) => onSaveHotWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
+                onChange={(e) => setHotCurrent(e.target.value)}
+                onBlur={(e) => onSaveHotWaterMeterReading(userApartment?.id, e.target.value, currentPeriod)}
                 style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', marginBottom: '8px' }}
               />
               <div style={{ fontSize: '11px', color: '#92400e', background: '#fed7aa', padding: '8px', borderRadius: '4px' }}>
