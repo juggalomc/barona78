@@ -97,6 +97,7 @@ export function InvoicesTab({
   generateInvoiceForApartment,
   sendInvoicesByEmail,
   deleteInvoices,
+  regenerateInvoices,
   updateOverpayment,
   deleteOverpayment,
   downloadMonthAsZip,
