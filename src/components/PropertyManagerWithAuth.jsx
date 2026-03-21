@@ -324,7 +324,9 @@ export default function PropertyManager() {
                 settings={settings}
                 editForm={editForm}
                 setEditForm={setEditForm}
+                apartments={apartments}
                 updateSetting={updateSetting}
+                sendEmailViaAppsScript={invoiceHandlers.sendEmailViaAppsScript}
                 showToast={showToast}
               />
             ) : null}

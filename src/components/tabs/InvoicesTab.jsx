@@ -284,7 +284,14 @@ export function InvoicesTab({
                   return (
                     <tr key={invoice.id} style={{borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#fafbfc' : '#fff'}}>
                       <td style={{padding: '12px', fontWeight: '600'}}>
-                        <div style={{fontSize: '12px'}}>{invoice.invoice_number}</div>
+                        <div style={{fontSize: '12px', display: 'flex', flexDirection: 'column'}}>
+                          <span>{invoice.invoice_number}</span>
+                          {invoice.sent_at && (
+                            <span style={{fontSize: '10px', color: '#059669', fontWeight: 'normal', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px'}}>
+                              📩 Nosūtīts {new Date(invoice.sent_at).toLocaleDateString('lv-LV')}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td style={{padding: '12px', textAlign: 'center'}}>Dzīv. {apt?.number}</td>
                       <td style={{padding: '12px', textAlign: 'center'}}>{invoice.period}</td>

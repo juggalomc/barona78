@@ -5,10 +5,14 @@ export function SettingsTab({
   settings,
   editForm,
   setEditForm,
+  apartments,
   updateSetting,
+  sendEmailViaAppsScript,
   showToast
 }) {
   const [editingField, setEditingField] = useState(null);
+  const [customEmail, setCustomEmail] = useState({ recipient: 'all', subject: '', message: '' });
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const handleSave = async (prop) => {
     const value = editForm[prop];
@@ -23,6 +27,71 @@ export function SettingsTab({
       showToast('✓ Iestatījums saglabāts');
     } else {
       showToast('Kļūda saglabājot', 'error');
+    }
+  };
+
+  const handleSendCustomEmail = async (e) => {
+    e.preventDefault();
+    if (!settings.google_apps_script_url) {
+      showToast('Nav konfigurēts e-pasta serviss (Google Apps Script URL)', 'error');
+      return;
+    }
+    if (!customEmail.subject || !customEmail.message) {
+      showToast('Ievadiet tēmu un ziņojumu', 'error');
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const targets = customEmail.recipient === 'all' 
+        ? apartments.filter(a => a.email) 
+        : apartments.filter(a => a.id === customEmail.recipient && a.email);
+
+      if (targets.length === 0) {
+        showToast('Nav saņēmēju ar e-pastiem', 'error');
+        setSendingEmail(false);
+        return;
+      }
+
+      let sentCount = 0;
+      for (const apt of targets) {
+        const htmlBody = `
+          <div style="font-family: sans-serif; color: #333; line-height: 1.6;">
+            ${customEmail.message.replace(/\n/g, '<br>')}
+          </div>
+        `;
+        await sendEmailViaAppsScript(apt.email, customEmail.subject, htmlBody, settings.google_apps_script_url);
+        sentCount++;
+        await new Promise(r => setTimeout(r, 300)); // Pauze
+      }
+      
+      showToast(`✓ Nosūtīts ${sentCount} saņēmējiem`);
+      setCustomEmail({ ...customEmail, subject: '', message: '' });
+    } catch (err) {
+      showToast('Kļūda sūtot: ' + err.message, 'error');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const sendMeterReadingRequest = async () => {
+    if (!confirm('Vai tiešām izsūtīt aicinājumu nodot rādījumus visiem dzīvokļiem?')) return;
+    
+    // Izmantojam saglabāto tekstu vai noklusējuma
+    const defaultMsg = `Labdien!\n\nAtgādinām, ka tuvojas skaitītāju rādījumu nodošanas laiks.\nLūdzam iesniegt ūdens skaitītāja rādījumus līdz 27. datumam portālā:\nhttps://barona78.vercel.app/\n\nPaldies!`;
+    const message = settings.meter_reading_reminder_text || defaultMsg;
+    
+    // Iestatām formā un izsūtam
+    setCustomEmail({
+      recipient: 'all',
+      subject: 'Atgādinājums: Ūdens skaitītāju rādījumi',
+      message: message
+    });
+    
+    // Mazu brīdi pagaidām, lai React state atjaunojas, tad simulējam sūtīšanu
+    // Bet labāk izsaukt sūtīšanu tieši ar parametriem, nevis caur state
+    try {
+      await handleSendCustomEmail({ preventDefault: () => {} });
     }
   };
 
@@ -162,6 +231,57 @@ export function SettingsTab({
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* KOMUNIKĀCIJA */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>📢 Komunikācija</h2>
+        
+        {/* Skaitītāju atgādinājums */}
+        <div style={{marginBottom: '20px', padding: '15px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0'}}>
+          <h3 style={{fontSize: '14px', margin: '0 0 10px 0', color: '#166534'}}>💧 Skaitītāju rādījumu aicinājums</h3>
+          <div style={{fontSize: '12px', marginBottom: '10px', color: '#666'}}>
+            Teksts, kas tiks sūtīts katra mēneša 25. datumā (nospiežot pogu):
+          </div>
+          {editingField === 'meter_reading_reminder_text' ? (
+            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+              <textarea 
+                value={editForm.meter_reading_reminder_text !== undefined ? editForm.meter_reading_reminder_text : (settings.meter_reading_reminder_text || '')}
+                onChange={(e) => setEditForm({...editForm, meter_reading_reminder_text: e.target.value})}
+                style={{...styles.input, minHeight: '100px'}} 
+                placeholder="Ievadiet tekstu..." 
+              />
+              <div style={{display: 'flex', gap: '8px'}}>
+                <button onClick={() => handleSave('meter_reading_reminder_text')} style={{...styles.btn, background: '#10b981', padding: '6px 12px', fontSize: '12px'}}>✓ Saglabāt šablonu</button>
+                <button onClick={() => setEditingField(null)} style={{...styles.btn, background: '#e5e7eb', color: '#333', padding: '6px 12px', fontSize: '12px'}}>Atcelt</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{marginBottom: '10px'}}>
+              <div style={{whiteSpace: 'pre-wrap', fontSize: '12px', background: 'white', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '4px', marginBottom: '8px'}}>
+                {settings.meter_reading_reminder_text || "Labdien!\n\nAtgādinām, ka tuvojas skaitītāju rādījumu nodošanas laiks.\nLūdzam iesniegt ūdens skaitītāja rādījumus līdz 27. datumam portālā:\nhttps://barona78.vercel.app/\n\nPaldies!"}
+              </div>
+              <button onClick={() => { setEditingField('meter_reading_reminder_text'); setEditForm({...editForm, meter_reading_reminder_text: settings.meter_reading_reminder_text || ''}); }} style={{fontSize: '11px', border: 'none', background: 'none', color: '#0369a1', cursor: 'pointer', padding: 0}}>✏️ Rediģēt šablonu</button>
+            </div>
+          )}
+          <button onClick={sendMeterReadingRequest} disabled={sendingEmail} style={{...styles.btn, background: '#15803d', width: '100%'}}>
+            {sendingEmail ? 'Sūta...' : '📤 Nosūtīt aicinājumu visiem tagad'}
+          </button>
+        </div>
+
+        {/* Custom e-pasts */}
+        <div style={{padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+          <h3 style={{fontSize: '14px', margin: '0 0 10px 0', color: '#334155'}}>✉️ Sūtīt ziņojumu</h3>
+          <form onSubmit={handleSendCustomEmail} style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+            <select value={customEmail.recipient} onChange={(e) => setCustomEmail({...customEmail, recipient: e.target.value})} style={styles.input}>
+              <option value="all">Visiem dzīvokļiem</option>
+              {apartments.map(a => <option key={a.id} value={a.id}>Dzīv. {a.number} ({a.owner_name})</option>)}
+            </select>
+            <input type="text" placeholder="Tēma" value={customEmail.subject} onChange={(e) => setCustomEmail({...customEmail, subject: e.target.value})} style={styles.input} />
+            <textarea placeholder="Ziņojums..." value={customEmail.message} onChange={(e) => setCustomEmail({...customEmail, message: e.target.value})} style={{...styles.input, minHeight: '100px'}} />
+            <button type="submit" disabled={sendingEmail} style={styles.btn}>{sendingEmail ? 'Sūta...' : 'Nosūtīt'}</button>
+          </form>
         </div>
       </div>
 

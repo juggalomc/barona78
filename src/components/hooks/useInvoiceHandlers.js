@@ -592,6 +592,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           }]
         );
 
+        // Atjaunojam statusu datubāzē
+        await supabase.from('invoices').update({ sent_at: new Date().toISOString() }).eq('id', invoice.id);
+
         sentCount++;
         console.log(`✓ Rēķins nosūtīts uz ${apt.email}`);
         // Neliela pauze, lai nepārslogotu Gmail
@@ -599,6 +602,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       showToast(`✓ Veiksmīgi nosūtīti ${sentCount} rēķini`);
+      fetchData(); // Pārlādējam datus, lai redzētu "nosūtīts" statusu
     } catch (error) {
       console.error('E-pasta nosūtīšanas kļūda:', error);
       showToast('Kļūda nosūtot e-pastu: ' + error.message, 'error');
@@ -2419,6 +2423,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     generateInvoices,
     generateInvoiceForApartment,
     sendInvoicesByEmail,
+    sendEmailViaAppsScript, // Eksportējam, lai izmantotu citur (Settings)
     regenerateInvoice,
     regenerateInvoices,
     toggleInvoicePaid,
