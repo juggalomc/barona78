@@ -1,6 +1,25 @@
 import React, { useState } from 'react';
 import { styles } from '../shared/styles';
 
+// Palīgfunkcija e-pastu saņēmēju iegūšanai (dublēta no useInvoiceHandlers, lai izvairītos no importa problēmām)
+const getEmailRecipients = (emailField, type) => {
+  if (!emailField) return [];
+  try {
+    // Pārbaudām vai izskatās pēc JSON
+    if (emailField.trim().startsWith('[')) {
+      const contacts = JSON.parse(emailField);
+      if (Array.isArray(contacts)) {
+        // Ja type nav norādīts vai ir 'general', izmantojam 'invoice' kā noklusējumu (īpašnieks)
+        const filterType = (!type || type === 'general') ? 'invoice' : type;
+        return contacts.filter(c => c[filterType] === true).map(c => c.email);
+      }
+    }
+  } catch (e) {
+    // Ja nav JSON, izmantojam kā parastu e-pastu
+  }
+  return [emailField];
+};
+
 export function SettingsTab({
   settings,
   editForm,
@@ -30,20 +49,15 @@ export function SettingsTab({
     }
   };
 
-  const handleSendCustomEmail = async (e) => {
-    e.preventDefault();
-    if (!settings.google_apps_script_url) {
-      showToast('Nav konfigurēts e-pasta serviss (Google Apps Script URL)', 'error');
-      return;
-    }
-    if (!customEmail.subject || !customEmail.message) {
-      showToast('Ievadiet tēmu un ziņojumu', 'error');
-      return;
-    }
-
+  // Iekšējā funkcija sūtīšanai
+  const executeSending = async (targets, subject, message, notificationType = 'general') => {
     setSendingEmail(true);
     try {
-      const targets = customEmail.recipient === 'all' 
+      if (!settings.google_apps_script_url) {
+        throw new Error('Nav konfigurēts e-pasta serviss');
+      }
+
+      const recipientApartments = targets === 'all' 
         ? apartments.filter(a => a.email) 
         : apartments.filter(a => a.id === customEmail.recipient && a.email);
 
@@ -54,23 +68,44 @@ export function SettingsTab({
       }
 
       let sentCount = 0;
-      for (const apt of targets) {
+      for (const apt of recipientApartments) {
+        const recipients = getEmailRecipients(apt.email, notificationType);
+        if (recipients.length === 0) continue;
+        
+        const toAddresses = recipients.join(',');
+
         const htmlBody = `
           <div style="font-family: sans-serif; color: #333; line-height: 1.6;">
-            ${customEmail.message.replace(/\n/g, '<br>')}
+            ${message.replace(/\n/g, '<br>')}
           </div>
         `;
-        await sendEmailViaAppsScript(apt.email, customEmail.subject, htmlBody, settings.google_apps_script_url);
+        await sendEmailViaAppsScript(toAddresses, subject, htmlBody, settings.google_apps_script_url);
         sentCount++;
         await new Promise(r => setTimeout(r, 300)); // Pauze
       }
       
       showToast(`✓ Nosūtīts ${sentCount} saņēmējiem`);
-      setCustomEmail({ ...customEmail, subject: '', message: '' });
+      return true;
     } catch (err) {
       showToast('Kļūda sūtot: ' + err.message, 'error');
+      return false;
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  const handleSendCustomEmail = async (e) => {
+    e.preventDefault();
+    if (!customEmail.subject || !customEmail.message) {
+      showToast('Ievadiet tēmu un ziņojumu', 'error');
+      return;
+    }
+
+    // Manuālie e-pasti iet kā 'general' (kas izmanto 'invoice' saņēmējus pēc noklusējuma)
+    const success = await executeSending(customEmail.recipient, customEmail.subject, customEmail.message, 'general');
+    
+    if (success) {
+      setCustomEmail({ ...customEmail, subject: '', message: '' });
     }
   };
 
@@ -85,15 +120,13 @@ export function SettingsTab({
     setCustomEmail({
       recipient: 'all',
       subject: 'Atgādinājums: Ūdens skaitītāju rādījumi',
-      message: message
+      message: message // Update UI state too
     });
     
-    // Mazu brīdi pagaidām, lai React state atjaunojas, tad simulējam sūtīšanu
-    // Bet labāk izsaukt sūtīšanu tieši ar parametriem, nevis caur state
-    try {
-      await handleSendCustomEmail({ preventDefault: () => {} });
-    } catch (error) {
-      console.error(error);
+    // Izmantojam 'water' tipu, lai atlasītu pareizos e-pastus
+    const success = await executeSending('all', 'Atgādinājums: Ūdens skaitītāju rādījumi', message, 'water');
+    if (success) {
+      setCustomEmail({ recipient: 'all', subject: '', message: '' });
     }
   };
 
@@ -296,6 +329,7 @@ export function SettingsTab({
           <p>1. Izveidojiet Google Apps Script (sekojiet instrukcijām).</p>
           <p>2. Publicējiet to kā Web App un nokopējiet iegūto URL.</p>
           <p>3. Ievadiet un saglabājiet šo URL zemāk.</p>
+          <p><strong>Info:</strong> Sistēma atbalsta vairākus e-pastus vienam dzīvoklim. Dzīvokļa e-pasta laukā var ievadīt JSON formātā: <code>[{`{"email":"a@b.lv", "invoice":true, "water":true}`}, ...]</code>.</p>
         </div>
 
         <SettingField label="Google Apps Script URL" prop="google_apps_script_url" icon="🚀" />

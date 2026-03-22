@@ -1,6 +1,26 @@
 import { useState } from 'react';
 import { TOTAL_AREA } from '../shared/constants';
 
+// Palīgfunkcija e-pastu saņēmēju iegūšanai
+// Atbalsta gan vienkāršu string, gan JSON formātu ar iestatījumiem
+// JSON formāts: [{ "email": "...", "invoice": true, "water": true }, ...]
+export const getEmailRecipients = (emailField, type = 'invoice') => {
+  if (!emailField) return [];
+  try {
+    // Pārbaudām vai izskatās pēc JSON
+    if (emailField.trim().startsWith('[')) {
+      const contacts = JSON.parse(emailField);
+      if (Array.isArray(contacts)) {
+        return contacts.filter(c => c[type] === true).map(c => c.email);
+      }
+    }
+  } catch (e) {
+    // Ja nav JSON, izmantojam kā parastu e-pastu
+  }
+  // Ja ir parasts e-pasts, sūtam visu (atpakaļsaderība)
+  return [emailField];
+};
+
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
@@ -504,6 +524,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const apt = apartments.find(a => a.id === invoice.apartment_id);
         if (!apt || !apt.email) continue;
 
+        // Iegūstam saņēmējus, kuriem jāsaņem rēķini
+        const recipients = getEmailRecipients(apt.email, 'invoice');
+        if (recipients.length === 0) continue;
+        const toAddresses = recipients.join(',');
+
         // 1. Ģenerējam e-pasta tekstu (HTML)
         const emailGreeting = `
           <div style="font-family: Arial, sans-serif; color: #333; margin-bottom: 20px; padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
@@ -581,7 +606,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const base64Pdf = await new Promise((resolve) => pdfDocGenerator.getBase64(resolve));
         
         await sendEmailViaAppsScript(
-          apt.email,
+          toAddresses,
           `Rēķins ${invoice.invoice_number}`,
           emailGreeting,
           scriptUrl,
@@ -596,7 +621,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         await supabase.from('invoices').update({ sent_at: new Date().toISOString() }).eq('id', invoice.id);
 
         sentCount++;
-        console.log(`✓ Rēķins nosūtīts uz ${apt.email}`);
+        console.log(`✓ Rēķins nosūtīts uz ${toAddresses}`);
         // Neliela pauze, lai nepārslogotu Gmail
         await new Promise(r => setTimeout(r, 500));
       }
@@ -2275,7 +2300,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     const apt = apartments.find(a => a.id === invoice.apartment_id);
-    if (!apt || !apt.email) {
+    const recipients = apt ? getEmailRecipients(apt.email, 'invoice') : [];
+    
+    if (!apt || recipients.length === 0) {
       showToast(`Dzīvoklim ${apt?.number || ''} nav norādīts e-pasts.`, 'error');
       return;
     }
@@ -2312,7 +2339,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     setReminderModal({
       open: true,
       invoiceId: invoice.id,
-      to: apt.email,
+      to: recipients.join(', '),
       subject: subject,
       body: emailBodyHtml
     });
@@ -2367,6 +2394,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       const apt = apartments.find(a => a.id === invoice.apartment_id);
       if (!apt || !apt.email) continue;
 
+      const recipients = getEmailRecipients(apt.email, 'invoice');
+      if (recipients.length === 0) continue;
+
       const subject = `Atgādinājums par neapmaksātu rēķinu: ${invoice.invoice_number}`;
       const emailBodyHtml = `
         <html>
@@ -2396,11 +2426,12 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         </html>
       `;
 
+      const toAddresses = recipients.join(',');
       try {
-        await sendEmailViaAppsScript(apt.email, subject, emailBodyHtml, scriptUrl);
+        await sendEmailViaAppsScript(toAddresses, subject, emailBodyHtml, scriptUrl);
         sentCount++;
       } catch (error) {
-        console.error(`Kļūda sūtot uz ${apt.email}:`, error);
+        console.error(`Kļūda sūtot uz ${toAddresses}:`, error);
       }
       
       // Neliela pauze, lai nepārslogotu API
