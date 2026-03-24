@@ -270,6 +270,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       // Tarifi
       for (const tariff of periodTariffs) {
+        // Filtrējam pēc telpas tipa (dzīvojamā/nedzīvojamā)
+        const isResidential = apt.is_residential !== false; // Uzskatām par dzīvojamo, ja nav norādīts citādi
+        if (tariff.target_type === 'residential' && !isResidential) continue;
+        if (tariff.target_type === 'non_residential' && isResidential) continue;
+
         const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
         const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
         const vatRate = parseFloat(tariff.vat_rate) || 0;
@@ -873,6 +878,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         let invoiceDetails = [];
 
         for (const tariff of periodTariffs) {
+          // Filtrējam pēc telpas tipa (dzīvojamā/nedzīvojamā)
+          const isResidential = apt.is_residential !== false;
+          if (tariff.target_type === 'residential' && !isResidential) continue;
+          if (tariff.target_type === 'non_residential' && isResidential) continue;
+
           const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
           const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
           const vatRate = parseFloat(tariff.vat_rate) || 0;
@@ -1093,6 +1103,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       let invoiceDetails = [];
 
       for (const tariff of periodTariffs) {
+        // Filtrējam pēc telpas tipa (dzīvojamā/nedzīvojamā)
+        const isResidential = apt.is_residential !== false;
+        if (tariff.target_type === 'residential' && !isResidential) continue;
+        if (tariff.target_type === 'non_residential' && isResidential) continue;
+
         const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
         const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
         const vatRate = parseFloat(tariff.vat_rate) || 0;
@@ -1341,6 +1356,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const [year, month] = invoice.period.split('-');
 
         for (const tariff of periodTariffs) {
+          // Filtrējam pēc telpas tipa (dzīvojamā/nedzīvojamā)
+          const isResidential = apt.is_residential !== false;
+          if (tariff.target_type === 'residential' && !isResidential) continue;
+          if (tariff.target_type === 'non_residential' && isResidential) continue;
+
           const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
           const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
           const vatRate = parseFloat(tariff.vat_rate) || 0;
