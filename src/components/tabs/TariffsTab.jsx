@@ -45,50 +45,60 @@ export function TariffsTab({
           <h2 style={{ ...styles.cardTitle, margin: 0 }}>➕ Pievienot jaunu tarifu</h2>
         </div>
         
-        <form onSubmit={addTariff} style={{ ...styles.form, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', alignItems: 'end' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>Periods</label>
-            <input type="month" value={tariffPeriod} onChange={(e) => setTariffPeriod(e.target.value)} style={{ ...styles.input, width: '100%' }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>Nosaukums *</label>
-            <input type="text" placeholder="Piem., Apsaimniekošana" value={tariffForm.name} onChange={(e) => setTariffForm({...tariffForm, name: e.target.value})} style={{ ...styles.input, width: '100%' }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>Attiecas uz</label>
-            <select value={tariffForm.target_type || 'all'} onChange={(e) => setTariffForm({...tariffForm, target_type: e.target.value})} style={{ ...styles.input, width: '100%' }}>
-              <option value="all">🏠+🏢 Visiem</option>
-              <option value="residential">🏠 Tikai dzīvojamām</option>
-              <option value="non_residential">🏢 Tikai nedzīvojamām</option>
-            </select>
-          </div>
+        <form onSubmit={addTariff} style={{ ...styles.form, padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-               <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>{tariffForm.is_per_m2 ? 'Cena par m² (€) *' : 'Summa mājai (€) *'}</label>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                 <input type="checkbox" checked={tariffForm.is_per_m2} onChange={(e) => setTariffForm({...tariffForm, is_per_m2: e.target.checked})} style={{ width: '12px', height: '12px', cursor: 'pointer' }} />
-                 <span style={{ fontSize: '10px', color: '#666' }}>Ievadīt m² cenu</span>
-               </div>
+          {/* 1. Rinda - Pamata informācija */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 180px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Periods</label>
+              <input type="month" value={tariffPeriod} onChange={(e) => setTariffPeriod(e.target.value)} style={{ ...styles.input, width: '100%', padding: '8px' }} />
             </div>
-            {tariffForm.is_per_m2 ? (
-              <input type="number" step="0.0001" placeholder="0.0000" value={tariffForm.price_per_m2} onChange={(e) => setTariffForm({...tariffForm, price_per_m2: e.target.value})} style={{ ...styles.input, width: '100%' }} />
-            ) : (
-              <input type="number" step="0.01" placeholder="0.00" value={tariffForm.total_amount} onChange={(e) => setTariffForm({...tariffForm, total_amount: e.target.value})} style={{ ...styles.input, width: '100%' }} />
-            )}
-          </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '2 1 300px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Nosaukums *</label>
+              <input type="text" placeholder="Piem., Apsaimniekošana" value={tariffForm.name} onChange={(e) => setTariffForm({...tariffForm, name: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }} />
+            </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>PVN (%)</label>
-            <input type="number" step="0.01" placeholder="0" value={tariffForm.vat_rate} onChange={(e) => setTariffForm({...tariffForm, vat_rate: e.target.value})} style={{ ...styles.input, width: '100%' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 200px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Attiecas uz</label>
+              <select value={tariffForm.target_type || 'all'} onChange={(e) => setTariffForm({...tariffForm, target_type: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }}>
+                <option value="all">🏠+🏢 Visiem</option>
+                <option value="residential">🏠 Tikai dzīvojamām</option>
+                <option value="non_residential">🏢 Tikai nedzīvojamām</option>
+              </select>
+            </div>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '42px' }}>
-             <div style={{display: 'flex', alignItems: 'center', gap: '8px', background: '#f9fafb', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', height: '100%', boxSizing: 'border-box' }}>
-              <input type="checkbox" checked={tariffForm.include_in_invoice} onChange={(e) => setTariffForm({...tariffForm, include_in_invoice: e.target.checked})} style={{width: '18px', height: '18px', cursor: 'pointer'}} />
-              <label style={{fontSize: '13px', color: '#333', cursor: 'pointer', margin: 0, whiteSpace: 'nowrap'}}>Iekļaut rēķinā</label>
+          {/* 2. Rinda - Finanšu dati un darbības */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 220px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>{tariffForm.is_per_m2 ? 'Cena par m² (€) *' : 'Summa mājai (€) *'}</label>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setTariffForm({...tariffForm, is_per_m2: !tariffForm.is_per_m2})}>
+                   <input type="checkbox" checked={tariffForm.is_per_m2} onChange={(e) => setTariffForm({...tariffForm, is_per_m2: e.target.checked})} style={{ width: '12px', height: '12px', cursor: 'pointer', margin: 0 }} />
+                   <span style={{ fontSize: '10px', color: '#0369a1', fontWeight: '600' }}>m² cena</span>
+                 </div>
+              </div>
+              {tariffForm.is_per_m2 ? (
+                <input type="number" step="0.0001" placeholder="0.0000" value={tariffForm.price_per_m2} onChange={(e) => setTariffForm({...tariffForm, price_per_m2: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }} />
+              ) : (
+                <input type="number" step="0.01" placeholder="0.00" value={tariffForm.total_amount} onChange={(e) => setTariffForm({...tariffForm, total_amount: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }} />
+              )}
             </div>
-            <button type="submit" style={{ ...styles.btn, background: '#10b981', height: '100%' }}>➕ Pievienot</button>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '0 1 100px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>PVN (%)</label>
+              <input type="number" step="0.01" placeholder="0" value={tariffForm.vat_rate} onChange={(e) => setTariffForm({...tariffForm, vat_rate: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }} />
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 15px', background: 'white', borderRadius: '6px', border: '1px solid #d1d5db', height: '38px', marginBottom: '1px' }} onClick={() => setTariffForm({...tariffForm, include_in_invoice: !tariffForm.include_in_invoice})}>
+              <input type="checkbox" checked={tariffForm.include_in_invoice} onChange={(e) => setTariffForm({...tariffForm, include_in_invoice: e.target.checked})} style={{width: '16px', height: '16px', cursor: 'pointer', margin: 0}} />
+              <label style={{fontSize: '13px', color: '#374151', cursor: 'pointer', margin: 0, whiteSpace: 'nowrap', fontWeight: '500'}}>Iekļaut rēķinā</label>
+            </div>
+
+            <button type="submit" style={{ ...styles.btn, background: '#10b981', color: 'white', padding: '10px 24px', height: '40px', display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+              ➕ Pievienot
+            </button>
           </div>
         </form>
       </div>
