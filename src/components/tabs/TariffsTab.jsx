@@ -54,6 +54,14 @@ export function TariffsTab({
             <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>Nosaukums *</label>
             <input type="text" placeholder="Piem., Apsaimniekošana" value={tariffForm.name} onChange={(e) => setTariffForm({...tariffForm, name: e.target.value})} style={{ ...styles.input, width: '100%' }} />
           </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>Attiecas uz</label>
+            <select value={tariffForm.target_type || 'all'} onChange={(e) => setTariffForm({...tariffForm, target_type: e.target.value})} style={{ ...styles.input, width: '100%' }}>
+              <option value="all">🏠+🏢 Visiem</option>
+              <option value="residential">🏠 Tikai dzīvojamām</option>
+              <option value="non_residential">🏢 Tikai nedzīvojamām</option>
+            </select>
+          </div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -187,6 +195,11 @@ export function TariffsTab({
                     {isEditing ? (
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', padding: '5px' }} onClick={(e) => e.stopPropagation()}>
                         <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                        <select value={editForm.target_type || 'all'} onChange={(e) => setEditForm({...editForm, target_type: e.target.value})} style={{...styles.input, fontSize: '12px'}}>
+                          <option value="all">🏠+🏢 Visiem</option>
+                          <option value="residential">🏠 Tikai dzīvojamām</option>
+                          <option value="non_residential">🏢 Tikai nedzīvojamām</option>
+                        </select>
                         
                         <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px'}}>
                            <input type="checkbox" checked={editForm.is_per_m2} onChange={(e) => setEditForm({...editForm, is_per_m2: e.target.checked})} id={`edit-m2-${tar.id}`} style={{ width: '14px', height: '14px' }} />
@@ -215,6 +228,12 @@ export function TariffsTab({
                       <div style={{flex: 1}}>
                         <div style={{ fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', marginBottom: '4px' }}>
                           {tar.name}
+                          {tar.target_type === 'residential' && (
+                            <span title="Tikai dzīvojamām telpām">🏠</span>
+                          )}
+                          {tar.target_type === 'non_residential' && (
+                            <span title="Tikai nedzīvojamām telpām">🏢</span>
+                          )}
                           {tar.include_in_invoice === false && (
                             <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#fee2e2', color: '#991b1b', fontWeight: '600' }}>
                               ✕ Neiekļaut rēķinā
