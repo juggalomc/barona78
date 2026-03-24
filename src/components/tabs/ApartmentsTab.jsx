@@ -94,6 +94,14 @@ export function ApartmentsTab({
           </div>
           <div style={styles.formRow}>
             <input type="number" placeholder="Deklarēto personu skaits" min="0" value={apartmentForm.declared_persons} onChange={(e) => setApartmentForm({...apartmentForm, declared_persons: e.target.value})} style={styles.input} />
+            <select
+              value={apartmentForm.is_residential === false ? 'false' : 'true'}
+              onChange={(e) => setApartmentForm({...apartmentForm, is_residential: e.target.value === 'true'})}
+              style={styles.input}
+            >
+              <option value="true">🏠 Dzīvojamā telpa</option>
+              <option value="false">🏢 Nedzīvojamā telpa</option>
+            </select>
           </div>
           <input type="text" placeholder="Reģistrācijas numurs" value={apartmentForm.registration_number} onChange={(e) => setApartmentForm({...apartmentForm, registration_number: e.target.value})} style={styles.input} />
           <input type="text" placeholder="Dzīvokļa adrese" value={apartmentForm.apartment_address} onChange={(e) => setApartmentForm({...apartmentForm, apartment_address: e.target.value})} style={styles.input} />
@@ -114,6 +122,14 @@ export function ApartmentsTab({
                   <input type="text" value={editApartmentForm.owner_name} onChange={(e) => setEditApartmentForm({...editApartmentForm, owner_name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <EmailManager value={editApartmentForm.email || ''} onChange={(val) => setEditApartmentForm({...editApartmentForm, email: val})} styles={styles} />
                   <input type="number" placeholder="Deklarēto personu skaits" min="0" value={editApartmentForm.declared_persons} onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
+                  <select
+                    value={editApartmentForm.is_residential === false ? 'false' : 'true'}
+                    onChange={(e) => setEditApartmentForm({...editApartmentForm, is_residential: e.target.value === 'true'})}
+                    style={{...styles.input, fontSize: '12px'}}
+                  >
+                    <option value="true">🏠 Dzīvojamā telpa</option>
+                    <option value="false">🏢 Nedzīvojamā telpa</option>
+                  </select>
                   <input type="text" placeholder="Reģistrācijas numurs" value={editApartmentForm.registration_number || ''} onChange={(e) => setEditApartmentForm({...editApartmentForm, registration_number: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <input type="text" placeholder="Dzīvokļa adrese" value={editApartmentForm.apartment_address || ''} onChange={(e) => setEditApartmentForm({...editApartmentForm, apartment_address: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <div style={{display: 'flex', gap: '8px'}}>
@@ -125,7 +141,9 @@ export function ApartmentsTab({
                 <>
                   <div style={{flex: 1}}>
                     <div style={{fontWeight: 'bold'}}>Dzīv. {apt.number}</div>
-                    <div style={{fontSize: '13px', color: '#666'}}>📐 {apt.area} m² • 👤 {apt.declared_persons || 1} • {apt.owner_name}</div>
+                    <div style={{fontSize: '13px', color: '#666'}}>
+                      {apt.is_residential === false ? '🏢' : '🏠'} • 📐 {apt.area} m² • 👤 {apt.declared_persons || 0} • {apt.owner_name}
+                    </div>
                     {apt.email && (
                       <div style={{fontSize: '12px', color: '#3b82f6', marginTop: '2px'}}>
                         {apt.email.trim().startsWith('[') ? (
