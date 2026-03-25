@@ -32,6 +32,7 @@ export function SettingsTab({
   const [editingField, setEditingField] = useState(null);
   const [customEmail, setCustomEmail] = useState({ recipient: 'all', subject: '', message: '' });
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0, active: false });
 
   const handleSave = async (prop) => {
     const value = editForm[prop];
@@ -52,6 +53,7 @@ export function SettingsTab({
   // Iekšējā funkcija sūtīšanai
   const executeSending = async (targets, subject, message, notificationType = 'general') => {
     setSendingEmail(true);
+    setSendingProgress({ current: 0, total: 0, active: true });
     try {
       if (!settings.google_apps_script_url) {
         throw new Error('Nav konfigurēts e-pasta serviss');
@@ -61,11 +63,11 @@ export function SettingsTab({
         ? apartments.filter(a => a.email) 
         : apartments.filter(a => a.id === customEmail.recipient && a.email);
 
-      if (targets.length === 0) {
-        showToast('Nav saņēmēju ar e-pastiem', 'error');
-        setSendingEmail(false);
+      if (tSendingEmail(false);
+        setSendingProgress({ current: 0, total: 0, active: false });
         return;
       }
+      setSendingProgress({ current: 0, total: recipientApartments.length, active: true });
 
       let sentCount = 0;
       for (const apt of recipientApartments) {
@@ -82,6 +84,7 @@ export function SettingsTab({
           `;
           await sendEmailViaAppsScript(toAddresses, subject, htmlBody, settings.google_apps_script_url);
           sentCount++;
+          setSendingProgress(prev => ({ ...prev, current: sentCount }));
         } catch (itemError) {
           console.error(`Kļūda sūtot ziņojumu uz dzīv. ${apt.number}:`, itemError);
         }
@@ -96,6 +99,7 @@ export function SettingsTab({
       return false;
     } finally {
       setSendingEmail(false);
+      setSendingProgress({ current: 0, total: 0, active: false });
     }
   };
 
@@ -193,6 +197,19 @@ export function SettingsTab({
 
   return (
     <div>
+      {/* SŪTĪŠANAS PROGRESS */}
+      {sendingProgress.active && (
+        <div style={{ ...styles.card, background: '#f0fdf4', border: '1px solid #22c55e', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: '700', color: '#166534' }}>
+            <span>📤 Notiek sūtīšana...</span>
+            <span>{sendingProgress.current} / {sendingProgress.total}</span>
+          </div>
+          <div style={{ width: '100%', height: '12px', background: '#e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
+            <div style={{ width: `${(sendingProgress.current / sendingProgress.total) * 100}%`, height: '100%', background: '#22c55e', transition: 'width 0.4s ease' }}></div>
+          </div>
+        </div>
+      )}
+
       {/* ĒKAS INFORMĀCIJA */}
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>🏢 Ēkas Informācija</h2>

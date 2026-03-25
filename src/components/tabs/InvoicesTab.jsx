@@ -107,7 +107,8 @@ export function InvoicesTab({
   sendReminderFromModal,
   reminderModal,
   setReminderModal,
-  sendAllReminders
+  sendAllReminders,
+  sendingProgress
 }) {
   const [selectedApartmentForGen, setSelectedApartmentForGen] = React.useState('');
   const [selectedInvoices, setSelectedInvoices] = React.useState(new Set());
@@ -138,6 +139,19 @@ export function InvoicesTab({
 
   return (
     <div style={{ padding: '20px' }}>
+      {/* ===== SŪTĪŠANAS PROGRESS ===== */}
+      {sendingProgress?.active && (
+        <div style={{ ...styles.card, background: '#f0f9ff', border: '1px solid #0ea5e9', marginBottom: '30px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', fontWeight: '700', color: '#0369a1' }}>
+            <span>📧 Notiek e-pastu izsūtīšana...</span>
+            <span>{sendingProgress.current} no {sendingProgress.total}</span>
+          </div>
+          <div style={{ width: '100%', height: '12px', background: '#e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
+            <div style={{ width: `${(sendingProgress.current / sendingProgress.total) * 100}%`, height: '100%', background: '#0ea5e9', transition: 'width 0.4s ease' }}></div>
+          </div>
+        </div>
+      )}
+
       {/* ===== ĢENERĒŠANAS BLOKS ===== */}
       <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px'}}>
         <div style={styles.card}>

@@ -35,6 +35,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     subject: '',
     body: ''
   });
+  const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0, active: false });
 
   const calculatePreviousDebt = (apartmentId, currentPeriod) => {
     const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
@@ -523,6 +524,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       showToast(`⏳ Sāk sūtīt ${invoicesToSend.length} rēķinus...`, 'info');
+      setSendingProgress({ current: 0, total: invoicesToSend.length, active: true });
       let sentCount = 0;
 
       for (const invoice of invoicesToSend) {
@@ -622,6 +624,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           // Atjaunojam statusu datubāzē
           await supabase.from('invoices').update({ sent_at: new Date().toISOString() }).eq('id', invoice.id);
           sentCount++;
+          setSendingProgress(prev => ({ ...prev, current: sentCount }));
           console.log(`✓ Rēķins nosūtīts uz ${toAddresses}.`);
         } catch (itemError) {
           console.error(`Kļūda sūtot rēķinu ${invoice?.invoice_number}:`, itemError);
@@ -632,6 +635,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       showToast(`✓ Veiksmīgi nosūtīti ${sentCount} rēķini`);
+      setSendingProgress({ current: 0, total: 0, active: false });
       fetchData(); // Pārlādējam datus, lai redzētu "nosūtīts" statusu
     } catch (error) {
       console.error('E-pasta nosūtīšanas kļūda:', error);
@@ -2407,12 +2411,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     showToast(`Sāk sūtīt ${overdueInvoices.length} atgādinājumus...`, 'info');
+    setSendingProgress({ current: 0, total: overdueInvoices.length, active: true });
     
     let sentCount = 0;
 
     for (const invoice of overdueInvoices) {
+      const apt = apartments.find(a => a.id === invoice.apartment_id);
       try {
-        const apt = apartments.find(a => a.id === invoice.apartment_id);
         if (!apt || !apt.email) continue;
 
         const recipients = getEmailRecipients(apt.email, 'invoice');
@@ -2450,8 +2455,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const toAddresses = recipients.join(',');
         await sendEmailViaAppsScript(toAddresses, subject, emailBodyHtml, scriptUrl);
         sentCount++;
+        setSendingProgress(prev => ({ ...prev, current: sentCount }));
       } catch (error) {
-        console.error(`Kļūda sūtot uz ${toAddresses}:`, error);
+        console.error(`Kļūda sūtot atgādinājumu:`, error);
       }
       
       // Pauze, lai nepārslogotu API
@@ -2459,6 +2465,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     showToast(`Pabeigts. Nosūtīti ${sentCount} atgādinājumi.`);
+    setSendingProgress({ current: 0, total: 0, active: false });
   };
 
   return {
@@ -2492,6 +2499,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     sendReminderFromModal,
     reminderModal,
     setReminderModal,
-    sendAllReminders
+    sendAllReminders,
+    sendingProgress
   };
 }
