@@ -63,7 +63,9 @@ export function SettingsTab({
         ? apartments.filter(a => a.email) 
         : apartments.filter(a => a.id === customEmail.recipient && a.email);
 
-      if (tSendingEmail(false);
+      if (recipientApartments.length === 0) {
+        showToast('Nav saņēmēju ar e-pastiem', 'error');
+        setSendingEmail(false);
         setSendingProgress({ current: 0, total: 0, active: false });
         return;
       }
