@@ -33,6 +33,8 @@ export function SettingsTab({
   const [customEmail, setCustomEmail] = useState({ recipient: 'all', subject: '', message: '' });
   const [sendingEmail, setSendingEmail] = useState(false);
   const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0, active: false });
+  const [recipientType, setRecipientType] = useState('all'); // 'all', 'manual'
+  const [selectedApts, setSelectedApts] = useState(new Set());
 
   const handleSave = async (prop) => {
     const value = editForm[prop];
@@ -59,9 +61,11 @@ export function SettingsTab({
         throw new Error('Nav konfigurēts e-pasta serviss');
       }
 
-      const recipientApartments = targets === 'all' 
-        ? apartments.filter(a => a.email) 
-        : apartments.filter(a => a.id === customEmail.recipient && a.email);
+      const recipientApartments = Array.isArray(targets)
+        ? apartments.filter(a => targets.includes(a.id) && a.email)
+        : targets === 'all'
+          ? apartments.filter(a => a.email)
+          : apartments.filter(a => a.id === targets && a.email);
 
       if (recipientApartments.length === 0) {
         showToast('Nav saņēmēju ar e-pastiem', 'error');
@@ -112,12 +116,25 @@ export function SettingsTab({
       return;
     }
 
-    // Manuālie e-pasti iet kā 'general' (kas izmanto 'invoice' saņēmējus pēc noklusējuma)
-    const success = await executeSending(customEmail.recipient, customEmail.subject, customEmail.message, 'general');
+    const targets = recipientType === 'all' ? 'all' : Array.from(selectedApts);
+    if (recipientType === 'manual' && targets.length === 0) {
+      showToast('Lūdzu, atlasiet vismaz vienu dzīvokli', 'error');
+      return;
+    }
+
+    const success = await executeSending(targets, customEmail.subject, customEmail.message, 'general');
     
     if (success) {
       setCustomEmail({ ...customEmail, subject: '', message: '' });
+      setSelectedApts(new Set());
     }
+  };
+
+  const toggleAptSelection = (id) => {
+    const newSelection = new Set(selectedApts);
+    if (newSelection.has(id)) newSelection.delete(id);
+    else newSelection.add(id);
+    setSelectedApts(newSelection);
   };
 
   const sendMeterReadingRequest = async () => {
@@ -371,10 +388,47 @@ export function SettingsTab({
         <div style={{padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
           <h3 style={{fontSize: '14px', margin: '0 0 10px 0', color: '#334155'}}>✉️ Sūtīt ziņojumu</h3>
           <form onSubmit={handleSendCustomEmail} style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-            <select value={customEmail.recipient} onChange={(e) => setCustomEmail({...customEmail, recipient: e.target.value})} style={styles.input}>
-              <option value="all">Visiem dzīvokļiem</option>
-              {apartments.map(a => <option key={a.id} value={a.id}>Dzīv. {a.number} ({a.owner_name})</option>)}
-            </select>
+            <div style={{display: 'flex', gap: '15px', marginBottom: '5px'}}>
+              <label style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer'}}>
+                <input type="radio" checked={recipientType === 'all'} onChange={() => setRecipientType('all')} /> Visiem dzīvokļiem
+              </label>
+              <label style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer'}}>
+                <input type="radio" checked={recipientType === 'manual'} onChange={() => setRecipientType('manual')} /> Atlasīt manuāli
+              </label>
+            </div>
+
+            {recipientType === 'manual' && (
+              <div style={{
+                maxHeight: '180px', 
+                overflowY: 'auto', 
+                border: '1px solid #cbd5e1', 
+                borderRadius: '4px', 
+                padding: '10px', 
+                background: 'white',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                gap: '8px'
+              }}>
+                <div style={{gridColumn: '1/-1', display: 'flex', gap: '10px', marginBottom: '5px', borderBottom: '1px solid #eee', paddingBottom: '5px'}}>
+                   <button type="button" onClick={() => setSelectedApts(new Set(apartments.map(a => a.id)))} style={{fontSize: '11px', background: '#eee', border: '1px solid #ccc', cursor: 'pointer', padding: '2px 6px'}}>Izvēlēties visus</button>
+                   <button type="button" onClick={() => setSelectedApts(new Set())} style={{fontSize: '11px', background: '#eee', border: '1px solid #ccc', cursor: 'pointer', padding: '2px 6px'}}>Noņemt visus</button>
+                </div>
+                {apartments.sort((a,b) => parseInt(a.number) - parseInt(b.number)).map(apt => (
+                  <label key={apt.id} style={{
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px', 
+                    fontSize: '12px', 
+                    cursor: 'pointer',
+                    padding: '2px',
+                    background: selectedApts.has(apt.id) ? '#f0f9ff' : 'transparent'
+                  }}>
+                    <input type="checkbox" checked={selectedApts.has(apt.id)} onChange={() => toggleAptSelection(apt.id)} /> Dzīv. {apt.number}
+                  </label>
+                ))}
+              </div>
+            )}
+
             <input type="text" placeholder="Tēma" value={customEmail.subject} onChange={(e) => setCustomEmail({...customEmail, subject: e.target.value})} style={styles.input} />
             <textarea placeholder="Ziņojums..." value={customEmail.message} onChange={(e) => setCustomEmail({...customEmail, message: e.target.value})} style={{...styles.input, minHeight: '100px'}} />
             <button type="submit" disabled={sendingEmail} style={styles.btn}>{sendingEmail ? 'Sūta...' : 'Nosūtīt'}</button>
