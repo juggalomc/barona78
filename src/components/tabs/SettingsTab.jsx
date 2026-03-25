@@ -69,19 +69,24 @@ export function SettingsTab({
 
       let sentCount = 0;
       for (const apt of recipientApartments) {
-        const recipients = getEmailRecipients(apt.email, notificationType);
-        if (recipients.length === 0) continue;
-        
-        const toAddresses = recipients.join(',');
+        try {
+          const recipients = getEmailRecipients(apt.email, notificationType);
+          if (recipients.length === 0) continue;
+          
+          const toAddresses = recipients.join(',');
 
-        const htmlBody = `
-          <div style="font-family: sans-serif; color: #333; line-height: 1.6;">
-            ${message.replace(/\n/g, '<br>')}
-          </div>
-        `;
-        await sendEmailViaAppsScript(toAddresses, subject, htmlBody, settings.google_apps_script_url);
-        sentCount++;
-        await new Promise(r => setTimeout(r, 10000)); // Pauze
+          const htmlBody = `
+            <div style="font-family: sans-serif; color: #333; line-height: 1.6;">
+              ${message.replace(/\n/g, '<br>')}
+            </div>
+          `;
+          await sendEmailViaAppsScript(toAddresses, subject, htmlBody, settings.google_apps_script_url);
+          sentCount++;
+        } catch (itemError) {
+          console.error(`Kļūda sūtot ziņojumu uz dzīv. ${apt.number}:`, itemError);
+        }
+        // Pauze pat kļūdas gadījumā
+        await new Promise(r => setTimeout(r, 10000));
       }
       
       showToast(`✓ Nosūtīts ${sentCount} saņēmējiem`);
