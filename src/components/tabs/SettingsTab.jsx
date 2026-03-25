@@ -95,7 +95,7 @@ export function SettingsTab({
           console.error(`Kļūda sūtot ziņojumu uz dzīv. ${apt.number}:`, itemError);
         }
         // Pauze pat kļūdas gadījumā
-        await new Promise(r => setTimeout(r, 10000));
+        await new Promise(r => setTimeout(r, 15000));
       }
       
       showToast(`✓ Nosūtīts ${sentCount} saņēmējiem`);

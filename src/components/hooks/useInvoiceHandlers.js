@@ -631,7 +631,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
 
         // Pauze notiek jebkurā gadījumā, lai nepārslogotu sistēmu
-        await new Promise(r => setTimeout(r, 10000));
+        await new Promise(r => setTimeout(r, 15000));
       }
 
       showToast(`✓ Veiksmīgi nosūtīti ${sentCount} rēķini`);
@@ -2461,7 +2461,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
       
       // Pauze, lai nepārslogotu API
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      await new Promise(resolve => setTimeout(resolve, 15000));
     }
 
     showToast(`Pabeigts. Nosūtīti ${sentCount} atgādinājumi.`);
