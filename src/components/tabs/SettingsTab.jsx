@@ -81,7 +81,7 @@ export function SettingsTab({
         `;
         await sendEmailViaAppsScript(toAddresses, subject, htmlBody, settings.google_apps_script_url);
         sentCount++;
-        await new Promise(r => setTimeout(r, 300)); // Pauze
+        await new Promise(r => setTimeout(r, 10000)); // Pauze
       }
       
       showToast(`✓ Nosūtīts ${sentCount} saņēmējiem`);

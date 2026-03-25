@@ -626,9 +626,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         await supabase.from('invoices').update({ sent_at: new Date().toISOString() }).eq('id', invoice.id);
 
         sentCount++;
-        console.log(`✓ Rēķins nosūtīts uz ${toAddresses}`);
-        // Neliela pauze, lai nepārslogotu Gmail
-        await new Promise(r => setTimeout(r, 500));
+        console.log(`✓ Rēķins nosūtīts uz ${toAddresses}. Gaida 10 sekundes...`);
+        // Pauze, lai nepārslogotu Gmail API
+        await new Promise(r => setTimeout(r, 10000));
       }
 
       showToast(`✓ Veiksmīgi nosūtīti ${sentCount} rēķini`);
@@ -2454,8 +2454,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         console.error(`Kļūda sūtot uz ${toAddresses}:`, error);
       }
       
-      // Neliela pauze, lai nepārslogotu API
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Pauze, lai nepārslogotu API
+      await new Promise(resolve => setTimeout(resolve, 10000));
     }
 
     showToast(`Pabeigts. Nosūtīti ${sentCount} atgādinājumi.`);
