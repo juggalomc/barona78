@@ -269,6 +269,44 @@ export function SettingsTab({
         </div>
       </div>
 
+      {/* LIETOTĀJU PORTĀLA IESTATĪJUMI */}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>🌐 Lietotāju Portāls</h2>
+        <div style={{marginBottom: '12px', padding: '12px 15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+          <div style={{fontSize: '14px', fontWeight: '600', marginBottom: '8px'}}>📢 Informācija zem rēķiniem</div>
+          <div style={{fontSize: '12px', color: '#666', marginBottom: '8px'}}>Šis teksts parādīsies lietotājiem portālā uzreiz zem rēķinu saraksta.</div>
+          {editingField === 'user_portal_info' ? (
+            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+              <textarea
+                value={editForm['user_portal_info'] !== undefined ? editForm['user_portal_info'] : (settings['user_portal_info'] || '')}
+                onChange={(e) => setEditForm({...editForm, 'user_portal_info': e.target.value})}
+                style={{
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '2px solid #0ea5e9',
+                  borderRadius: '4px',
+                  fontFamily: 'inherit',
+                  minHeight: '80px',
+                  resize: 'vertical'
+                }}
+                placeholder="Piemēram: Lūdzam pievērst uzmanību..."
+              />
+              <div style={{display: 'flex', gap: '8px'}}>
+                <button onClick={() => handleSave('user_portal_info')} style={{padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}>✓ Saglabāt</button>
+                <button onClick={() => { setEditingField(null); setEditForm({...editForm, 'user_portal_info': settings['user_portal_info'] || ''}); }} style={{padding: '8px 16px', background: '#e5e7eb', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>✕ Atcelt</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap'}}>
+              <div style={{fontSize: '13px', color: '#666', wordBreak: 'break-word', flex: 1, minWidth: '150px', whiteSpace: 'pre-wrap', background: 'white', padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0'}}>
+                {settings['user_portal_info'] ? settings['user_portal_info'] : '(nav informācijas)'}
+              </div>
+              <button onClick={() => { setEditingField('user_portal_info'); setEditForm({...editForm, 'user_portal_info': settings['user_portal_info'] || ''}); }} style={{padding: '6px 12px', background: '#f0f9ff', border: '1px solid #0ea5e9', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500', color: '#0369a1', whiteSpace: 'nowrap'}}>✏️ Rediģēt</button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* KOMUNIKĀCIJA */}
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>📢 Komunikācija</h2>

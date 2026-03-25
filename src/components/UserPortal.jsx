@@ -161,6 +161,13 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
                 );
               })
             )}
+
+            {/* Administratora pievienotā informācija */}
+            {settings?.user_portal_info && (
+              <div style={{ marginTop: '15px', padding: '12px', background: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe', color: '#1e40af', fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                {settings.user_portal_info}
+              </div>
+            )}
           </div>
         </div>
 
