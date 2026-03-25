@@ -86,7 +86,7 @@ export function SettingsTab({
           `;
           await sendEmailViaAppsScript(toAddresses, subject, htmlBody, settings.google_apps_script_url);
           sentCount++;
-          setSendingProgress(prev => ({ ...prev, current: sentCount }));
+          setSendingProgress(prev => ({ ...prev, current: prev.current + 1 }));
         } catch (itemError) {
           console.error(`Kļūda sūtot ziņojumu uz dzīv. ${apt.number}:`, itemError);
         }

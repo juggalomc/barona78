@@ -624,7 +624,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           // Atjaunojam statusu datubāzē
           await supabase.from('invoices').update({ sent_at: new Date().toISOString() }).eq('id', invoice.id);
           sentCount++;
-          setSendingProgress(prev => ({ ...prev, current: sentCount }));
+          setSendingProgress(prev => ({ ...prev, current: prev.current + 1 }));
           console.log(`✓ Rēķins nosūtīts uz ${toAddresses}.`);
         } catch (itemError) {
           console.error(`Kļūda sūtot rēķinu ${invoice?.invoice_number}:`, itemError);
@@ -2455,7 +2455,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const toAddresses = recipients.join(',');
         await sendEmailViaAppsScript(toAddresses, subject, emailBodyHtml, scriptUrl);
         sentCount++;
-        setSendingProgress(prev => ({ ...prev, current: sentCount }));
+        setSendingProgress(prev => ({ ...prev, current: prev.current + 1 }));
       } catch (error) {
         console.error(`Kļūda sūtot atgādinājumu:`, error);
       }
