@@ -21,6 +21,12 @@ export const getEmailRecipients = (emailField, type = 'invoice') => {
   return [emailField];
 };
 
+// Palīgfunkcija e-pasta attēlošanai rēķinā (pārvērš JSON sarakstā)
+export const formatEmailForDisplay = (emailField) => {
+  const recipients = getEmailRecipients(emailField, 'invoice');
+  return recipients.length > 0 ? recipients.join(', ') : emailField;
+};
+
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
@@ -596,6 +602,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               { columns: [ { width: '50%', text: [ { text: 'Rēķina numurs:\n', bold: true }, `${invoice.invoice_number}\n\n`, { text: 'Periods:\n', bold: true }, `${invoice.period} (${new Date(invoice.date_from).toLocaleDateString('lv-LV')} - ${new Date(invoice.date_to).toLocaleDateString('lv-LV')})\n\n`, { text: 'Izrakstīts:\n', bold: true }, `${new Date(invoice.created_at).toLocaleDateString('lv-LV')}\n\n`, { text: 'Termiņš:\n', bold: true }, new Date(invoice.due_date).toLocaleDateString('lv-LV') ], fontSize: 11 } ], marginBottom: 20 },
               { text: 'SAŅĒMĒJS', fontSize: 12, bold: true, marginBottom: 8 },
               { text: `Dzīvoklis Nr. ${apt.number}\n${apt.owner_name ? 'Vārds: '+apt.owner_name+'\n':''}${apt.email ? 'E-pasts: '+apt.email+'\n':''}`, fontSize: 10, marginBottom: 20 },
+              { text: `Dzīvoklis Nr. ${apt.number}\n${apt.owner_name ? 'Vārds: '+apt.owner_name+'\n':''}${apt.email ? 'E-pasts: '+formatEmailForDisplay(apt.email)+'\n':''}`, fontSize: 10, marginBottom: 20 },
               { table: { headerRows: 1, widths: ['*', 90, 80, 80], body: tableRows }, layout: { hLineWidth: ()=>0.5, vLineWidth: ()=>0.5, hLineColor: ()=>'#cccccc', vLineColor: ()=>'#cccccc' }, marginBottom: 15 },
               { alignment: 'right', columns: [ { width: '70%', text: '' }, { width: '30%', table: { widths: ['*', '*'], body: [ [{text:'Summa bez PVN:', bold:true}, {text:`€${amountWithoutVat.toFixed(2)}`, alignment:'right'}], ...(vatAmount>0?[[{text:'PVN:', bold:true}, {text:`€${vatAmount.toFixed(2)}`, alignment:'right'}]]:[]), [{text:'KOPĀ:', fontSize:14, bold:true, color:'#003399'}, {text:`€${amountWithVat.toFixed(2)}`, fontSize:14, bold:true, color:'#003399', alignment:'right'}] ] }, layout: 'noBorders' } ], marginBottom: 30 },
               ...(settings.additional_invoice_info ? [{ text: '📝 Papildus Informācija:', fontSize: 12, bold: true, marginTop: 20, marginBottom: 8 }, { text: settings.additional_invoice_info, fontSize: 10, marginBottom: 20 }] : []),
@@ -747,6 +754,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             ${apt.owner_name ? `<div style="font-size: 12px;">Vārds/Nosaukums: ${apt.owner_name}</div>` : ''}
             ${apt.owner_surname ? `<div style="font-size: 12px;">Uzvārds: ${apt.owner_surname}</div>` : ''}
             ${apt.email ? `<div style="font-size: 12px;">E-pasts: ${apt.email}</div>` : ''}
+            ${apt.email ? `<div style="font-size: 12px;">E-pasts: ${formatEmailForDisplay(apt.email)}</div>` : ''}
             ${apt.declared_persons ? `<div style="font-size: 12px;">Deklarēto personu skaits: ${apt.declared_persons}</div>` : ''}
             ${apt.registration_number ? `<div style="font-size: 12px; margin-top: 8px; font-weight: bold;">Reģ. numurs: ${apt.registration_number}</div>` : ''}
             ${apt.apartment_address ? `<div style="font-size: 12px;">Adrese: ${apt.apartment_address}</div>` : ''}
@@ -1741,6 +1749,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                       (apt.owner_name ? 'Vārds: ' + apt.owner_name + '\n' : '') +
                       (apt.owner_surname ? 'Uzvārds: ' + apt.owner_surname + '\n' : '') +
                       (apt.email ? 'E-pasts: ' + apt.email + '\n' : '') +
+                      (apt.email ? 'E-pasts: ' + formatEmailForDisplay(apt.email) + '\n' : '') +
                       (apt.declared_persons ? 'Deklarēto personu skaits: ' + apt.declared_persons + '\n' : '') +
                       (apt.registration_number ? 'Reģistrācijas numurs: ' + apt.registration_number + '\n' : '') +
                       (apt.apartment_address ? 'Adrese: ' + apt.apartment_address + '\n' : '') +
@@ -2115,6 +2124,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                         (apt.owner_name ? 'Vārds: ' + apt.owner_name + '\n' : '') +
                         (apt.owner_surname ? 'Uzvārds: ' + apt.owner_surname + '\n' : '') +
                         (apt.email ? 'E-pasts: ' + apt.email + '\n' : '') +
+                        (apt.email ? 'E-pasts: ' + formatEmailForDisplay(apt.email) + '\n' : '') +
                         (apt.declared_persons ? 'Deklarēto personu skaits: ' + apt.declared_persons + '\n' : '') +
                         (apt.registration_number ? 'Reģistrācijas numurs: ' + apt.registration_number + '\n' : '') +
                         (apt.apartment_address ? 'Adrese: ' + apt.apartment_address + '\n' : '') +
