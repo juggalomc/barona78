@@ -205,7 +205,8 @@ export function TariffsTab({
                     {isEditing ? (
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', padding: '5px' }} onClick={(e) => e.stopPropagation()}>
                         <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
-                        <select value={editForm.target_type/option>
+                        <select value={editForm.target_type} onChange={(e) => setEditForm({...editForm, target_type: e.target.value})} style={{...styles.input, fontSize: '12px'}}>
+                          <option value="all">🏠+🏢 Visiem</option>
                           <option value="residential">🏠 Tikai dzīvojamām</option>
                           <option value="non_residential">🏢 Tikai nedzīvojamām</option>
                         </select>
