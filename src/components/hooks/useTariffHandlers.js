@@ -9,7 +9,8 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
     price_per_m2: '',
     is_per_m2: false,
     vat_rate: 0,
-    include_in_invoice: true
+    include_in_invoice: true,
+    target_type: 'all'
   });
   const [editingTariff, setEditingTariff] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -33,13 +34,14 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
           : parseFloat(tariffForm.total_amount),
         vat_rate: parseFloat(tariffForm.vat_rate) || 0,
         period: tariffPeriod,
-        include_in_invoice: tariffForm.include_in_invoice
+        include_in_invoice: tariffForm.include_in_invoice,
+        target_type: tariffForm.target_type || 'all'
       };
 
       const { error } = await supabase.from('tariffs').insert([dataToInsert]);
       if (error) throw error;
       
-      setTariffForm({ name: '', total_amount: '', price_per_m2: '', is_per_m2: false, vat_rate: 0, include_in_invoice: true });
+      setTariffForm({ name: '', total_amount: '', price_per_m2: '', is_per_m2: false, vat_rate: 0, include_in_invoice: true, target_type: 'all' });
       fetchData();
       showToast('✓ Tarifs pievienots');
     } catch (error) {
@@ -55,7 +57,8 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
       price_per_m2: (parseFloat(tariff.total_amount) / TOTAL_AREA).toFixed(4),
       is_per_m2: false, // Pēc noklusējuma rediģējam kopējo summu, lietotājs var pārslēgt
       vat_rate: tariff.vat_rate || 0,
-      include_in_invoice: tariff.include_in_invoice !== false
+      include_in_invoice: tariff.include_in_invoice !== false,
+      target_type: tariff.target_type || 'all'
     });
   };
 
@@ -71,7 +74,8 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
           name: editForm.name,
           total_amount: totalAmount,
           vat_rate: parseFloat(editForm.vat_rate) || 0,
-          include_in_invoice: editForm.include_in_invoice
+          include_in_invoice: editForm.include_in_invoice,
+          target_type: editForm.target_type || 'all'
         })
         .eq('id', id);
       
@@ -109,7 +113,8 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
         name: t.name,
         total_amount: t.total_amount,
         vat_rate: t.vat_rate,
-        period: toPeriod
+        period: toPeriod,
+        target_type: t.target_type || 'all'
       }));
 
       const { error } = await supabase.from('tariffs').insert(newTariffs);
