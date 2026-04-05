@@ -95,7 +95,7 @@ export function ApartmentsTab({
           <div style={styles.formRow}>
             <input type="number" placeholder="Deklarēto personu skaits" min="0" value={apartmentForm.declared_persons} onChange={(e) => setApartmentForm({...apartmentForm, declared_persons: e.target.value})} style={styles.input} />
             <select
-              value={apartmentForm.is_residential === false ? 'false' : 'true'}
+              value={String(apartmentForm.is_residential !== false)}
               onChange={(e) => setApartmentForm({...apartmentForm, is_residential: e.target.value === 'true'})}
               style={styles.input}
             >
@@ -123,7 +123,7 @@ export function ApartmentsTab({
                   <EmailManager value={editApartmentForm.email || ''} onChange={(val) => setEditApartmentForm({...editApartmentForm, email: val})} styles={styles} />
                   <input type="number" placeholder="Deklarēto personu skaits" min="0" value={editApartmentForm.declared_persons} onChange={(e) => setEditApartmentForm({...editApartmentForm, declared_persons: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
                   <select
-                    value={editApartmentForm.is_residential === false ? 'false' : 'true'}
+                    value={String(editApartmentForm.is_residential !== false)}
                     onChange={(e) => setEditApartmentForm({...editApartmentForm, is_residential: e.target.value === 'true'})}
                     style={{...styles.input, fontSize: '12px'}}
                   >

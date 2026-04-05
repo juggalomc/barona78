@@ -12,6 +12,10 @@ ADD COLUMN registration_number VARCHAR(255);
 -- Add apartment_address column
 ALTER TABLE apartments 
 ADD COLUMN apartment_address TEXT;
+
+-- Add is_residential column (defaults to true)
+ALTER TABLE apartments 
+ADD COLUMN is_residential BOOLEAN DEFAULT TRUE;
 ```
 
 ### Alternative: Create both columns in one statement

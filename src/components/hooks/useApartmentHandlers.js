@@ -13,7 +13,8 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
     share: '',
     declared_persons: '',
     registration_number: '',
-    apartment_address: ''
+    apartment_address: '',
+    is_residential: true
   });
   const [editingApartment, setEditingApartment] = useState(null);
   const [editApartmentForm, setEditApartmentForm] = useState({});
@@ -38,7 +39,8 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
         share: apartmentForm.share ? parseFloat(apartmentForm.share) : null,
         declared_persons: apartmentForm.declared_persons === '' ? null : parseInt(apartmentForm.declared_persons),
         registration_number: apartmentForm.registration_number || null,
-        apartment_address: apartmentForm.apartment_address || null
+        apartment_address: apartmentForm.apartment_address || null,
+        is_residential: !!apartmentForm.is_residential
       };
 
       const { error } = await supabase.from('apartments').insert([dataToInsert]);
@@ -56,7 +58,8 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
         share: '',
         declared_persons: '',
         registration_number: '',
-        apartment_address: ''
+        apartment_address: '',
+        is_residential: true
       });
       fetchData();
       showToast('✓ Dzīvoklis pievienots');
@@ -79,7 +82,8 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
       share: apt.share || '',
       declared_persons: apt.declared_persons !== null ? apt.declared_persons : '',
       registration_number: apt.registration_number || '',
-      apartment_address: apt.apartment_address || ''
+      apartment_address: apt.apartment_address || '',
+      is_residential: apt.is_residential !== false
     });
   };
 
@@ -99,7 +103,8 @@ export function useApartmentHandlers(supabase, fetchData, showToast) {
           share: editApartmentForm.share ? parseFloat(editApartmentForm.share) : null,
           declared_persons: editApartmentForm.declared_persons === '' ? null : parseInt(editApartmentForm.declared_persons),
           registration_number: editApartmentForm.registration_number || null,
-          apartment_address: editApartmentForm.apartment_address || null
+          apartment_address: editApartmentForm.apartment_address || null,
+          is_residential: !!editApartmentForm.is_residential
         })
         .eq('id', id);
       
