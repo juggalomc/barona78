@@ -568,9 +568,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
     };
 
-    renderSection('Pakalpojumi bez PVN', d => isService(d) && (d.vat_rate === 0 || d.vat_rate === undefined));
-    renderSection('Pakalpojumi ar PVN (21%)', d => isService(d) && d.vat_rate === 21);
-    renderSection('Pakalpojumi ar PVN (12%)', d => isService(d) && d.vat_rate === 12);
+    renderSection('Pakalpojumi bez PVN', d => isService(d) && (Number(d.vat_rate) === 0 || d.vat_rate === undefined));
+    renderSection('Pakalpojumi ar PVN (21%)', d => isService(d) && Number(d.vat_rate) === 21);
+    renderSection('Pakalpojumi ar PVN (12%)', d => isService(d) && Number(d.vat_rate) === 12);
     
     return tableRows;
   };
@@ -743,8 +743,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     
     const mapHtmlRow = d => {
       if (['water', 'hot_water', 'water_diff', 'hot_water_diff'].includes(d.type)) {
-        const emoji = d.type.includes('hot') ? '🔥' : '❄️';
-        return `<tr><td>${emoji} ${d.tariff_name}</td><td style="text-align: center;">${d.consumption_m3.toFixed(2)} m³</td><td style="text-align: right;">€${d.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${d.amount_without_vat.toFixed(2)}</td></tr>`;
+        // Emoži jau ir ietverts tariff_name (piem. ❄️ Aukstais ūdens)
+        const nameWithEmoji = d.tariff_name;
+        const consumption = parseFloat(d.consumption_m3 || 0);
+        return `<tr><td>${nameWithEmoji}</td><td style="text-align: center;">${consumption.toFixed(2)} m³</td><td style="text-align: right;">€${(d.price_per_m3 || 0).toFixed(4)}</td><td style="text-align: right;">€${(d.amount_without_vat || 0).toFixed(2)}</td></tr>`;
       } else if (d.type === 'waste') {
         return `<tr><td>${d.tariff_name}</td><td style="text-align: center;">${d.declared_persons} pers.</td><td style="text-align: right;">€${(d.amount_without_vat / d.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${d.amount_without_vat.toFixed(2)}</td></tr>`;
       } else {
@@ -752,10 +754,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
     };
 
-    const rowsWithoutVatHtml = invoiceDetails.filter(d => isService(d) && (d.vat_rate === 0 || d.vat_rate === undefined)).map(mapHtmlRow).join('');
+    const rowsWithoutVatHtml = invoiceDetails.filter(d => isService(d) && (Number(d.vat_rate) === 0 || d.vat_rate === undefined)).map(mapHtmlRow).join('');
     
     const getVatSectionHtml = (rate) => {
-      const rows = invoiceDetails.filter(d => isService(d) && d.vat_rate === rate);
+      const rows = invoiceDetails.filter(d => isService(d) && Number(d.vat_rate) === rate);
       if (rows.length === 0) return '';
       return `<tr><td colspan="4" class="section-header">Pakalpojumi ar PVN (${rate}%)</td></tr>${rows.map(mapHtmlRow).join('')}`;
     };
