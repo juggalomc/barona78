@@ -439,7 +439,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             vat_amount: diffVatAmount,
             type: 'hot_water_diff'
           });
-      
+        }
       }
 
       // Atkritumi
@@ -1323,6 +1323,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       // ✅ SILTĀ ŪDENS STARPĪBA - JA NAV RĀDĪJUMA (ja nav rādījuma, bet ir definēta starpība)
+      if (!hotWaterReading && hotWaterTariff && hotWaterTariff.diff_m3 > 0) {
         const nonReportingHotAptsCount = apartments.filter(aptItem => 
           !meterReadings.find(mr => mr.apartment_id === aptItem.id && mr.meter_type === 'hot_water' && mr.period === invoice.period)
         ).length;
