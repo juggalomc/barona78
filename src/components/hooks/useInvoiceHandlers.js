@@ -912,6 +912,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         dateTo = dateTo || `${year}-${month}-${daysInMonth}`;
       }
 
+      const waterTariffGlobal = waterTariffs.find(w => w.period === currentInvoiceMonth);
+      const nonReportingAptsCount = apartments.filter(aptItem => 
+        !meterReadings.find(mr => mr.apartment_id === aptItem.id && mr.meter_type === 'water' && mr.period === currentInvoiceMonth)
+      ).length;
+
       for (const apt of apartments) {
         let totalAmountWithoutVat = 0;
         let totalVatAmount = 0;
