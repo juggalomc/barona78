@@ -483,7 +483,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       // Parāds
-      const previousDebt = calculatePreviousDebt(apt.id, invoice.period, invoice.id);
+      const previousDebt = calculatePreviousDebt(apt.id, currentInvoiceMonth);
       if (previousDebt > 0) {
         totalAmountWithoutVat += previousDebt;
         invoiceDetails.push({
