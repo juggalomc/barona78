@@ -351,6 +351,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
   const editMeterReading = async (meterReadingId, newValue) => {
     try {
       const value = parseFloat(newValue);
+      const reading = meterReadings.find(mr => mr.id === meterReadingId);
+      if (!reading) return;
       
       if (isNaN(value) || value < 0) {
         showToast('Nepareiza vērtība', 'error');
@@ -362,6 +364,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         return;
       }
 
+      const fetchReadings = fetchMeterReadingsOnly || fetchData;
+
       const { error } = await supabase
         .from('meter_readings')
         .update({ reading_value: value })
@@ -369,7 +373,19 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       
       if (error) throw error;
 
-      fetchData();
+      // ✅ Atjaunojam arī patēriņa tabulu pēc manuālas labošanas
+      const lastReading = getLastReading(reading.apartment_id, reading.meter_type, reading.period, meterReadings);
+      const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
+      const consumption = Math.max(0, value - prevVal);
+
+      await supabase.from('water_consumption').upsert({
+        apartment_id: String(reading.apartment_id),
+        period: reading.period,
+        meter_type: reading.meter_type,
+        consumption_m3: consumption
+      }, { onConflict: 'apartment_id,period,meter_type' });
+
+      fetchReadings();
       showToast('✓ Skaitītāja rādījums atjaunināts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');

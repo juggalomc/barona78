@@ -323,7 +323,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       // ✅ AUKSTAIS ŪDENS - ATSEVIŠĶI
       if (waterCons && waterTariff && waterTariff.include_in_invoice !== false) {
-        const waterConsumptionM3 = parseFloat(waterCons.consumption_m3) || 0;
+        const waterConsumptionM3 = Math.max(0, parseFloat(waterCons.consumption_m3) || 0);
         const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
         const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
         const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
@@ -374,7 +374,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       // ✅ SILTAIS ŪDENS
       if (hotWaterCons && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
-        const hotWaterConsumptionM3 = parseFloat(hotWaterCons.consumption_m3) || 0;
+        const hotWaterConsumptionM3 = Math.max(0, parseFloat(hotWaterCons.consumption_m3) || 0);
         const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
         const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
         const hotWaterVatRate = 12; // Siltajam ūdenim 12% PVN

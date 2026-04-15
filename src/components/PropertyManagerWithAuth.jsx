@@ -73,9 +73,9 @@ export default function PropertyManager() {
   const apartmentHandlers = useApartmentHandlers(supabase, fetchData, showToast);
   const userHandlers = useUserHandlers(supabase, fetchData, showToast);
   const tariffHandlers = useTariffHandlers(supabase, fetchData, showToast);
-  const waterHandlers = useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly);
+  const waterHandlers = useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly, meterReadings);
   const wasteHandlers = useWasteHandlers(supabase, apartments, wasteTariffs, fetchData, showToast);
-  const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings, waterHandlers.enabledMeters);
+  const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings, waterHandlers.enabledMeters, waterConsumption);
 
   useEffect(() => {
     // Ja lietotājs ir ielādēts no localStorage, ielādējam viņa datus

@@ -60,11 +60,13 @@ export function useDataFetching(supabase) {
   // ✅ OPTIMIZĀCIJA: Selektīvi fetch tikai skaitītāju rādījumiem
   const fetchMeterReadingsOnly = async () => {
     try {
-      const mrRes = await supabase
-        .from('meter_readings')
-        .select('*')
-        .order('reading_date', { ascending: false });
+      const [mrRes, wcRes] = await Promise.all([
+        supabase.from('meter_readings').select('*').order('reading_date', { ascending: false }),
+        supabase.from('water_consumption').select('*').order('period', { ascending: false })
+      ]);
+      
       setMeterReadings(mrRes.data || []);
+      setWaterConsumption(wcRes.data || []);
     } catch (error) {
       console.error('Kļūda ielādējot skaitītāju rādījumus:', error);
     }
