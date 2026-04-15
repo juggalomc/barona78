@@ -594,6 +594,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           // 2. Ģenerējam PDF (izmantojot esošo loģiku, bet pielāgojot definīciju)
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
           const amountWithoutVat = invoice.amount_without_vat || 0;
+          // Assuming 'vatAmount' was here and needs removal based on error
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
           const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
           const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
@@ -727,7 +728,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
   const generateInvoicePdfHtml = (invoice, apt) => {
     const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
     const amountWithoutVat = invoice.amount_without_vat || 0;
-    const vatAmount = invoice.vat_amount || 0;
     const amountWithVat = invoice.amount_with_vat || invoice.amount;
     const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
     const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
@@ -1788,6 +1788,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
           const amountWithoutVat = invoice.amount_without_vat || 0;
+          // Assuming 'vatAmount' was here and needs removal based on error
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
           const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
           const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
@@ -1987,6 +1988,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                           { text: 'Summa bez PVN:', bold: true },
                           { text: '€' + amountWithoutVat.toFixed(2), alignment: 'right' }
                         ],
+                        ...(vat21 > 0 ? [[
+                          { text: 'PVN 21%:', bold: true },
+                          { text: '€' + vat21.toFixed(2), alignment: 'right' }
+                        ]] : []),
                         ...(vat12 > 0 ? [[
                           { text: 'PVN 12%:', bold: true },
                           { text: '€' + vat12.toFixed(2), alignment: 'right' }
@@ -2159,6 +2164,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           try {
             const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
             const amountWithoutVat = invoice.amount_without_vat || 0;
+            // Assuming 'vatAmount' was here and needs removal based on error
             const amountWithVat = invoice.amount_with_vat || invoice.amount;
             const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
             const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
