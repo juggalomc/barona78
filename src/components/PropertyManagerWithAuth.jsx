@@ -59,7 +59,7 @@ export default function PropertyManager() {
 
   // Data hooks
   const {
-    apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, users, loading,
+    apartments, tariffs, invoices, waterConsumption, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, users, loading,
     fetchData, fetchUserData, fetchMeterReadingsOnly
   } = useDataFetching(supabase);
 
