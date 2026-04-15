@@ -653,6 +653,26 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               { text: `Dzīvoklis Nr. ${apt.number}\n${apt.owner_name ? 'Vārds: '+apt.owner_name+'\n':''}${apt.email ? 'E-pasts: '+formatEmailForDisplay(apt.email)+'\n':''}`, fontSize: 10, marginBottom: 20 },
               { table: { headerRows: 1, widths: ['*', 90, 80, 80], body: tableRows }, layout: { hLineWidth: ()=>0.5, vLineWidth: ()=>0.5, hLineColor: ()=>'#cccccc', vLineColor: ()=>'#cccccc' }, marginBottom: 15 },
               { alignment: 'right', columns: [ { width: '70%', text: '' }, { width: '30%', table: { widths: ['*', '*'], body: [ [{text:'Summa bez PVN:', bold:true}, {text:`€${amountWithoutVat.toFixed(2)}`, alignment:'right'}], ...(vatAmount>0?[[{text:'PVN:', bold:true}, {text:`€${vatAmount.toFixed(2)}`, alignment:'right'}]]:[]), [{text:'KOPĀ:', fontSize:14, bold:true, color:'#003399'}, {text:`€${amountWithVat.toFixed(2)}`, fontSize:14, bold:true, color:'#003399', alignment:'right'}] ] }, layout: 'noBorders' } ], marginBottom: 30 },
+              {
+                alignment: 'right',
+                columns: [
+                  { width: '70%', text: '' },
+                  {
+                    width: '30%',
+                    table: {
+                      widths: ['*', '*'],
+                      body: [
+                        [{text:'Summa bez PVN:', bold:true}, {text:`€${amountWithoutVat.toFixed(2)}`, alignment:'right'}],
+                        ...(vat21 > 0 ? [[{text:'PVN 21%:', bold:true}, {text:`€${vat21.toFixed(2)}`, alignment:'right'}]] : []),
+                        ...(vat12 > 0 ? [[{text:'PVN 12%:', bold:true}, {text:`€${vat12.toFixed(2)}`, alignment:'right'}]] : []),
+                        [{text:'KOPĀ:', fontSize:14, bold:true, color:'#003399'}, {text:`€${amountWithVat.toFixed(2)}`, fontSize:14, bold:true, color:'#003399', alignment:'right'}]
+                      ]
+                    },
+                    layout: 'noBorders'
+                  }
+                ],
+                marginBottom: 30
+              },
               ...(settings.additional_invoice_info ? [{ text: '📝 Papildus Informācija:', fontSize: 12, bold: true, marginTop: 20, marginBottom: 8 }, { text: settings.additional_invoice_info, fontSize: 10, marginBottom: 20 }] : []),
               { text: 'MAKSĀJUMA REKVIZĪTI', fontSize: 12, bold: true, marginBottom: 10 },
               { table: { widths: ['*', '*'], body: [
