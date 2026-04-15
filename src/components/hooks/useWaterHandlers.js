@@ -230,12 +230,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       }
 
       // ✅ Sinhronizējam ar water_consumption tabulu
-      const [year, month] = period.split('-');
-      let prevMonth = parseInt(month) - 1;
-      let prevYear = parseInt(year);
-      if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
-      const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-      
       const lastReading = meterReadings
         .filter(mr => mr.apartment_id === apartmentId && mr.meter_type === 'water' && mr.period < period)
         .sort((a, b) => b.period.localeCompare(a.period))[0];
@@ -323,12 +317,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       }
 
       // ✅ Sinhronizējam ar water_consumption tabulu
-      const [year, month] = period.split('-');
-      let prevMonth = parseInt(month) - 1;
-      let prevYear = parseInt(year);
-      if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
-      const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-      
       const lastReading = meterReadings
         .filter(mr => mr.apartment_id === apartmentId && mr.meter_type === 'hot_water' && mr.period < period)
         .sort((a, b) => b.period.localeCompare(a.period))[0];
