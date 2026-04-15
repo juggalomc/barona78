@@ -530,6 +530,51 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     document.head.appendChild(script2);
   });
 
+  // Palīgfunkcija PDF tabulas rindu būvēšanai (kopīga visām PDF metodēm)
+  const buildInvoiceTableRows = (invoiceDetails, apt) => {
+    const tableRows = [];
+    tableRows.push([
+      { text: 'PAKALPOJUMS', bold: true, style: 'tableHeader' },
+      { text: 'DAUDZUMS', bold: true, style: 'tableHeader', alignment: 'center' },
+      { text: 'CENA', bold: true, style: 'tableHeader', alignment: 'right' },
+      { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
+    ]);
+
+    const isService = d => ['tariff', 'water', 'hot_water', 'waste', 'water_diff', 'hot_water_diff'].includes(d.type);
+    
+    const renderSection = (title, filterFn) => {
+      const rows = invoiceDetails.filter(filterFn);
+      if (rows.length > 0) {
+        tableRows.push([{ text: title, colSpan: 4, style: 'sectionHeader' }, {}, {}, {}]);
+        rows.forEach(d => {
+          let quantity = '', price = '';
+          if (['water', 'hot_water', 'water_diff', 'hot_water_diff'].includes(d.type)) {
+            quantity = `${(d.consumption_m3 || 0).toFixed(2)} m³`;
+            price = `€${(d.price_per_m3 || 0).toFixed(4)}`;
+          } else if (d.type === 'waste') {
+            quantity = `${d.declared_persons || 0} pers.`;
+            price = `€${((d.amount_without_vat || 0) / (d.declared_persons || 1)).toFixed(4)}`;
+          } else {
+            quantity = `${apt.area} m²`;
+            price = `€${((d.amount_without_vat || 0) / parseFloat(apt.area || 1)).toFixed(4)}`;
+          }
+          tableRows.push([
+            { text: d.tariff_name, style: 'tableBody' },
+            { text: quantity, alignment: 'center', style: 'tableBody' },
+            { text: price, alignment: 'right', style: 'tableBody' },
+            { text: `€${(d.amount_without_vat || 0).toFixed(2)}`, alignment: 'right', style: 'tableBody' }
+          ]);
+        });
+      }
+    };
+
+    renderSection('Pakalpojumi bez PVN', d => isService(d) && (d.vat_rate === 0 || d.vat_rate === undefined));
+    renderSection('Pakalpojumi ar PVN (21%)', d => isService(d) && d.vat_rate === 21);
+    renderSection('Pakalpojumi ar PVN (12%)', d => isService(d) && d.vat_rate === 12);
+    
+    return tableRows;
+  };
+
   const sendInvoicesByEmail = async (e, selectedValue) => {
     e.preventDefault();
     
@@ -606,6 +651,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             { text: 'CENA', bold: true, style: 'tableHeader', alignment: 'right' },
             { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
           ]);
+          const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
 
           // PDF rindu ģenerēšanas loģika
           const isService = d => ['tariff', 'water', 'hot_water', 'waste', 'water_diff', 'hot_water_diff'].includes(d.type);
@@ -1722,6 +1768,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             { text: 'CENA', bold: true, style: 'tableHeader', alignment: 'right' },
             { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
           ]);
+          const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
 
           const rowsWithoutVat = invoiceDetails.filter(d => 
             (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff' || d.type === 'hot_water_diff') && 
@@ -2097,6 +2144,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             const paymentIban = settings.payment_iban || 'LV62HABA0551064112797';
             const paymentEmail = settings.payment_email || 'info@barona78.lv';
             const paymentPhone = settings.payment_phone || '+371 67800000';
+            const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
 
             const tableRows = [];
             tableRows.push([
