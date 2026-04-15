@@ -655,6 +655,14 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               { alignment: 'right', columns: [ { width: '70%', text: '' }, { width: '30%', table: { widths: ['*', '*'], body: [ [{text:'Summa bez PVN:', bold:true}, {text:`€${amountWithoutVat.toFixed(2)}`, alignment:'right'}], ...(vatAmount>0?[[{text:'PVN:', bold:true}, {text:`€${vatAmount.toFixed(2)}`, alignment:'right'}]]:[]), [{text:'KOPĀ:', fontSize:14, bold:true, color:'#003399'}, {text:`€${amountWithVat.toFixed(2)}`, fontSize:14, bold:true, color:'#003399', alignment:'right'}] ] }, layout: 'noBorders' } ], marginBottom: 30 },
               ...(settings.additional_invoice_info ? [{ text: '📝 Papildus Informācija:', fontSize: 12, bold: true, marginTop: 20, marginBottom: 8 }, { text: settings.additional_invoice_info, fontSize: 10, marginBottom: 20 }] : []),
               { text: 'MAKSĀJUMA REKVIZĪTI', fontSize: 12, bold: true, marginBottom: 10 },
+              { table: { widths: ['*', '*'], body: [
+                [{text:'Summa bez PVN:', bold:true}, {text:`€${amountWithoutVat.toFixed(2)}`, alignment:'right'}],
+                ...(vat21 > 0 ? [[{text:'PVN 21%:', bold:true}, {text:`€${vat21.toFixed(2)}`, alignment:'right'}]] : []),
+                ...(vat12 > 0 ? [[{text:'PVN 12%:', bold:true}, {text:`€${vat12.toFixed(2)}`, alignment:'right'}]] : []),
+                [{text:'KOPĀ:', fontSize:14, bold:true, color:'#003399'}, {text:`€${amountWithVat.toFixed(2)}`, fontSize:14, bold:true, color:'#003399', alignment:'right'}]
+              ] }, layout: 'noBorders' } ], marginBottom: 30 },
+              ...(settings.additional_invoice_info ? [{ text: '📝 Papildus Informācija:', fontSize: 12, bold: true, marginTop: 20, marginBottom: 8 }, { text: settings.additional_invoice_info, fontSize: 10, marginBottom: 20 }] : []),
+              { text: 'MAKSĀJUMA REKVIZĪTI', fontSize: 12, bold: true, marginBottom: 10 },
               { table: { widths: ['30%', '70%'], body: [ ['NOSAUKUMS:', settings.building_name||'BIEDRĪBA "BARONA 78"'], ['REĢISTRĀCIJAS KODS:', settings.building_code||'40008325768'], ['ADRESE:', settings.building_address||'Kr. Barona iela 78-14, Rīga, LV-1001'], ['BANKA:', settings.payment_bank||'Habib Bank'], ['IBAN:', settings.payment_iban||'LV62HABA0551064112797'] ].map(r=>[{text:r[0], bold:true, fontSize:10, color:'#6b7280', fillColor:'#f3f4f6'}, {text:r[1], fontSize:10, color:'#4b5563', fillColor:'#f9fafb'}]) }, layout: { hLineWidth: ()=>1, vLineWidth: ()=>1, hLineColor: ()=>'#e5e7eb', vLineColor: ()=>'#e5e7eb' }, marginBottom: 10 }
             ],
             styles: { tableHeader: {fontSize:10, color:'#000', fillColor:'#f5f5f5'}, sectionHeader: {fontSize:11, bold:true, color:'#333', fillColor:'#f5f5f5'}, tableBody: {fontSize:10}, debt: {color:'#991b1b'}, overpayment: {color:'#1e40af'} }
@@ -1963,6 +1971,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                           { text: 'Summa bez PVN:', bold: true },
                           { text: '€' + amountWithoutVat.toFixed(2), alignment: 'right' }
                         ],
+                        ...(vat21 > 0 ? [[
                           { text: 'PVN 21%:', bold: true },
                           { text: '€' + vat21.toFixed(2), alignment: 'right' }
                         ]] : []),
@@ -2140,6 +2149,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             const amountWithoutVat = invoice.amount_without_vat || 0;
             const vatAmount = invoice.vat_amount || 0;
             const amountWithVat = invoice.amount_with_vat || invoice.amount;
+            const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
+            const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
 
             const buildingName = settings.building_name || 'BIEDRĪBA "BARONA 78"';
             const buildingCode = settings.building_code || '40008325768';
@@ -2343,6 +2354,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                           ...(vatAmount > 0 ? [[
                             { text: 'PVN:', bold: true },
                             { text: '€' + vatAmount.toFixed(2), alignment: 'right' }
+                          ...(vat21 > 0 ? [[
+                            { text: 'PVN 21%:', bold: true },
+                            { text: '€' + vat21.toFixed(2), alignment: 'right' }
+                          ]] : []),
+                          ...(vat12 > 0 ? [[
+                            { text: 'PVN 12%:', bold: true },
+                            { text: '€' + vat12.toFixed(2), alignment: 'right' }
                           ]] : []),
                           [
                             { text: 'KOPĀ:', fontSize: 14, bold: true, color: '#003399' },
