@@ -21,11 +21,11 @@ export function generateInvoicePdfHtml(invoice, apt, settings = {}) {
 
   // ===== RINDAS GRUPĒŠANA =====
   const rowsWithoutVat = invoiceDetails
-    .filter(d => (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff') && (d.vat_rate === 0 || d.vat_rate === undefined))
+    .filter(d => (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff' || d.type === 'hot_water_diff') && (d.vat_rate === 0 || d.vat_rate === undefined))
     .map(detail => {
       if (detail.type === 'water' || detail.type === 'water_diff') {
         return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
-      } else if (detail.type === 'hot_water') {
+      } else if (detail.type === 'hot_water' || detail.type === 'hot_water_diff') {
         return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
       } else if (detail.type === 'waste') {
         return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.declared_persons} pers.</td><td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
@@ -36,11 +36,11 @@ export function generateInvoicePdfHtml(invoice, apt, settings = {}) {
     .join('');
 
   const rowsWithVat = invoiceDetails
-    .filter(d => (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff') && d.vat_rate > 0)
+    .filter(d => (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff' || d.type === 'hot_water_diff') && d.vat_rate > 0)
     .map(detail => {
       if (detail.type === 'water' || detail.type === 'water_diff') {
         return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
-      } else if (detail.type === 'hot_water') {
+      } else if (detail.type === 'hot_water' || detail.type === 'hot_water_diff') {
         return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.consumption_m3} m³</td><td style="text-align: right;">€${detail.price_per_m3.toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
       } else if (detail.type === 'waste') {
         return `<tr><td>${detail.tariff_name}</td><td style="text-align: center;">${detail.declared_persons} pers.</td><td style="text-align: right;">€${(detail.amount_without_vat / detail.declared_persons).toFixed(4)}</td><td style="text-align: right;">€${detail.amount_without_vat.toFixed(2)}</td></tr>`;
@@ -190,7 +190,7 @@ export function buildInvoiceTableRows(invoiceDetails, apt) {
 
   // Pakalpojumi BEZ PVN
   const rowsWithoutVat = invoiceDetails.filter(d => 
-    (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff') && 
+    (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff' || d.type === 'hot_water_diff') && 
     (d.vat_rate === 0 || d.vat_rate === undefined)
   );
   
@@ -203,7 +203,7 @@ export function buildInvoiceTableRows(invoiceDetails, apt) {
     rowsWithoutVat.forEach(detail => {
       let quantity = '';
       let unitPrice = '';
-      if (detail.type === 'water' || detail.type === 'hot_water' || detail.type === 'water_diff') {
+      if (detail.type === 'water' || detail.type === 'hot_water' || detail.type === 'water_diff' || detail.type === 'hot_water_diff') {
         quantity = detail.consumption_m3 + ' m³';
         unitPrice = '€' + detail.price_per_m3.toFixed(4);
       } else if (detail.type === 'waste') {
@@ -224,7 +224,7 @@ export function buildInvoiceTableRows(invoiceDetails, apt) {
 
   // Pakalpojumi AR PVN
   const rowsWithVat = invoiceDetails.filter(d => 
-    (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff') && 
+    (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff' || d.type === 'hot_water_diff') && 
     d.vat_rate > 0
   );
   
@@ -237,7 +237,7 @@ export function buildInvoiceTableRows(invoiceDetails, apt) {
     rowsWithVat.forEach(detail => {
       let quantity = '';
       let unitPrice = '';
-      if (detail.type === 'water' || detail.type === 'hot_water' || detail.type === 'water_diff') {
+      if (detail.type === 'water' || detail.type === 'hot_water' || detail.type === 'water_diff' || detail.type === 'hot_water_diff') {
         quantity = detail.consumption_m3 + ' m³';
         unitPrice = '€' + detail.price_per_m3.toFixed(4);
       } else if (detail.type === 'waste') {

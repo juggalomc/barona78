@@ -17,7 +17,9 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     period: '2026-01',
     price_per_m3: '',
     vat_rate: 0,
-    include_in_invoice: true
+    include_in_invoice: true,
+    diff_m3: '',
+    diff_price: ''
   });
 
   // Ielādē tarifu datus formā, kad mainās periods vai ielādējas dati
@@ -39,7 +41,9 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       period: tariffPeriod,
       price_per_m3: hot ? hot.price_per_m3 : '',
       vat_rate: hot ? hot.vat_rate : 21,
-      include_in_invoice: hot ? (hot.include_in_invoice !== false) : true
+      include_in_invoice: hot ? (hot.include_in_invoice !== false) : true,
+      diff_m3: hot ? hot.diff_m3 : '',
+      diff_price: hot ? hot.diff_price : ''
     }));
   }, [tariffPeriod, waterTariffs, hotWaterTariffs]);
 
@@ -108,6 +112,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       const vatValue = parseFloat(hotWaterTariffForm.vat_rate || 0);
       const period = hotWaterTariffForm.period;
       const includeInvoice = hotWaterTariffForm.include_in_invoice;
+      const diffM3 = parseFloat(hotWaterTariffForm.diff_m3 || 0);
+      const diffPrice = parseFloat(hotWaterTariffForm.diff_price || 0);
 
       if (isNaN(priceValue) || priceValue < 0 || priceValue > 9999.99) {
         showToast('Nepareiza cena par m³', 'error');
@@ -130,7 +136,9 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
           .update({
             price_per_m3: priceValue,
             vat_rate: vatValue,
-            include_in_invoice: includeInvoice
+            include_in_invoice: includeInvoice,
+            diff_m3: diffM3,
+            diff_price: diffPrice
           })
           .eq('id', existing[0].id);
         if (error) throw error;
@@ -141,7 +149,9 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
             period: period,
             price_per_m3: priceValue,
             vat_rate: vatValue,
-            include_in_invoice: includeInvoice
+            include_in_invoice: includeInvoice,
+            diff_m3: diffM3,
+            diff_price: diffPrice
           }]);
         if (error) throw error;
       }
