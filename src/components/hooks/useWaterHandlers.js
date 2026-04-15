@@ -231,7 +231,11 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       // ✅ Sinhronizējam ar water_consumption tabulu
       const lastReading = meterReadings
-        .filter(mr => mr.apartment_id === apartmentId && mr.meter_type === 'water' && mr.period < period)
+        .filter(mr => 
+          String(mr.apartment_id) === String(apartmentId) && 
+          mr.meter_type === 'water' && 
+          mr.period < period
+        )
         .sort((a, b) => b.period.localeCompare(a.period))[0];
       
       const consumption = lastReading ? Math.max(0, value - parseFloat(lastReading.reading_value)) : 0;
@@ -318,7 +322,11 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       // ✅ Sinhronizējam ar water_consumption tabulu
       const lastReading = meterReadings
-        .filter(mr => mr.apartment_id === apartmentId && mr.meter_type === 'hot_water' && mr.period < period)
+        .filter(mr => 
+          String(mr.apartment_id) === String(apartmentId) && 
+          mr.meter_type === 'hot_water' && 
+          mr.period < period
+        )
         .sort((a, b) => b.period.localeCompare(a.period))[0];
       
       const consumption = lastReading ? Math.max(0, value - parseFloat(lastReading.reading_value)) : 0;
@@ -389,8 +397,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       for (const apt of apartments) {
         for (const type of ['water', 'hot_water']) {
-          const currentReadingObj = meterReadings.find(mr => 
-            mr.apartment_id === apt.id && 
+          const currentReadingObj = (meterReadings || []).find(mr => 
+            String(mr.apartment_id) === String(apt.id) && 
             mr.meter_type === type && 
             mr.period === tariffPeriod
           );
@@ -432,7 +440,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
   const getLastReading = (apartmentId, meterType, currentPeriod, readings) => {
     const relevant = readings
       .filter(mr => 
-        mr.apartment_id === apartmentId && 
+        String(mr.apartment_id) === String(apartmentId) && 
         mr.meter_type === meterType && 
         mr.period < currentPeriod
       )
