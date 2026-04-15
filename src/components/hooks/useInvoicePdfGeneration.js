@@ -230,7 +230,7 @@ export function buildInvoiceTableRows(invoiceDetails, apt) {
   
   if (rowsWithVat.length > 0) {
     tableRows.push([
-      { text: 'Pakalpojumi ar PVN (21%)', colSpan: 4, style: 'sectionHeader' },
+      { text: 'Pakalpojumi ar PVN', colSpan: 4, style: 'sectionHeader' },
       {}, {}, {}
     ]);
     

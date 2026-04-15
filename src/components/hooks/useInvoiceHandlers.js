@@ -410,7 +410,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
         const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
         const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
-        const hotWaterVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+        const hotWaterVatRate = 12; // Siltajam ūdenim 12% PVN
         const hotWaterVatAmount = Math.round(hotWaterAmountWithoutVat * hotWaterVatRate / 100 * 100) / 100;
 
         totalAmountWithoutVat += hotWaterAmountWithoutVat;
@@ -438,7 +438,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const shareM3 = parseFloat(hotWaterTariff.diff_m3) / nonReportingHotAptsCount;
           const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
           const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
-          const diffVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+          const diffVatRate = 12; // Siltā ūdens starpībai 12% PVN
           const diffVatAmount = Math.round(diffAmount * diffVatRate / 100 * 100) / 100;
 
           totalAmountWithoutVat += diffAmount;
@@ -653,7 +653,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           }
           const rowsWithVat = invoiceDetails.filter(d => (d.type === 'tariff' || d.type === 'water' || d.type === 'hot_water' || d.type === 'waste' || d.type === 'water_diff') && d.vat_rate > 0);
           if (rowsWithVat.length > 0) {
-            tableRows.push([{ text: 'Pakalpojumi ar PVN (21%)', colSpan: 4, style: 'sectionHeader' }, {}, {}, {}]);
+            tableRows.push([{ text: 'Pakalpojumi ar PVN', colSpan: 4, style: 'sectionHeader' }, {}, {}, {}]);
             rowsWithVat.forEach(d => {
                let q = '', p = '';
              if(d.type==='water'||d.type==='hot_water'||d.type==='water_diff'||d.type==='hot_water_diff') { q=`${d.consumption_m3.toFixed(2)} m³`; p=`€${d.price_per_m3.toFixed(4)}`; }
@@ -1066,7 +1066,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const shareM3 = parseFloat(hotWaterTariffGlobal.diff_m3) / nonReportingHotAptsCount;
           const diffPrice = parseFloat(hotWaterTariffGlobal.diff_price) || 0;
           const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
-          const diffVatRate = parseFloat(hotWaterTariffGlobal.vat_rate) || 0;
+          const diffVatRate = 12; // 12% PVN
           const diffVatAmount = Math.round(diffAmount * diffVatRate / 100 * 100) / 100;
 
           totalAmountWithoutVat += diffAmount;
@@ -1104,7 +1104,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
           const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
           const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
-          const hotWaterVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+          const hotWaterVatRate = 12; // 12% PVN
           const hotWaterVatAmount = Math.round(hotWaterAmountWithoutVat * hotWaterVatRate / 100 * 100) / 100;
 
           totalAmountWithoutVat += hotWaterAmountWithoutVat;
@@ -1345,7 +1345,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const shareM3 = parseFloat(hotWaterTariff.diff_m3) / nonReportingHotAptsCount;
           const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
           const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
-          const diffVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+          const diffVatRate = 12; // 12% PVN
           const diffVatAmount = Math.round(diffAmount * diffVatRate / 100 * 100) / 100;
 
           totalAmountWithoutVat += diffAmount;
@@ -1384,7 +1384,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
         const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
         const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
-        const hotWaterVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+        const hotWaterVatRate = 12; // 12% PVN
         const hotWaterVatAmount = Math.round(hotWaterAmountWithoutVat * hotWaterVatRate / 100 * 100) / 100;
 
         totalAmountWithoutVat += hotWaterAmountWithoutVat;
@@ -1652,7 +1652,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             const shareM3 = parseFloat(hotWaterTariff.diff_m3) / nonReportingHotAptsCount;
             const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
             const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
-            const diffVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+            const diffVatRate = 12; // 12% PVN
             const diffVatAmount = Math.round(diffAmount * diffVatRate / 100 * 100) / 100;
 
             totalAmountWithoutVat += diffAmount;
@@ -1691,7 +1691,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
           const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
           const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
-          const hotWaterVatRate = parseFloat(hotWaterTariff.vat_rate) || 0;
+          const hotWaterVatRate = 12; // 12% PVN
           const hotWaterVatAmount = Math.round(hotWaterAmountWithoutVat * hotWaterVatRate / 100 * 100) / 100;
 
           totalAmountWithoutVat += hotWaterAmountWithoutVat;

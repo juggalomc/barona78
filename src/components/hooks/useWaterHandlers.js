@@ -40,7 +40,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       ...prev,
       period: tariffPeriod,
       price_per_m3: hot ? hot.price_per_m3 : '',
-      vat_rate: hot ? hot.vat_rate : 21,
+      vat_rate: hot ? hot.vat_rate : 12, // Noklusējums siltajam ūdenim 12%
       include_in_invoice: hot ? (hot.include_in_invoice !== false) : true,
       diff_m3: hot ? hot.diff_m3 : '',
       diff_price: hot ? hot.diff_price : ''
