@@ -10,7 +10,6 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
     }
-    const dueDate = new Date(invoice.due_date);
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     if (todayStr > invoice.due_date || invoice.period < currentPeriod) {
