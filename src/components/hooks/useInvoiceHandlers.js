@@ -1987,10 +1987,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                           { text: 'Summa bez PVN:', bold: true },
                           { text: '€' + amountWithoutVat.toFixed(2), alignment: 'right' }
                         ],
-                        ...(vat21 > 0 ? [[
-                          { text: 'PVN 21%:', bold: true },
-                          { text: '€' + vat21.toFixed(2), alignment: 'right' }
-                        ]] : []),
                         ...(vat12 > 0 ? [[
                           { text: 'PVN 12%:', bold: true },
                           { text: '€' + vat12.toFixed(2), alignment: 'right' }
