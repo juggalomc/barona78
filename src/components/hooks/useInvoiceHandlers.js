@@ -293,6 +293,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       // ✅ ŪDENS DATI NO PATĒRIŅA TABULAS
       const waterCons = waterConsumption.find(wc => wc.apartment_id === apt.id && wc.meter_type === 'water' && wc.period === currentInvoiceMonth);
       const hotWaterCons = waterConsumption.find(wc => wc.apartment_id === apt.id && wc.meter_type === 'hot_water' && wc.period === currentInvoiceMonth);
+      const waterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'water' && wc.period === currentInvoiceMonth);
+      const hotWaterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && wc.period === currentInvoiceMonth);
       const waterTariff = waterTariffs.find(w => w.period === currentInvoiceMonth);
       const hotWaterTariff = hotWaterTariffs.find(w => w.period === currentInvoiceMonth);
 
@@ -348,6 +350,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       if (!waterCons && waterTariff && waterTariff.diff_m3 > 0) {
         const nonReportingAptsCount = apartments.filter(aptItem => 
           !waterConsumption.find(wc => wc.apartment_id === aptItem.id && wc.meter_type === 'water' && wc.period === currentInvoiceMonth)
+          !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && wc.period === currentInvoiceMonth)
         ).length;
 
         if (nonReportingAptsCount > 0) {
@@ -399,6 +402,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       if (!hotWaterCons && hotWaterTariff && hotWaterTariff.diff_m3 > 0) {
         const nonReportingHotAptsCount = apartments.filter(aptItem => 
           !waterConsumption.find(wc => wc.apartment_id === aptItem.id && wc.meter_type === 'hot_water' && wc.period === currentInvoiceMonth)
+          !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && wc.period === currentInvoiceMonth)
         ).length;
 
         if (nonReportingHotAptsCount > 0) {
@@ -596,6 +600,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const amountWithoutVat = invoice.amount_without_vat || 0;
           const vatAmount = invoice.vat_amount || 0;
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
+          const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
+          const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
 
           // Tabulas rindas
           const tableRows = [];
@@ -701,6 +707,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     const amountWithoutVat = invoice.amount_without_vat || 0;
     const vatAmount = invoice.vat_amount || 0;
     const amountWithVat = invoice.amount_with_vat || invoice.amount;
+    const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
+    const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
 
     const buildingName = settings.building_name || 'BIEDRĪBA "BARONA 78"';
     const buildingCode = settings.building_code || '40008325768';
@@ -826,6 +834,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               <span>€${amountWithoutVat.toFixed(2)}</span>
             </div>
             ${vatAmount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 15px;"><span>PVN kopā:</span><span>€${vatAmount.toFixed(2)}</span></div>` : ''}
+            ${vat21 > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;"><span>PVN 21%:</span><span>€${vat21.toFixed(2)}</span></div>` : ''}
+            ${vat12 > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 15px;"><span>PVN 12%:</span><span>€${vat12.toFixed(2)}</span></div>` : ''}
             <div style="font-size: 12px; margin-bottom: 15px;">KOPĀ APMAKSAI (EUR):</div>
             <div class="amount-total">€${amountWithVat.toFixed(2)}</div>
           </div>
@@ -929,10 +939,12 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       const nonReportingColdAptsCount = apartments.filter(aptItem => 
         !meterReadings.find(mr => mr.apartment_id === aptItem.id && mr.meter_type === 'water' && mr.period === currentInvoiceMonth)
+        !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && wc.period === currentInvoiceMonth)
       ).length;
 
       const nonReportingHotAptsCount = apartments.filter(aptItem => 
         !meterReadings.find(mr => mr.apartment_id === aptItem.id && mr.meter_type === 'hot_water' && mr.period === currentInvoiceMonth)
+        !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && wc.period === currentInvoiceMonth)
       ).length;
 
       for (const apt of apartments) {
@@ -943,6 +955,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         // Definējam visus nepieciešamos rādījumus un tarifus cikla sākumā
         const waterCons = waterConsumption.find(wc => wc.apartment_id === apt.id && wc.meter_type === 'water' && wc.period === currentInvoiceMonth);
         const hotWaterCons = waterConsumption.find(wc => wc.apartment_id === apt.id && wc.meter_type === 'hot_water' && wc.period === currentInvoiceMonth);
+        const waterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'water' && wc.period === currentInvoiceMonth);
+        const hotWaterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && wc.period === currentInvoiceMonth);
         const waterTariff = waterTariffs.find(w => w.period === currentInvoiceMonth);
         const hotWaterTariff = hotWaterTariffs.find(w => w.period === currentInvoiceMonth);
 
@@ -1759,6 +1773,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const amountWithoutVat = invoice.amount_without_vat || 0;
           const vatAmount = invoice.vat_amount || 0;
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
+          const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
+          const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
 
           const tableRows = [];
           tableRows.push([
@@ -1958,6 +1974,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                         ...(vatAmount > 0 ? [[
                           { text: 'PVN:', bold: true },
                           { text: '€' + vatAmount.toFixed(2), alignment: 'right' }
+                        ...(vat21 > 0 ? [[
+                          { text: 'PVN 21%:', bold: true },
+                          { text: '€' + vat21.toFixed(2), alignment: 'right' }
+                        ]] : []),
+                        ...(vat12 > 0 ? [[
+                          { text: 'PVN 12%:', bold: true },
+                          { text: '€' + vat12.toFixed(2), alignment: 'right' }
                         ]] : []),
                         [
                           { text: 'KOPĀ:', fontSize: 14, bold: true, color: '#003399' },
