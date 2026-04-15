@@ -40,7 +40,7 @@ export function WaterTab({
         </div>
 
         <button 
-          onClick={syncWaterConsumption}
+          onClick={() => syncWaterConsumption(meterReadings)}
           title="Pārrēķināt un saglabāt patēriņu visiem dzīvokļiem šajā periodā"
           style={{ padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
         >

@@ -380,21 +380,23 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     }
   };
 
-  const syncWaterConsumption = async () => {
+  const syncWaterConsumption = async (readingsFromProps) => {
     try {
       showToast('⏳ Sinhronizē patēriņa datus...', 'info');
       const consumptionData = [];
+      // Izmantojam datus, kas padoti no UI, vai hook iekšējos datus
+      const activeReadings = readingsFromProps || meterReadings || [];
 
       for (const apt of (apartments || [])) {
         for (const type of ['water', 'hot_water']) {
-          const currentReadingObj = (meterReadings || []).find(mr => 
+          const currentReadingObj = activeReadings.find(mr => 
             String(mr.apartment_id) === String(apt.id) && 
             mr.meter_type === type && 
             mr.period === tariffPeriod
           );
 
           if (currentReadingObj) {
-            const lastReading = getLastReading(apt.id, type, tariffPeriod, meterReadings || []);
+            const lastReading = getLastReading(apt.id, type, tariffPeriod, activeReadings);
             const currentVal = parseFloat(currentReadingObj.reading_value);
             const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
             const consumption = Math.max(0, currentVal - prevVal);
