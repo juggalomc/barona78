@@ -498,7 +498,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
       const timestamp = Math.floor(Date.now() / 1000);
       const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
-      const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+      // Iestatām termiņu uz nākamā mēneša 28. datumu (month ir index 0-11, Date konstruktorā tas jau ir nākamais mēnesis)
+      const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
 
       const { error } = await supabase.from('invoices').insert([{
         apartment_id: apt.id,
@@ -1164,7 +1165,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
         const timestamp = Math.floor(Date.now() / 1000);
         const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
-        const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+        // Iestatām termiņu uz nākamā mēneša 28. datumu
+        const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
 
         invoicesToAdd.push({
           apartment_id: apt.id,
@@ -1747,7 +1749,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
         const timestamp = Math.floor(Date.now() / 1000);
         const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
-        const dueDate = new Date(year, month, 15).toISOString().split('T')[0];
+        // Iestatām termiņu uz nākamā mēneša 28. datumu
+        const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
 
         const { error } = await supabase.from('invoices').insert([{
           apartment_id: apt.id,
