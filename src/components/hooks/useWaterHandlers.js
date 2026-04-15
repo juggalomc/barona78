@@ -230,18 +230,13 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       }
 
       // ✅ Sinhronizējam ar water_consumption tabulu
-      const lastReading = meterReadings
-        .filter(mr => 
-          String(mr.apartment_id) === String(apartmentId) && 
-          mr.meter_type === 'water' && 
-          mr.period < period
-        )
-        .sort((a, b) => b.period.localeCompare(a.period))[0];
-      
-      const consumption = lastReading ? Math.max(0, value - parseFloat(lastReading.reading_value)) : 0;
+      const lastReading = getLastReading(apartmentId, 'water', period, meterReadings);
+      const currentVal = parseFloat(value) || 0;
+      const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
+      const consumption = Math.max(0, currentVal - prevVal);
       
       await supabase.from('water_consumption').upsert({
-        apartment_id: apartmentId,
+        apartment_id: String(apartmentId),
         period: period,
         meter_type: 'water',
         consumption_m3: consumption
@@ -321,18 +316,13 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       }
 
       // ✅ Sinhronizējam ar water_consumption tabulu
-      const lastReading = meterReadings
-        .filter(mr => 
-          String(mr.apartment_id) === String(apartmentId) && 
-          mr.meter_type === 'hot_water' && 
-          mr.period < period
-        )
-        .sort((a, b) => b.period.localeCompare(a.period))[0];
-      
-      const consumption = lastReading ? Math.max(0, value - parseFloat(lastReading.reading_value)) : 0;
+      const lastReading = getLastReading(apartmentId, 'hot_water', period, meterReadings);
+      const currentVal = parseFloat(value) || 0;
+      const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
+      const consumption = Math.max(0, currentVal - prevVal);
       
       await supabase.from('water_consumption').upsert({
-        apartment_id: apartmentId,
+        apartment_id: String(apartmentId),
         period: period,
         meter_type: 'hot_water',
         consumption_m3: consumption
@@ -395,7 +385,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       showToast('⏳ Sinhronizē patēriņa datus...', 'info');
       const consumptionData = [];
 
-      for (const apt of apartments) {
+      for (const apt of (apartments || [])) {
         for (const type of ['water', 'hot_water']) {
           const currentReadingObj = (meterReadings || []).find(mr => 
             String(mr.apartment_id) === String(apt.id) && 
@@ -404,13 +394,13 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
           );
 
           if (currentReadingObj) {
-            const lastReading = getLastReading(apt.id, type, tariffPeriod, meterReadings);
+            const lastReading = getLastReading(apt.id, type, tariffPeriod, meterReadings || []);
             const currentVal = parseFloat(currentReadingObj.reading_value);
             const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
             const consumption = Math.max(0, currentVal - prevVal);
 
             consumptionData.push({
-              apartment_id: apt.id,
+              apartment_id: String(apt.id),
               period: tariffPeriod,
               meter_type: type,
               consumption_m3: consumption
