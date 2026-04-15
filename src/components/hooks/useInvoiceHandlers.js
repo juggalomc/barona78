@@ -27,7 +27,7 @@ export const formatEmailForDisplay = (emailField) => {
   return recipients.length > 0 ? recipients.join(', ') : emailField;
 };
 
-export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}) {
+export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}, waterConsumption = []) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
   const [invoiceToDate, setInvoiceToDate] = useState('');

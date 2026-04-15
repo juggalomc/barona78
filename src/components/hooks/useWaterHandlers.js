@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly) {
+export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly, meterReadings = []) {
   const [enabledMeters, setEnabledMeters] = useState({ water: true, hot_water: false });
   const today = new Date();
   const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
