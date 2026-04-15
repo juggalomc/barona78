@@ -9,7 +9,9 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     period: '2026-01',
     price_per_m3: '',
     vat_rate: 0,
-    include_in_invoice: true
+    include_in_invoice: true,
+    diff_m3: '',
+    diff_price: ''
   });
   const [hotWaterTariffForm, setHotWaterTariffForm] = useState({
     period: '2026-01',
@@ -26,7 +28,9 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       period: tariffPeriod,
       price_per_m3: water ? water.price_per_m3 : '',
       vat_rate: water ? water.vat_rate : 21,
-      include_in_invoice: water ? (water.include_in_invoice !== false) : true
+      include_in_invoice: water ? (water.include_in_invoice !== false) : true,
+      diff_m3: water ? water.diff_m3 : '',
+      diff_price: water ? water.diff_price : ''
     }));
 
     const hot = hotWaterTariffs.find(t => t.period === tariffPeriod);
@@ -45,6 +49,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       const priceValue = parseFloat(waterTariffForm.price_per_m3 || 0);
       const vatValue = parseFloat(waterTariffForm.vat_rate || 0);
       const period = waterTariffForm.period;
+      const diffM3 = parseFloat(waterTariffForm.diff_m3 || 0);
+      const diffPrice = parseFloat(waterTariffForm.diff_price || 0);
       const includeInvoice = waterTariffForm.include_in_invoice;
 
       if (isNaN(priceValue) || priceValue < 0 || priceValue > 9999.99) {
@@ -68,7 +74,9 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
           .update({
             price_per_m3: priceValue,
             vat_rate: vatValue,
-            include_in_invoice: includeInvoice
+            include_in_invoice: includeInvoice,
+            diff_m3: diffM3,
+            diff_price: diffPrice
           })
           .eq('id', existing[0].id);
         if (error) throw error;
@@ -79,6 +87,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
             period: period,
             price_per_m3: priceValue,
             vat_rate: vatValue,
+            diff_m3: diffM3,
+            diff_price: diffPrice,
             include_in_invoice: includeInvoice
           }]);
         if (error) throw error;

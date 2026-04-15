@@ -113,6 +113,33 @@ export function WaterTab({
             <button type="submit" style={{ background: '#ea580c', color: 'white', border: 'none', borderRadius: '4px', padding: '0 15px', cursor: 'pointer' }}>Saglabāt</button>
           </div>
         </form>
+
+        {/* Ūdens starpība */}
+        <form onSubmit={saveWaterTariff} style={{ background: '#f5f3ff', padding: '15px', borderRadius: '8px', border: '1px solid #ddd6fe' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#6d28d9', marginBottom: '10px', marginTop: 0 }}>📊 Ūdens patēriņa starpība</h3>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Kopējā starpība m³"
+              value={waterTariffForm.diff_m3}
+              onChange={(e) => setWaterTariffForm({ ...waterTariffForm, diff_m3: e.target.value })}
+              style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #c4b5fd' }}
+            />
+            <input
+              type="number"
+              step="0.0001"
+              placeholder="Cena €/m³"
+              value={waterTariffForm.diff_price}
+              onChange={(e) => setWaterTariffForm({ ...waterTariffForm, diff_price: e.target.value })}
+              style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #c4b5fd' }}
+            />
+            <button type="submit" style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '4px', padding: '0 15px', cursor: 'pointer' }}>Saglabāt</button>
+          </div>
+          <div style={{ fontSize: '11px', color: '#7c3aed', marginTop: '8px' }}>
+            ℹ️ Tiks sadalīts uz dzīvokļiem, kuri nav nodevuši rādījumus periodā {tariffPeriod}.
+          </div>
+        </form>
       </div>
 
       {/* 3. SADAĻA: TABULA AR RĀDĪJUMIEM */}
