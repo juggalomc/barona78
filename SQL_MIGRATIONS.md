@@ -42,4 +42,50 @@ Both columns are optional (NULL allowed).
 5. Click "Run"
 6. The columns will be added to the `apartments` table
 
+## Water Consumption Table Setup
+
+To enable synchronization, the `water_consumption` table must have a unique constraint on the combination of apartment, period, and meter type.
+
+If you encounter a "duplicate key value violates unique constraint" error, especially one mentioning `water_consumption_apartment_id_period_key`, it means an incorrect unique constraint might already exist. You should drop it first.
+
+```sql
+-- OPTIONAL: Drop an existing incorrect unique constraint if it exists and causes conflicts
+-- This is often named 'water_consumption_apartment_id_period_key' if created automatically
+-- ALTER TABLE water_consumption
+-- DROP CONSTRAINT water_consumption_apartment_id_period_key;
+
+-- Create table if it doesn't exist
+CREATE TABLE IF NOT EXISTS water_consumption (
+  id BIGSERIAL PRIMARY KEY,
+  apartment_id UUID REFERENCES apartments(id) ON DELETE CASCADE,
+  period VARCHAR(7) NOT NULL, -- e.g. '2024-01'
+  meter_type VARCHAR(20) NOT NULL, -- 'water' or 'hot_water'
+  consumption_m3 DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add the unique constraint required for the UPSERT logic
+ALTER TABLE water_consumption
+ADD CONSTRAINT water_consumption_unique_entry UNIQUE (apartment_id, period, meter_type);
+```
+After running this migration, the application will automatically store and display this information.
+## Water Consumption Table Setup
+
+To enable synchronization, the `water_consumption` table must have a unique constraint on the combination of apartment, period, and meter type.
+
+```sql
+-- Create table if it doesn't exist
+CREATE TABLE IF NOT EXISTS water_consumption (
+  id BIGSERIAL PRIMARY KEY,
+  apartment_id UUID REFERENCES apartments(id) ON DELETE CASCADE,
+  period VARCHAR(7) NOT NULL, -- e.g. '2024-01'
+  meter_type VARCHAR(20) NOT NULL, -- 'water' or 'hot_water'
+  consumption_m3 DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add the unique constraint required for the UPSERT logic
+ALTER TABLE water_consumption
+ADD CONSTRAINT water_consumption_unique_entry UNIQUE (apartment_id, period, meter_type);
+```
 After running this migration, the application will automatically store and display this information.
