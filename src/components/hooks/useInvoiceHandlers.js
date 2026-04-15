@@ -594,7 +594,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           // 2. Ģenerējam PDF (izmantojot esošo loģiku, bet pielāgojot definīciju)
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
           const amountWithoutVat = invoice.amount_without_vat || 0;
-          // Assuming 'vatAmount' was here and needs removal based on error
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
           const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
           const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
@@ -1206,9 +1205,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       let totalVatAmount = 0;
       let invoiceDetails = [];
 
-      const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === invoice.period);
+      const waterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'water' && wc.period === invoice.period);
+      const hotWaterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && wc.period === invoice.period);
       const waterTariff = waterTariffs.find(w => w.period === invoice.period);
-      const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === invoice.period);
       const hotWaterTariff = hotWaterTariffs.find(w => w.period === invoice.period);
 
       for (const tariff of periodTariffs) {
@@ -1236,25 +1235,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       // ✅ AUKSTAIS ŪDENS - ATSEVIŠĶI
-      if (waterReading && waterTariff && waterTariff.include_in_invoice !== false) {
-        const [year, month] = invoice.period.split('-');
-        let prevMonth = parseInt(month) - 1;
-        let prevYear = parseInt(year);
-        if (prevMonth === 0) {
-          prevMonth = 12;
-          prevYear -= 1;
-        }
-        const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-        
-        const currentReading = parseFloat(waterReading.reading_value) || 0;
-        const previousWaterReading = meterReadings.find(mr => 
-          mr.apartment_id === apt.id && 
-          mr.meter_type === 'water' &&
-          mr.period === previousPeriod
-        );
-        const previousReadingValue = previousWaterReading ? parseFloat(previousWaterReading.reading_value) || 0 : 0;
-        
-        const waterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
+      if (waterCons && waterTariff && waterTariff.include_in_invoice !== false) {
+        const waterConsumptionM3 = parseFloat(waterCons.consumption_m3) || 0;
         const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
         const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
         const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
@@ -1276,9 +1258,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       // ✅ ŪDENS STARPĪBA - JA NAV RĀDĪJUMA
-      if (!waterReading && waterTariff && waterTariff.diff_m3 > 0) {
+      if (!waterCons && waterTariff && waterTariff.diff_m3 > 0) {
         const nonReportingAptsCount = apartments.filter(aptItem => 
-          !meterReadings.find(mr => mr.apartment_id === aptItem.id && mr.meter_type === 'water' && mr.period === invoice.period)
+          !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && wc.period === invoice.period)
         ).length;
 
         if (nonReportingAptsCount > 0) {
@@ -1304,9 +1286,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       // ✅ SILTĀ ŪDENS STARPĪBA - JA NAV RĀDĪJUMA
-      if (!hotWaterReading && hotWaterTariff && hotWaterTariff.diff_m3 > 0) {
+      if (!hotWaterCons && hotWaterTariff && hotWaterTariff.diff_m3 > 0) {
         const nonReportingHotAptsCount = apartments.filter(aptItem => 
-          !meterReadings.find(mr => mr.apartment_id === aptItem.id && mr.meter_type === 'hot_water' && mr.period === invoice.period)
+          !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && wc.period === invoice.period)
         ).length;
 
         if (nonReportingHotAptsCount > 0) {
@@ -1331,25 +1313,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
       }
 
-      if (hotWaterReading && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
-        const [year, month] = invoice.period.split('-');
-        let prevMonth = parseInt(month) - 1;
-        let prevYear = parseInt(year);
-        if (prevMonth === 0) {
-          prevMonth = 12;
-          prevYear -= 1;
-        }
-        const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-        
-        const currentReading = parseFloat(hotWaterReading.reading_value) || 0;
-        const previousHotWaterReading = meterReadings.find(mr => 
-          mr.apartment_id === apt.id && 
-          mr.meter_type === 'hot_water' &&
-          mr.period === previousPeriod
-        );
-        const previousReadingValue = previousHotWaterReading ? parseFloat(previousHotWaterReading.reading_value) || 0 : 0;
-        
-        const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
+      if (hotWaterCons && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
+        const hotWaterConsumptionM3 = parseFloat(hotWaterCons.consumption_m3) || 0;
         const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
         const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
         const hotWaterVatRate = 12; // 12% PVN
@@ -1514,8 +1479,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         let invoiceDetails = [];
         const [year, month] = invoice.period.split('-');
 
-        const waterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === invoice.period);
-        const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === invoice.period);
+        const waterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'water' && wc.period === invoice.period);
+        const hotWaterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && wc.period === invoice.period);
         const waterTariff = waterTariffs.find(w => w.period === invoice.period);
         const hotWaterTariff = hotWaterTariffs.find(w => w.period === invoice.period);
 
@@ -1543,25 +1508,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           });
         }
 
-        if (waterReading && waterTariff && waterTariff.include_in_invoice !== false) {
-          const [year, month] = invoice.period.split('-');
-          let prevMonth = parseInt(month) - 1;
-          let prevYear = parseInt(year);
-          if (prevMonth === 0) {
-            prevMonth = 12;
-            prevYear -= 1;
-          }
-          const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-          
-          const currentReading = parseFloat(waterReading.reading_value) || 0;
-          const previousWaterReading = meterReadings.find(mr => 
-            mr.apartment_id === apt.id && 
-            mr.meter_type === 'water' &&
-            mr.period === previousPeriod
-          );
-          const previousReadingValue = previousWaterReading ? parseFloat(previousWaterReading.reading_value) || 0 : 0;
-          
-          const waterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
+        if (waterCons && waterTariff && waterTariff.include_in_invoice !== false) {
+          const waterConsumptionM3 = parseFloat(waterCons.consumption_m3) || 0;
           const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
           const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
           const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
@@ -1583,9 +1531,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
 
         // ✅ ŪDENS STARPĪBA - JA NAV RĀDĪJUMA
-        if (!waterReading && waterTariff && waterTariff.diff_m3 > 0) {
+        if (!waterCons && waterTariff && waterTariff.diff_m3 > 0) {
           const nonReportingAptsCount = apartments.filter(aptItem => 
-            !meterReadings.find(mr => mr.apartment_id === aptItem.id && mr.meter_type === 'water' && mr.period === invoice.period)
+            !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && wc.period === invoice.period)
           ).length;
 
           if (nonReportingAptsCount > 0) {
@@ -1611,9 +1559,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
 
         // ✅ SILTĀ ŪDENS STARPĪBA - JA NAV RĀDĪJUMA
-        if (!hotWaterReading && hotWaterTariff && hotWaterTariff.diff_m3 > 0) {
+        if (!hotWaterCons && hotWaterTariff && hotWaterTariff.diff_m3 > 0) {
           const nonReportingHotAptsCount = apartments.filter(aptItem => 
-            !meterReadings.find(mr => mr.apartment_id === aptItem.id && mr.meter_type === 'hot_water' && mr.period === invoice.period)
+            !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && wc.period === invoice.period)
           ).length;
 
           if (nonReportingHotAptsCount > 0) {
@@ -1638,25 +1586,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           }
         }
 
-        if (hotWaterReading && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
-          const [year, month] = invoice.period.split('-');
-          let prevMonth = parseInt(month) - 1;
-          let prevYear = parseInt(year);
-          if (prevMonth === 0) {
-            prevMonth = 12;
-            prevYear -= 1;
-          }
-          const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-          
-          const currentReading = parseFloat(hotWaterReading.reading_value) || 0;
-          const previousHotWaterReading = meterReadings.find(mr => 
-            mr.apartment_id === apt.id && 
-            mr.meter_type === 'hot_water' &&
-            mr.period === previousPeriod
-          );
-          const previousReadingValue = previousHotWaterReading ? parseFloat(previousHotWaterReading.reading_value) || 0 : 0;
-          
-          const hotWaterConsumptionM3 = Math.max(0, currentReading - previousReadingValue);
+        if (hotWaterCons && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
+          const hotWaterConsumptionM3 = parseFloat(hotWaterCons.consumption_m3) || 0;
           const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
           const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
           const hotWaterVatRate = 12; // 12% PVN
@@ -1788,7 +1719,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
           const amountWithoutVat = invoice.amount_without_vat || 0;
-          // Assuming 'vatAmount' was here and needs removal based on error
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
           const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
           const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
@@ -2164,7 +2094,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           try {
             const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
             const amountWithoutVat = invoice.amount_without_vat || 0;
-            // Assuming 'vatAmount' was here and needs removal based on error
             const amountWithVat = invoice.amount_with_vat || invoice.amount;
             const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
             const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
