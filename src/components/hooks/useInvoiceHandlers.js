@@ -439,7 +439,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             vat_amount: diffVatAmount,
             type: 'hot_water_diff'
           });
-        }
+      
       }
 
       // Atkritumi
