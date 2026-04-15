@@ -1654,8 +1654,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           }
         }
 
-        // ✅ SILTAIS ŪDENS - ATSEVIŠĶI
-        const hotWaterReading = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === invoice.period);
+      // ✅ SILTAIS ŪDENS - ATSEVIŠĶI
         const hotWaterTariff = hotWaterTariffs.find(w => w.period === invoice.period);
 
         if (hotWaterReading && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
