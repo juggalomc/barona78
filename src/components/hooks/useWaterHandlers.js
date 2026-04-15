@@ -229,6 +229,26 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         if (error) throw error;
       }
 
+      // ✅ Sinhronizējam ar water_consumption tabulu
+      const [year, month] = period.split('-');
+      let prevMonth = parseInt(month) - 1;
+      let prevYear = parseInt(year);
+      if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
+      const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+      
+      const lastReading = meterReadings
+        .filter(mr => mr.apartment_id === apartmentId && mr.meter_type === 'water' && mr.period < period)
+        .sort((a, b) => b.period.localeCompare(a.period))[0];
+      
+      const consumption = lastReading ? Math.max(0, value - parseFloat(lastReading.reading_value)) : 0;
+      
+      await supabase.from('water_consumption').upsert({
+        apartment_id: apartmentId,
+        period: period,
+        meter_type: 'water',
+        consumption_m3: consumption
+      }, { onConflict: 'apartment_id,period,meter_type' });
+
       fetchReadings();
       showToast('✓ Aukstā ūdens rādījums saglabāts');
     } catch (error) {
@@ -301,6 +321,26 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
           }]);
         if (error) throw error;
       }
+
+      // ✅ Sinhronizējam ar water_consumption tabulu
+      const [year, month] = period.split('-');
+      let prevMonth = parseInt(month) - 1;
+      let prevYear = parseInt(year);
+      if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
+      const previousPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+      
+      const lastReading = meterReadings
+        .filter(mr => mr.apartment_id === apartmentId && mr.meter_type === 'hot_water' && mr.period < period)
+        .sort((a, b) => b.period.localeCompare(a.period))[0];
+      
+      const consumption = lastReading ? Math.max(0, value - parseFloat(lastReading.reading_value)) : 0;
+      
+      await supabase.from('water_consumption').upsert({
+        apartment_id: apartmentId,
+        period: period,
+        meter_type: 'hot_water',
+        consumption_m3: consumption
+      }, { onConflict: 'apartment_id,period,meter_type' });
 
       fetchReadings();
       showToast('✓ Siltā ūdens rādījums saglabāts');

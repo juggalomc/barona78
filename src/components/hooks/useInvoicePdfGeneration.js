@@ -32,10 +32,10 @@ export function generateInvoicePdfHtml(invoice, apt, settings = {}) {
     }
   };
 
-  const rowsWithoutVatHtml = invoiceDetails.filter(d => isService(d) && (d.vat_rate === 0 || d.vat_rate === undefined)).map(mapHtmlRow).join('');
+  const rowsWithoutVatHtml = invoiceDetails.filter(d => isService(d) && (Number(d.vat_rate) === 0 || d.vat_rate === undefined)).map(mapHtmlRow).join('');
   
   const getVatSectionHtml = (rate) => {
-    const rows = invoiceDetails.filter(d => isService(d) && d.vat_rate === rate);
+    const rows = invoiceDetails.filter(d => isService(d) && Number(d.vat_rate) === rate);
     if (rows.length === 0) return '';
     return `<tr><td colspan="4" class="section-header">Pakalpojumi ar PVN (${rate}%)</td></tr>${rows.map(mapHtmlRow).join('')}`;
   };
@@ -185,7 +185,7 @@ export function buildInvoiceTableRows(invoiceDetails, apt) {
   const isService = d => ['tariff', 'water', 'hot_water', 'waste', 'water_diff', 'hot_water_diff'].includes(d.type);
 
   // Pakalpojumi BEZ PVN
-  const rowsWithoutVat = invoiceDetails.filter(d => isService(d) && (d.vat_rate === 0 || d.vat_rate === undefined));
+  const rowsWithoutVat = invoiceDetails.filter(d => isService(d) && (Number(d.vat_rate) === 0 || d.vat_rate === undefined));
   
   if (rowsWithoutVat.length > 0) {
     tableRows.push([
@@ -216,7 +216,7 @@ export function buildInvoiceTableRows(invoiceDetails, apt) {
   }
 
   const addVatRows = (rate) => {
-    const rows = invoiceDetails.filter(d => isService(d) && d.vat_rate === rate);
+    const rows = invoiceDetails.filter(d => isService(d) && Number(d.vat_rate) === rate);
     if (rows.length > 0) {
       tableRows.push([{ text: `Pakalpojumi ar PVN (${rate}%)`, colSpan: 4, style: 'sectionHeader' }, {}, {}, {}]);
       rows.forEach(detail => {
