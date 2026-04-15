@@ -10,9 +10,9 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
     }
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    if (todayStr > invoice.due_date || invoice.period < currentPeriod) {
+    const dueDate = new Date(invoice.due_date);
+    const todayDate = new Date();
+    if (todayDate > dueDate) {
       return { status: 'Parāds', color: '#ef4444', emoji: '⚠️' };
     } else {
       return { status: 'Gaida atmaksu', color: '#f59e0b', emoji: '⏳' };

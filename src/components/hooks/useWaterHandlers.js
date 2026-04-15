@@ -185,6 +185,12 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
         if (existing && existing.length > 0) {
           await supabase.from('meter_readings').delete().eq('id', existing[0].id);
+          // Dzēšam arī no water_consumption, ja rādījums tiek izdzēsts
+          await supabase.from('water_consumption')
+            .delete()
+            .eq('apartment_id', String(apartmentId))
+            .eq('meter_type', 'water')
+            .eq('period', period);
           fetchReadings();
         }
         return;
@@ -271,6 +277,12 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
         if (existing && existing.length > 0) {
           await supabase.from('meter_readings').delete().eq('id', existing[0].id);
+          // Dzēšam arī no water_consumption, ja rādījums tiek izdzēsts
+          await supabase.from('water_consumption')
+            .delete()
+            .eq('apartment_id', String(apartmentId))
+            .eq('meter_type', 'hot_water')
+            .eq('period', period);
           fetchReadings();
         }
         return;
@@ -366,12 +378,25 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
   const deleteMeterReading = async (meterReadingId) => {
     try {
+      // Atrodam rādījumu, lai iegūtu apartment_id, meter_type, period
+      const readingToDelete = meterReadings.find(mr => mr.id === meterReadingId);
+      if (!readingToDelete) {
+        showToast('Rādījums nav atrasts', 'error');
+        return;
+      }
+
       const { error } = await supabase
         .from('meter_readings')
         .delete()
         .eq('id', meterReadingId);
       
       if (error) throw error;
+      // Dzēšam arī atbilstošo ierakstu no water_consumption
+      await supabase.from('water_consumption')
+        .delete()
+        .eq('apartment_id', String(readingToDelete.apartment_id))
+        .eq('meter_type', readingToDelete.meter_type)
+        .eq('period', readingToDelete.period);
 
       fetchData();
       showToast('✓ Skaitītāja rādījums dzēsts');
