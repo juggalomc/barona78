@@ -382,6 +382,53 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     }
   };
 
+  const syncWaterConsumption = async () => {
+    try {
+      showToast('⏳ Sinhronizē patēriņa datus...', 'info');
+      const consumptionData = [];
+
+      for (const apt of apartments) {
+        for (const type of ['water', 'hot_water']) {
+          const currentReadingObj = meterReadings.find(mr => 
+            mr.apartment_id === apt.id && 
+            mr.meter_type === type && 
+            mr.period === tariffPeriod
+          );
+
+          if (currentReadingObj) {
+            const lastReading = getLastReading(apt.id, type, tariffPeriod, meterReadings);
+            const currentVal = parseFloat(currentReadingObj.reading_value);
+            const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
+            const consumption = Math.max(0, currentVal - prevVal);
+
+            consumptionData.push({
+              apartment_id: apt.id,
+              period: tariffPeriod,
+              meter_type: type,
+              consumption_m3: consumption
+            });
+          }
+        }
+      }
+
+      if (consumptionData.length === 0) {
+        showToast('Nav rādījumu šim periodam, ko sinhronizēt', 'info');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('water_consumption')
+        .upsert(consumptionData, { onConflict: 'apartment_id,period,meter_type' });
+
+      if (error) throw error;
+      
+      fetchData();
+      showToast(`✓ Sinhronizēti ${consumptionData.length} ieraksti`);
+    } catch (error) {
+      showToast('Sinhronizācijas kļūda: ' + error.message, 'error');
+    }
+  };
+
   const getLastReading = (apartmentId, meterType, currentPeriod, readings) => {
     const relevant = readings
       .filter(mr => 
@@ -404,6 +451,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     saveHotWaterMeterReading,
     editMeterReading,
     deleteMeterReading,
-    getLastReading
+    getLastReading,
+    syncWaterConsumption
   };
 }

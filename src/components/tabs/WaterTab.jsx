@@ -18,7 +18,8 @@ export function WaterTab({
   saveHotWaterMeterReading,
   getLastReading,
   settings,
-  updateSetting
+  updateSetting,
+  syncWaterConsumption
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -37,6 +38,14 @@ export function WaterTab({
             ))}
           </select>
         </div>
+
+        <button 
+          onClick={syncWaterConsumption}
+          title="Pārrēķināt un saglabāt patēriņu visiem dzīvokļiem šajā periodā"
+          style={{ padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          🔄 Sinhronizēt patēriņu
+        </button>
 
         <div style={{ display: 'flex', gap: '20px', background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
           <div>
