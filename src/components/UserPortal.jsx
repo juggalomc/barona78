@@ -12,7 +12,8 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
     }
     const dueDate = new Date(invoice.due_date);
     const today = new Date();
-    if (today > dueDate) {
+    // Ja rēķins nav apmaksāts un tas ir vecāks par šo mēnesi vai termiņš ir garām
+    if (today > dueDate || invoice.period < currentPeriod) {
       return { status: 'Parāds', color: '#ef4444', emoji: '⚠️' };
     } else {
       return { status: 'Gaida atmaksu', color: '#f59e0b', emoji: '⏳' };
@@ -122,7 +123,7 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '12px', color: '#ccc', marginBottom: '4px' }}>Kopā apmaksāt:</div>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4ade80' }}>€{userInvoices.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
-            <div style={{ fontSize: '11px', color: '#ccc', marginTop: '4px' }}>Parāds: €{userInvoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
+            <div style={{ fontSize: '11px', color: '#ccc', marginTop: '4px' }}>Parāds: €{userInvoices.filter(i => !i.paid).reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
              <button onClick={() => setShowPasswordChange(!showPasswordChange)} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>🔑 Mainīt paroli</button>

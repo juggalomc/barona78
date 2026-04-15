@@ -154,7 +154,7 @@ export function ApartmentsTab({
                       </div>
                     )}
                     {(() => {
-                      const apartmentDebt = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid && new Date(inv.due_date) <= new Date()).reduce((sum, inv) => sum + inv.amount, 0);
+                      const apartmentDebt = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid).reduce((sum, inv) => sum + inv.amount, 0);
                       if (apartmentDebt > 0) {
                         return <div style={{fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: '500'}}>⚠️ Parāds: €{apartmentDebt.toFixed(2)}</div>;
                       }

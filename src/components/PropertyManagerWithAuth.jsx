@@ -173,6 +173,7 @@ export default function PropertyManager() {
     }
     const dueDate = new Date(invoice.due_date);
     const today = new Date();
+    // Jebkurš neapmaksāts rēķins, kam pagājis termiņš vai kas ir no iepriekšēja perioda
     if (today > dueDate) {
       return { status: 'Parāds', color: '#ef4444', emoji: '⚠️' };
     } else {

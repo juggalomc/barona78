@@ -809,8 +809,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">Dzīvoklis Nr. ${apt.number}</div>
             ${apt.owner_name ? `<div style="font-size: 12px;">Vārds/Nosaukums: ${apt.owner_name}</div>` : ''}
             ${apt.owner_surname ? `<div style="font-size: 12px;">Uzvārds: ${apt.owner_surname}</div>` : ''}
-            ${apt.email ? `<div style="font-size: 12px;">E-pasts: ${apt.email}</div>` : ''}
-            ${apt.email ? `<div style="font-size: 12px;">E-pasts: ${formatEmailForDisplay(apt.email)}</div>` : ''}
+          ${apt.email ? `<div style="font-size: 12px;">E-pasts: ${formatEmailForDisplay(apt.email)}</div>` : ''}
             ${apt.declared_persons ? `<div style="font-size: 12px;">Deklarēto personu skaits: ${apt.declared_persons}</div>` : ''}
             ${apt.registration_number ? `<div style="font-size: 12px; margin-top: 8px; font-weight: bold;">Reģ. numurs: ${apt.registration_number}</div>` : ''}
             ${apt.apartment_address ? `<div style="font-size: 12px;">Adrese: ${apt.apartment_address}</div>` : ''}
@@ -1967,7 +1966,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                 text: 'Dzīvoklis Nr. ' + apt.number + '\n' +
                       (apt.owner_name ? 'Vārds: ' + apt.owner_name + '\n' : '') +
                       (apt.owner_surname ? 'Uzvārds: ' + apt.owner_surname + '\n' : '') +
-                      (apt.email ? 'E-pasts: ' + apt.email + '\n' : '') +
                       (apt.email ? 'E-pasts: ' + formatEmailForDisplay(apt.email) + '\n' : '') +
                       (apt.declared_persons ? 'Deklarēto personu skaits: ' + apt.declared_persons + '\n' : '') +
                       (apt.registration_number ? 'Reģistrācijas numurs: ' + apt.registration_number + '\n' : '') +
