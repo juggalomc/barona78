@@ -2,10 +2,16 @@ import React from 'react';
 import { styles } from '../shared/styles';
 
 export function OverviewTab({ apartments, tariffs, invoices }) {
-  const totalDebt = invoices
-    .filter(inv => !inv.paid)
-    .reduce((sum, inv) => sum + inv.amount, 0);
+  // Aprēķinām kopējo parādu, saskaitot katra dzīvokļa jaunāko neapmaksāto rēķinu
+  const totalDebt = apartments.reduce((sum, apt) => {
+    const aptInvoices = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid);
+    if (aptInvoices.length === 0) return sum;
+    const latest = aptInvoices.reduce((prev, curr) => prev.period > curr.period ? prev : curr);
+    return sum + latest.amount;
+  }, 0);
 
+  // Kopējā rēķinu summa (tīrā statistika bez parāda pārcelšanas būtu sarežģītāka, 
+  // šeit rādām visu rēķinu summu, bet parāda sadaļa ir precizēta)
   const totalAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0);
 
   return (

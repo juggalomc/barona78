@@ -43,19 +43,34 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
   });
   const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0, active: false });
 
-  const calculatePreviousDebt = (apartmentId, currentPeriod) => {
+  const calculatePreviousDebt = (apartmentId, currentPeriod, excludeInvoiceId = null) => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
+    
     const previousDebts = invoices.filter(inv => {
       if (inv.apartment_id !== apartmentId) return false;
       if (inv.paid) return false;
+      if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
+
       const [invYear, invMonth] = inv.period.split('-').map(Number);
-      if (invYear < currentYear) return true;
-      if (invYear === currentYear && invMonth < currentMonth) return true;
-      return false;
+      
+      // Nosacījums 1: Periods ir pirms pašreizējā rēķina perioda
+      const isEarlierPeriod = (invYear < currentYear) || (invYear === currentYear && invMonth < currentMonth);
+      
+      // Nosacījums 2: Termiņš ir beidzies uz ģenerēšanas brīdi
+      const isPastDue = todayStr > inv.due_date;
+
+      return isEarlierPeriod || isPastDue;
     });
-    const total = previousDebts.reduce((sum, inv) => sum + inv.amount, 0);
-    console.log(`💡 Parāds dzīv. ${apartments.find(a => a.id === apartmentId)?.number} par ${currentPeriod}: €${total}`);
-    return total;
+
+    if (previousDebts.length === 0) return 0;
+
+    // Atrodam jaunāko neapmaksāto rēķinu (pēc perioda)
+    const latestInvoice = previousDebts.reduce((prev, current) => {
+      return (prev.period > current.period) ? prev : current;
+    });
+
+    return latestInvoice.amount;
   };
 
   const calculateOverpayment = async (apartmentId, currentPeriod) => {
@@ -468,7 +483,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       // Parāds
-      const previousDebt = calculatePreviousDebt(apt.id, currentInvoiceMonth);
+      const previousDebt = calculatePreviousDebt(apt.id, invoice.period, invoice.id);
       if (previousDebt > 0) {
         totalAmountWithoutVat += previousDebt;
         invoiceDetails.push({
@@ -657,7 +672,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               { columns: [ { text: 'RĒĶINS', fontSize: 32, bold: true }, { text: `${settings.building_name||'BIEDRĪBA "BARONA 78"'}\n${settings.building_code||'40008325768'}\n${settings.building_address||'Kr. Barona iela 78-14, Rīga, LV-1001'}`, fontSize: 10, alignment: 'right' } ], marginBottom: 20 },
               { columns: [ { width: '50%', text: [ { text: 'Rēķina numurs:\n', bold: true }, `${invoice.invoice_number}\n\n`, { text: 'Periods:\n', bold: true }, `${invoice.period} (${new Date(invoice.date_from).toLocaleDateString('lv-LV')} - ${new Date(invoice.date_to).toLocaleDateString('lv-LV')})\n\n`, { text: 'Izrakstīts:\n', bold: true }, `${new Date(invoice.created_at).toLocaleDateString('lv-LV')}\n\n`, { text: 'Termiņš:\n', bold: true }, new Date(invoice.due_date).toLocaleDateString('lv-LV') ], fontSize: 11 } ], marginBottom: 20 },
               { text: 'SAŅĒMĒJS', fontSize: 12, bold: true, marginBottom: 8 },
-              { text: `Dzīvoklis Nr. ${apt.number}\n${apt.owner_name ? 'Vārds: '+apt.owner_name+'\n':''}${apt.email ? 'E-pasts: '+apt.email+'\n':''}`, fontSize: 10, marginBottom: 20 },
               { text: `Dzīvoklis Nr. ${apt.number}\n${apt.owner_name ? 'Vārds: '+apt.owner_name+'\n':''}${apt.email ? 'E-pasts: '+formatEmailForDisplay(apt.email)+'\n':''}`, fontSize: 10, marginBottom: 20 },
               { table: { headerRows: 1, widths: ['*', 90, 80, 80], body: tableRows }, layout: { hLineWidth: ()=>0.5, vLineWidth: ()=>0.5, hLineColor: ()=>'#cccccc', vLineColor: ()=>'#cccccc' }, marginBottom: 15 },
               { alignment: 'right', columns: [ { width: '70%', text: '' }, { width: '30%', table: { widths: ['*', '*'], body: [ [{text:'Summa bez PVN:', bold:true}, {text:`€${amountWithoutVat.toFixed(2)}`, alignment:'right'}], ...(vatAmount>0?[[{text:'PVN:', bold:true}, {text:`€${vatAmount.toFixed(2)}`, alignment:'right'}]]:[]), [{text:'KOPĀ:', fontSize:14, bold:true, color:'#003399'}, {text:`€${amountWithVat.toFixed(2)}`, fontSize:14, bold:true, color:'#003399', alignment:'right'}] ] }, layout: 'noBorders' } ], marginBottom: 30 },
@@ -809,7 +823,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">Dzīvoklis Nr. ${apt.number}</div>
             ${apt.owner_name ? `<div style="font-size: 12px;">Vārds/Nosaukums: ${apt.owner_name}</div>` : ''}
             ${apt.owner_surname ? `<div style="font-size: 12px;">Uzvārds: ${apt.owner_surname}</div>` : ''}
-          ${apt.email ? `<div style="font-size: 12px;">E-pasts: ${formatEmailForDisplay(apt.email)}</div>` : ''}
+            ${apt.email ? `<div style="font-size: 12px;">E-pasts: ${formatEmailForDisplay(apt.email)}</div>` : ''}
             ${apt.declared_persons ? `<div style="font-size: 12px;">Deklarēto personu skaits: ${apt.declared_persons}</div>` : ''}
             ${apt.registration_number ? `<div style="font-size: 12px; margin-top: 8px; font-weight: bold;">Reģ. numurs: ${apt.registration_number}</div>` : ''}
             ${apt.apartment_address ? `<div style="font-size: 12px;">Adrese: ${apt.apartment_address}</div>` : ''}
@@ -1524,7 +1538,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           continue;
         }
 
-        await supabase.from('invoices').delete().eq('id', invoice.id);
+        const originalInvoiceId = invoice.id;
+        await supabase.from('invoices').delete().eq('id', originalInvoiceId);
 
         let totalAmountWithoutVat = 0;
         let totalVatAmount = 0;
@@ -1719,7 +1734,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           }
         }
 
-        const previousDebt = calculatePreviousDebt(apt.id, invoice.period);
+        const previousDebt = calculatePreviousDebt(apt.id, invoice.period, originalInvoiceId);
         if (previousDebt > 0) {
           totalAmountWithoutVat += previousDebt;
           invoiceDetails.push({
@@ -2340,7 +2355,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
                   text: 'Dzīvoklis Nr. ' + apt.number + '\n' +
                         (apt.owner_name ? 'Vārds: ' + apt.owner_name + '\n' : '') +
                         (apt.owner_surname ? 'Uzvārds: ' + apt.owner_surname + '\n' : '') +
-                        (apt.email ? 'E-pasts: ' + apt.email + '\n' : '') +
                         (apt.email ? 'E-pasts: ' + formatEmailForDisplay(apt.email) + '\n' : '') +
                         (apt.declared_persons ? 'Deklarēto personu skaits: ' + apt.declared_persons + '\n' : '') +
                         (apt.registration_number ? 'Reģistrācijas numurs: ' + apt.registration_number + '\n' : '') +

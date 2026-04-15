@@ -154,9 +154,14 @@ export function ApartmentsTab({
                       </div>
                     )}
                     {(() => {
-                      const apartmentDebt = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid).reduce((sum, inv) => sum + inv.amount, 0);
-                      if (apartmentDebt > 0) {
-                        return <div style={{fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: '500'}}>⚠️ Parāds: €{apartmentDebt.toFixed(2)}</div>;
+                      const aptInvoices = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid);
+                      if (aptInvoices.length > 0) {
+                        const latest = aptInvoices.reduce((prev, curr) => prev.period > curr.period ? prev : curr);
+                        return (
+                          <div style={{fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: '500'}}>
+                            ⚠️ Parāds: €{latest.amount.toFixed(2)}
+                          </div>
+                        );
                       }
                       return null;
                     })()}
