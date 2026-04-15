@@ -594,7 +594,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           // 2. Ģenerējam PDF (izmantojot esošo loģiku, bet pielāgojot definīciju)
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
           const amountWithoutVat = invoice.amount_without_vat || 0;
-          const vatAmount = invoice.vat_amount || 0;
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
           const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
           const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
@@ -652,7 +651,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               { text: 'SAŅĒMĒJS', fontSize: 12, bold: true, marginBottom: 8 },
               { text: `Dzīvoklis Nr. ${apt.number}\n${apt.owner_name ? 'Vārds: '+apt.owner_name+'\n':''}${apt.email ? 'E-pasts: '+formatEmailForDisplay(apt.email)+'\n':''}`, fontSize: 10, marginBottom: 20 },
               { table: { headerRows: 1, widths: ['*', 90, 80, 80], body: tableRows }, layout: { hLineWidth: ()=>0.5, vLineWidth: ()=>0.5, hLineColor: ()=>'#cccccc', vLineColor: ()=>'#cccccc' }, marginBottom: 15 },
-              { alignment: 'right', columns: [ { width: '70%', text: '' }, { width: '30%', table: { widths: ['*', '*'], body: [ [{text:'Summa bez PVN:', bold:true}, {text:`€${amountWithoutVat.toFixed(2)}`, alignment:'right'}], ...(vatAmount>0?[[{text:'PVN:', bold:true}, {text:`€${vatAmount.toFixed(2)}`, alignment:'right'}]]:[]), [{text:'KOPĀ:', fontSize:14, bold:true, color:'#003399'}, {text:`€${amountWithVat.toFixed(2)}`, fontSize:14, bold:true, color:'#003399', alignment:'right'}] ] }, layout: 'noBorders' } ], marginBottom: 30 },
               {
                 alignment: 'right',
                 columns: [
@@ -1790,7 +1788,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
           const amountWithoutVat = invoice.amount_without_vat || 0;
-          const vatAmount = invoice.vat_amount || 0;
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
           const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
           const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
@@ -2166,7 +2163,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           try {
             const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
             const amountWithoutVat = invoice.amount_without_vat || 0;
-            const vatAmount = invoice.vat_amount || 0;
             const amountWithVat = invoice.amount_with_vat || invoice.amount;
             const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
             const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
