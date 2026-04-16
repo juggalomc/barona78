@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getLastReading } from '../../utils/waterCalculations'; // Import getLastReading
 
 export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly, meterReadings = []) {
   const [enabledMeters, setEnabledMeters] = useState({ water: true, hot_water: false });
@@ -468,17 +469,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     } catch (error) {
       showToast('Sinhronizācijas kļūda: ' + error.message, 'error');
     }
-  };
-
-  const getLastReading = (apartmentId, meterType, currentPeriod, readings) => {
-    const relevant = readings
-      .filter(mr => 
-        String(mr.apartment_id) === String(apartmentId) && 
-        mr.meter_type === meterType && 
-        mr.period < currentPeriod
-      )
-      .sort((a, b) => b.period.localeCompare(a.period));
-    return relevant.length > 0 ? relevant[0] : null;
   };
 
   return {
