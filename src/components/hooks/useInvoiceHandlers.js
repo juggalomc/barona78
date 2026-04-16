@@ -145,10 +145,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           // 2. Ģenerējam PDF
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
-          const amountWithoutVat = invoice.amount_without_vat || 0;
-          const amountWithVat = invoice.amount_with_vat || invoice.amount;
-          const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
-          const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
+          const amountWithoutVat = parseFloat(invoice.amount_without_vat) || 0;
+          const amountWithVat = parseFloat(invoice.amount_with_vat) || invoice.amount;
+          const vat21 = invoiceDetails.filter(d => Number(d.vat_rate) === 21).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
+          const vat12 = invoiceDetails.filter(d => Number(d.vat_rate) === 12).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
 
           const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
 
@@ -390,6 +390,21 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       fetchData();
       showToast(`✓ Rēķins ${invoice.invoice_number} reģenerēts`);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const saveDebtNote = async (invoiceId, note) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ previous_debt_note: note })
+        .eq('id', invoiceId);
+      if (error) throw error;
+      setDebtNoteForm({ invoiceId: null, note: '' });
+      fetchData();
+      showToast('✓ Paskaidrojums saglabāts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -660,12 +675,12 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       return;
     }
     
-    let htmlContent = generateInvoicePdfHtml(invoice, apt);
+    let htmlContent = generateInvoicePdfHtml(invoice, apt, settings);
 
     const printButtonHtml = `
       <style>
         @media print { .no-print { display: none !important; } }
-        .no-print { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .no-print { position: fixed; top: 20px; right: 20px; z-index: 10000; }
         .print-btn { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-family: sans-serif; font-size: 14px; transition: background 0.2s; }
         .print-btn:hover { background: #1d4ed8; }
       </style>
@@ -850,6 +865,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     calculateOverpayment,
     generateInvoices,
     generateInvoiceForApartment,
+    saveDebtNote,
     sendInvoicesByEmail,
     sendEmailViaAppsScript,
     regenerateInvoice,

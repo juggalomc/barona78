@@ -35,7 +35,7 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
     { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
   ]);
 
-  const isService = d => ['tariff', 'water', 'hot_water', 'waste', 'water_diff', 'hot_water_diff'].includes(d.type);
+  const isService = d => ['tariff', 'water', 'hot_water', 'waste', 'water_diff', 'hot_water_diff', 'cold_water', 'water_meter'].includes(d.type);
 
   // Pakalpojumi BEZ PVN
   const rowsWithoutVat = invoiceDetails.filter(d => isService(d) && (Number(d.vat_rate) === 0 || d.vat_rate === undefined));

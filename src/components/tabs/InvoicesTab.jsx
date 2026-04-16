@@ -81,6 +81,7 @@ export function InvoicesTab({
   invoiceToDate, setInvoiceToDate,
   expandedInvoiceMonth, setExpandedInvoiceMonth,
   debtNoteForm, setDebtNoteForm,
+  saveDebtNote,
   generateInvoices,
   toggleInvoicePaid,
   deleteInvoice,
