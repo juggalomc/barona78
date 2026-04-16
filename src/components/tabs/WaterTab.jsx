@@ -217,7 +217,7 @@ export function WaterTab({
             <tbody>
               {apartments.map((apt, index) => {
                 // AUKSTAIS ŪDENS DATI
-                const coldReadingObj = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'water' && mr.period === tariffPeriod);
+                const coldReadingObj = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'water' && mr.period === tariffPeriod);
                 const coldCurrent = coldReadingObj ? coldReadingObj.reading_value : '';
                 
                 const coldLastObj = getLastReading(apt.id, 'water', tariffPeriod, meterReadings);
@@ -225,7 +225,7 @@ export function WaterTab({
                 const coldDiff = (coldCurrent !== '' && coldPrev !== '') ? (coldCurrent - coldPrev).toFixed(2) : '-';
 
                 // SILTAIS ŪDENS DATI
-                const hotReadingObj = meterReadings.find(mr => mr.apartment_id === apt.id && mr.meter_type === 'hot_water' && mr.period === tariffPeriod);
+                const hotReadingObj = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'hot_water' && mr.period === tariffPeriod);
                 const hotCurrent = hotReadingObj ? hotReadingObj.reading_value : '';
 
                 const hotLastObj = getLastReading(apt.id, 'hot_water', tariffPeriod, meterReadings);

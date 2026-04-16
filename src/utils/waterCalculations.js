@@ -74,7 +74,6 @@ export const calculateWaterDetails = ({
     });
   } 
   
-  // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
   if (!waterCons && waterTariff && parseFloat(waterTariff.diff_m3) > 0) {
     // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
     const count = nonReportingColdCount ?? apartments.filter(a => 
