@@ -72,12 +72,14 @@ export const calculateWaterDetails = ({
       vat_amount: vat,
       type: 'water'
     });
-  } else if (!waterCons && waterTariff && waterTariff.diff_m3 > 0) {
+  } 
+  
+  // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
+  if (!waterCons && waterTariff && parseFloat(waterTariff.diff_m3) > 0) {
     // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
     const count = nonReportingColdCount ?? apartments.filter(a => 
       !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && mr.period === period)
     ).length;
-
     if (count > 0) {
       const shareM3 = parseFloat(waterTariff.diff_m3) / count;
       const diffPrice = parseFloat(waterTariff.diff_price) || 0;
@@ -95,7 +97,7 @@ export const calculateWaterDetails = ({
         amount_without_vat: amount,
         vat_rate: vatRate,
         vat_amount: vat,
-        type: 'water_diff'
+        type: 'water_diff' // Atpazīstams kā aukstā ūdens starpība
       });
     }
   }
@@ -105,7 +107,7 @@ export const calculateWaterDetails = ({
     const m3 = Math.max(0, parseFloat(hotWaterCons.consumption_m3) || 0);
     const price = parseFloat(hotWaterTariff.price_per_m3) || 0;
     const amount = Math.round(m3 * price * 100) / 100;
-    const vatRate = 12; // Siltajam ūdenim fiksēts 12%
+    const vatRate = parseFloat(hotWaterTariff.vat_rate) || 12; // Siltajam ūdenim pēc noklusējuma 12%
     const vat = Math.round(amount * vatRate / 100 * 100) / 100;
 
     totalAmountWithoutVat += amount;

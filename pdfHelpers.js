@@ -37,7 +37,8 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
     { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
   ]);
 
-  const isService = d => ['tariff', 'water', 'hot_water', 'waste', 'water_diff', 'hot_water_diff'].includes(d.type);
+  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff', 'cold_water', 'water_meter'];
+  const isService = d => ['tariff', 'waste', ...waterTypes].includes(d.type);
 
   // Pakalpojumi BEZ PVN
   const rowsWithoutVat = invoiceDetails.filter(d => isService(d) && (Number(d.vat_rate) === 0 || d.vat_rate === undefined));
@@ -51,7 +52,7 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
     rowsWithoutVat.forEach(detail => {
       let quantity = '';
       let unitPrice = '';
-      if (['water', 'hot_water', 'water_diff', 'hot_water_diff'].includes(detail.type)) {
+      if (waterTypes.includes(detail.type)) {
         quantity = (detail.consumption_m3 || 0).toFixed(2) + ' m³';
         unitPrice = '€' + (detail.price_per_m3 || 0).toFixed(4);
       } else if (detail.type === 'waste') {
@@ -77,7 +78,7 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
       rows.forEach(detail => {
         let quantity = '';
         let unitPrice = '';
-        if (['water', 'hot_water', 'water_diff', 'hot_water_diff'].includes(detail.type)) {
+        if (waterTypes.includes(detail.type)) {
           quantity = (detail.consumption_m3 || 0).toFixed(2) + ' m³';
           unitPrice = '€' + (detail.price_per_m3 || 0).toFixed(4);
         } else if (detail.type === 'waste') {
@@ -144,10 +145,11 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
   const additionalInfo = settings.additional_invoice_info || '';
 
   // ===== RINDAS GRUPĒŠANA =====
-  const isService = d => ['tariff', 'water', 'hot_water', 'waste', 'water_diff', 'hot_water_diff'].includes(d.type);
+  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff', 'cold_water', 'water_meter'];
+  const isService = d => ['tariff', 'waste', ...waterTypes].includes(d.type);
   
   const mapHtmlRow = d => {
-    if (['water', 'hot_water', 'water_diff', 'hot_water_diff'].includes(d.type)) {
+    if (waterTypes.includes(d.type)) {
       // Emoži jau ir ietverts tariff_name (piem. ❄️ Aukstais ūdens)
       const nameWithEmoji = d.tariff_name;
       const consumption = parseFloat(d.consumption_m3 || 0);

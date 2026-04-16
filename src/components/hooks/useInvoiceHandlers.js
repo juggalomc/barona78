@@ -42,8 +42,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         invoiceDateTo = `${year}-${month}-${daysInMonth}`;
       }
 
-      const previousDebt = calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth);
-      const overpayment = calculateOverpayment(apt.id, invoices, currentInvoiceMonth);
+      const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth)) || 0;
+      const overpayment = Number(calculateOverpayment(apt.id, invoices, currentInvoiceMonth)) || 0;
 
       const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
         apt, period: currentInvoiceMonth, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
@@ -146,7 +146,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           // 2. Ģenerējam PDF
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
           const amountWithoutVat = parseFloat(invoice.amount_without_vat) || 0;
-          const amountWithVat = parseFloat(invoice.amount_with_vat) || invoice.amount;
+          const amountWithVat = parseFloat(invoice.amount_with_vat) || parseFloat(invoice.amount) || 0;
           const vat21 = invoiceDetails.filter(d => Number(d.vat_rate) === 21).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
           const vat12 = invoiceDetails.filter(d => Number(d.vat_rate) === 12).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
 
@@ -291,8 +291,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       ).length;
 
       for (const apt of apartments) {
-        const previousDebt = calculatePreviousDebt(apt.id, currentInvoiceMonth);
-        const overpayment = await calculateOverpayment(apt.id, currentInvoiceMonth);
+        const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth)) || 0;
+        const overpayment = Number(await calculateOverpayment(apt.id, invoices, currentInvoiceMonth)) || 0;
 
         const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
           apt, period: currentInvoiceMonth, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
@@ -358,8 +358,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       await supabase.from('invoices').delete().eq('id', invoice.id);
 
-      const previousDebt = calculatePreviousDebt(apt.id, invoices, invoice.period);
-      const overpayment = calculateOverpayment(apt.id, invoices, invoice.period);
+      const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period)) || 0;
+      const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
 
       const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
         apt, period: invoice.period, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
@@ -467,8 +467,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const originalInvoiceId = invoice.id;
         await supabase.from('invoices').delete().eq('id', originalInvoiceId);
 
-        const previousDebt = calculatePreviousDebt(apt.id, invoices, invoice.period, originalInvoiceId);
-        const overpayment = calculateOverpayment(apt.id, invoices, invoice.period);
+        const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period, originalInvoiceId)) || 0;
+        const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
 
         const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
           apt, period: invoice.period, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
