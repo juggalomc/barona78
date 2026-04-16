@@ -1,5 +1,3 @@
-import { formatEmailForDisplay } from './emailHelpers';
-
 /**
  * Ielādē pdfMake un vfs_fonts skriptus.
  * @returns {Promise<void>}

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { TOTAL_AREA } from '../shared/constants';
 import { calculateInvoiceAmounts } from '../../utils/invoiceCalculations';
 import { getEmailRecipients, formatEmailForDisplay } from '../../utils/emailHelpers';
 import { calculatePreviousDebt, calculateOverpayment } from '../../utils/debtCalculations';
@@ -519,10 +518,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           showToast('⏳ Ģenerē PDF...', 'info');
 
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
-          const amountWithoutVat = invoice.amount_without_vat || 0;
-          const amountWithVat = invoice.amount_with_vat || invoice.amount;
-          const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
-          const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
 
           const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
           
@@ -607,57 +602,48 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       let generatedCount = 0;
 
-      for (let i = 0; i < monthInvoices.length; i++) {
-        const invoice = monthInvoices[i];
+      const generateFile = (invoice) => new Promise((resolve) => {
         const apt = apartments.find(a => a.id === invoice.apartment_id);
-        if (!apt) continue;
+        if (!apt) return resolve();
 
-        try {
-          const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
-          const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
-          const docDefinition = buildInvoicePdfDefinition(invoice, apt, settings, tableRows);
-          const pdfDoc = window.pdfMake.createPdf(docDefinition);
+        const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
+        const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
+        const docDefinition = buildInvoicePdfDefinition(invoice, apt, settings, tableRows);
+        
+        window.pdfMake.createPdf(docDefinition).getBase64((base64) => {
+          const binaryString = atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let j = 0; j < binaryString.length; j++) {
+            bytes[j] = binaryString.charCodeAt(j);
+          }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
           
-          pdfDoc.getBase64((base64) => {
-            const binaryString = atob(base64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let j = 0; j < binaryString.length; j++) {
-              bytes[j] = binaryString.charCodeAt(j);
-            }
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-            
-            const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
-            zip.file(`${safeFileName}.pdf`, blob);
-            
-            generatedCount++;
-            showToast(`📄 Ģenerēts ${generatedCount}/${monthInvoices.length}`, 'info');
-            
-            if (generatedCount === monthInvoices.length) {
-              setTimeout(() => {
-                zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }).then(zipContent => {
-                  const zipUrl = URL.createObjectURL(zipContent);
-                  const link = document.createElement('a');
-                  link.href = zipUrl;
-                  link.download = `rekins_${period}.zip`;
-                  document.body.appendChild(link);
-                  link.click();
-                  
-                  setTimeout(() => {
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(zipUrl);
-                    showToast(`✓ ZIP lejuplādes ar ${generatedCount} PDF rēķiniem`);
-                  }, 200);
-                }).catch(err => {
-                  console.error('ZIP ģenerēšanas kļūda:', err);
-                  showToast('Kļūda ZIP ģenerēšanā', 'error');
-                });
-              }, 500);
-            }
-          });
+          zip.file(`${safeFileName}.pdf`, blob);
+          generatedCount++;
+          showToast(`📄 Ģenerēts ${generatedCount}/${monthInvoices.length}`, 'info');
+          resolve();
+        });
+      });
 
-        } catch (err) {
-          console.error(`Kļūda rēķinam ${invoice.invoice_number}:`, err);
-        }
+      for (const invoice of monthInvoices) {
+        await generateFile(invoice);
+      }
+
+      if (generatedCount > 0) {
+        const zipContent = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+        const zipUrl = URL.createObjectURL(zipContent);
+        const link = document.createElement('a');
+        link.href = zipUrl;
+        link.download = `rekins_${period}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(zipUrl);
+          showToast(`✓ ZIP lejuplāde pabeigta (${generatedCount} rēķini)`);
+        }, 200);
       }
     } catch (error) {
       console.error('ZIP lejuplādes kļūda:', error);
