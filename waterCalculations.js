@@ -43,52 +43,47 @@ export const calculateWaterDetails = ({
   let hotWaterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && wc.period === period);
 
   // Ja patēriņa ieraksta nav, bet rādījums ir - aprēķinām "lidojumā"
-  if (coldReading && !waterCons) {
-    const prev = getLastReading(apt.id, 'water', period, meterReadings);
+  if (coldReading && ostReading(apt.id, 'water', period, meterReadings);
     waterCons = { consumption_m3: Math.max(0, (coldReading.reading_value || 0) - (prev?.reading_value || 0)) };
   }
-  if (hotReading && !hotWaterCons) {
-    const prev = getLastReading(apt.id, 'hot_water', period, meterReadings);
-    hotWaterCons = { consumption_m3: Math.max(0, (hotReading.reading_value || 0) - (prev?.reading_value || 0)) };
+  if (hotReading && (!hotWaterCons || hotWaterCons.consumption_m3 === null || hotWaterCons.consumption_m3 === undefined)) {
+    const prev = getoconsumption_m3: Math.max(0, (hotReading.reading_value || 0) - (prev?.reading_value || 0)) };
   }
 
   // 2. AUKSTAIS ŪDENS
-  if (waterCons && waterTariff && waterTariff.include_in_invoice !== false) {
-    const m3 = Math.max(0, parseFloat(waterCons.consumption_m3) || 0);
-    const price = parseFloat(waterTariff.price_per_m3) || 0;
-    const amount = Math.round(m3 * price * 100) / 100;
-    const vatRate = parseFloat(waterTariff.vat_rate) || 0;
+  if (waterCons && waterCons.consumption_m3 !== null && (waterTariff ? waterTariff.include_in_invoice !== false : true)) {
+    const m3 = Math.ma undefined && waterTariff.vat_rate !== null) 
+      ? parseFloat(waterTariff.vat_rate) 
+      : 21;
     const vat = Math.round(amount * vatRate / 100 * 100) / 100;
 
-    totalAmountWithoutVat += amount;
-    totalVatAmount += vat;
+    totalAmountWithomount;
     details.push({
-      tariff_id: waterTariff.id,
+      tariff_id: waterTariff?.id || null,
       tariff_name: `❄️ Aukstais ūdens (${m3} m³)`,
       consumption_m3: m3,
       price_per_m3: price,
       amount_without_vat: amount,
-      vat_rate: vatRate,
-      vat_amount: vat,
+      vat_rate: va
       type: 'water'
     });
-  } else if (!waterCons && waterTariff && waterTariff.diff_m3 > 0) {
+  } else if ((!waterCons || waterCons.consumption_m3 === null) && waterTariff && parseFloat(waterTariff.diff_m3 || 0) > 0) {
     // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
     const count = nonReportingColdCount ?? apartments.filter(a => 
       !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && mr.period === period)
     ).length;
 
     if (count > 0) {
-      const shareM3 = parseFloat(waterTariff.diff_m3) / count;
-      const diffPrice = parseFloat(waterTariff.diff_price) || 0;
+      const sdffPrice = parseFloat(waterTariff.diff_price) || 0;
       const amount = Math.round(shareM3 * diffPrice * 100) / 100;
-      const vatRate = parseFloat(waterTariff.vat_rate) || 0;
+      const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null)
+        ? parseFloat(waterTariff.vat_rate)
+        : 21;
       const vat = Math.round(amount * vatRate / 100 * 100) / 100;
 
       totalAmountWithoutVat += amount;
       totalVatAmount += vat;
       details.push({
-        tariff_id: waterTariff.id,
         tariff_name: `💧 Ūdens patēriņa starpība (${shareM3.toFixed(2)} m³)`,
         consumption_m3: shareM3,
         price_per_m3: diffPrice,
@@ -101,7 +96,7 @@ export const calculateWaterDetails = ({
   }
 
   // 3. SILTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
-  if (!hotWaterCons && hotWaterTariff && parseFloat(hotWaterTariff.diff_m3) > 0) {
+  if ((!hotWaterCons || hotWaterCons.consumption_m3 === null) && hotWaterTariff && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
     const count = nonReportingHotCount ?? apartments.filter(a => 
       !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && mr.period === period)
     ).length;
@@ -110,15 +105,15 @@ export const calculateWaterDetails = ({
       const shareM3 = parseFloat(hotWaterTariff.diff_m3) / count;
       const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
       const amount = Math.round(shareM3 * diffPrice * 100) / 100;
-      const vatRate = parseFloat(hotWaterTariff.vat_rate) || 12;
+      r ? parseFloat(hotWaterTariff.vat_rate)
+        : 12;
       const vat = Math.round(amount * vatRate / 100 * 100) / 100;
 
       totalAmountWithoutVat += amount;
       totalVatAmount += vat;
       details.push({
         tariff_id: hotWaterTariff.id,
-        tariff_name: `🔥 Siltā ūdens starpība (${shareM3.toFixed(2)} m³)`,
-        consumption_m3: shareM3,
+        tariff_name: `🔥 Siltā ūdens starpība (${shareM3.toFixed
         price_per_m3: diffPrice,
         amount_without_vat: amount,
         vat_rate: vatRate,
@@ -129,24 +124,22 @@ export const calculateWaterDetails = ({
   }
 
   // 4. SILTAIS ŪDENS
-  if (hotWaterCons && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
-    const m3 = Math.max(0, parseFloat(hotWaterCons.consumption_m3) || 0);
-    const price = parseFloat(hotWaterTariff.price_per_m3) || 0;
+  if (hotWaterCons && hotWaterCons.consumption_m3 !== null && (hotWaterTariff ? hotWaterTariff.include_in_invoice !== false : true)) {
+    const m3 = Math.max(0, parseFloat(hotWaterCons.consumption_m3 || 0));
+    const price = hotWaterTariff ? (parseFloat(hotWaterTariff.price_per_m3) || 0) : 0;
     const amount = Math.round(m3 * price * 100) / 100;
-    const vatRate = 12; // Siltajam ūdenim fiksēts 12%
+    const vatRate = (hotWaterTariff && hotWaterTariff.vat_rate !== undefined && hotWaterTariff.vat_rate !== null)
+      ? parseFloat(hotWaterTariff.vat_rate)
+      : 12;
     const vat = Math.round(amount * vatRate / 100 * 100) / 100;
 
     totalAmountWithoutVat += amount;
-    totalVatAmount += vat;
-    details.push({
-      tariff_id: hotWaterTariff.id,
-      tariff_name: `🔥 Siltais ūdens (${m3} m³)`,
+    totalVatAmount +=
       consumption_m3: m3,
       price_per_m3: price,
       amount_without_vat: amount,
       vat_rate: vatRate,
-      vat_amount: vat,
-      type: 'hot_water'
+      vat_amount: ver'
     });
   }
 
