@@ -3,8 +3,8 @@ import { TOTAL_AREA } from '../shared/constants';
 import { calculateInvoiceAmounts } from '../../utils/invoiceCalculations';
 import { getEmailRecipients, formatEmailForDisplay } from '../../utils/emailHelpers';
 import { calculatePreviousDebt, calculateOverpayment } from '../../utils/debtCalculations';
-import { buildInvoicePdfDefinition } from '../../utils/invoicePdfDocDefinition'; // Import buildInvoicePdfDefinition
-import { buildInvoiceTableRows, loadPdfScripts, generateInvoicePdfHtml } from '../../utils/pdfHelpers'; // Import PDF helpers
+import { buildInvoicePdfDefinition } from '../../utils/invoicePdfDocDefinition';
+import { buildInvoiceTableRows, loadPdfScripts, generateInvoicePdfHtml } from '../../utils/pdfHelpers';
 
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}, waterConsumption = []) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
@@ -21,10 +21,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     body: ''
   });
   const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0, active: false });
-
-  // --- Debt and Overpayment Handlers (moved to debtCalculations.js) ---
-  // --- PDF Generation Helpers (moved to pdfHelpers.js) ---
-  // --- Email Sending Logic (kept here, but uses emailHelpers.js) ---
 
   const generateInvoiceForApartment = async (e, apartmentId, currentInvoiceMonth, periodTariffs, dateFrom, dateTo) => {
     e.preventDefault();
@@ -47,11 +43,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         invoiceDateTo = `${year}-${month}-${daysInMonth}`;
       }
 
-      // Parāds
       const previousDebt = calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth);
       const overpayment = calculateOverpayment(apt.id, invoices, currentInvoiceMonth);
 
-      // ✅ Unified Calculation Grouping [Tariffs -> Waste -> Water]
       const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
         apt, period: currentInvoiceMonth, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
         meterReadings, waterConsumption, apartments, previousDebt, overpayment
@@ -136,14 +130,12 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const apt = apartments.find(a => a.id === invoice.apartment_id);
           if (!apt || !apt.email) continue;
 
-          // Iegūstam saņēmējus, kuriem jāsaņem rēķini
           const recipients = getEmailRecipients(apt.email, 'invoice');
           if (recipients.length === 0) continue;
           const toAddresses = recipients.join(',');
 
           // 1. Ģenerējam e-pasta tekstu (HTML)
           const emailGreeting = `
-          const emailGreeting = ` 
             <div style="font-family: Arial, sans-serif; color: #333; margin-bottom: 20px; padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
               <p style="margin: 0 0 10px 0;">Labdien${apt.owner_name ? ', ' + apt.owner_name : ''}!</p>
               <p style="margin: 0 0 10px 0;">Nosūtām Jums rēķinu Nr. <strong>${invoice.invoice_number}</strong> par periodu ${invoice.period}.</p>
@@ -151,8 +143,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               <p style="margin: 0; font-size: 13px; color: #666;">Lūdzam veikt apmaksu līdz ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}. Paldies!</p>
             </div>
           `;
-          
-          // 2. Ģenerējam PDF (izmantojot esošo loģiku, bet pielāgojot definīciju)
+
+          // 2. Ģenerējam PDF
           const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
           const amountWithoutVat = invoice.amount_without_vat || 0;
           const amountWithVat = invoice.amount_with_vat || invoice.amount;
@@ -161,9 +153,12 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
 
-          // Parādi un pārmaksas
-          invoiceDetails.filter(d => d.type === 'debt').forEach(d => tableRows.push([{text:d.tariff_name, style:'debt', bold:true}, {}, {}, {text:`€${d.amount_without_vat.toFixed(2)}`, alignment:'right', style:'debt', bold:true}]));
-          invoiceDetails.filter(d => d.type === 'overpayment').forEach(d => tableRows.push([{text:d.tariff_name, style:'overpayment', bold:true}, {}, {}, {text:`€${d.amount_without_vat.toFixed(2)}`, alignment:'right', style:'overpayment', bold:true}]));
+          invoiceDetails.filter(d => d.type === 'debt').forEach(d => 
+            tableRows.push([{text:d.tariff_name, style:'debt', bold:true}, {}, {}, {text:`€${d.amount_without_vat.toFixed(2)}`, alignment:'right', style:'debt', bold:true}])
+          );
+          invoiceDetails.filter(d => d.type === 'overpayment').forEach(d => 
+            tableRows.push([{text:d.tariff_name, style:'overpayment', bold:true}, {}, {}, {text:`€${d.amount_without_vat.toFixed(2)}`, alignment:'right', style:'overpayment', bold:true}])
+          );
 
           const docDefinition = {
             pageSize: 'A4', pageMargins: [15, 15, 15, 15],
@@ -196,11 +191,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
               ...(settings.additional_invoice_info ? [{ text: '📝 Papildus Informācija:', fontSize: 12, bold: true, marginTop: 20, marginBottom: 8 }, { text: settings.additional_invoice_info, fontSize: 10, marginBottom: 20 }] : []),
               { text: 'MAKSĀJUMA REKVIZĪTI', fontSize: 12, bold: true, marginBottom: 10 },
               { table: { widths: ['30%', '70%'], body: [ ['NOSAUKUMS:', settings.building_name||'BIEDRĪBA "BARONA 78"'], ['REĢISTRĀCIJAS KODS:', settings.building_code||'40008325768'], ['ADRESE:', settings.building_address||'Kr. Barona iela 78-14, Rīga, LV-1001'], ['BANKA:', settings.payment_bank||'Habib Bank'], ['IBAN:', settings.payment_iban||'LV62HABA0551064112797'] ].map(r=>[{text:r[0], bold:true, fontSize:10, color:'#6b7280', fillColor:'#f3f4f6'}, {text:r[1], fontSize:10, color:'#4b5563', fillColor:'#f9fafb'}]) }, layout: { hLineWidth: ()=>1, vLineWidth: ()=>1, hLineColor: ()=>'#e5e7eb', vLineColor: ()=>'#e5e7eb' }, marginBottom: 10 }
-              ],
+            ],
             styles: { tableHeader: {fontSize:10, color:'#000', fillColor:'#f5f5f5'}, sectionHeader: {fontSize:11, bold:true, color:'#333', fillColor:'#f5f5f5'}, tableBody: {fontSize:10}, debt: {color:'#991b1b'}, overpayment: {color:'#1e40af'} }
           };
 
-          // 3. Konvertējam uz Base64
           const pdfDocGenerator = window.pdfMake.createPdf(docDefinition);
           const base64Pdf = await new Promise((resolve) => pdfDocGenerator.getBase64(resolve));
           
@@ -216,32 +210,21 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
             }]
           );
 
-          // 1. Ģenerējam e-pasta tekstu (HTML)
-          const emailGreeting = `
-            <div style="font-family: Arial, sans-serif; color: #333; margin-bottom: 20px; padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
-              <p style="margin: 0 0 10px 0;">Labdien${apt.owner_name ? ', ' + apt.owner_name : ''}!</p>
-              <p style="margin: 0 0 10px 0;">Nosūtām Jums rēķinu Nr. <strong>${invoice.invoice_number}</strong> par periodu ${invoice.period}.</p>
-              <p style="margin: 0 0 10px 0;">Rēķins ir pievienots šim e-pastam kā PDF pielikums.</p>
-              <p style="margin: 0; font-size: 13px; color: #666;">Lūdzam veikt apmaksu līdz ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}. Paldies!</p>
-            </div>
-          `;
-
-          // Atjaunojam statusu datubāzē
           await supabase.from('invoices').update({ sent_at: new Date().toISOString() }).eq('id', invoice.id);
           sentCount++;
           setSendingProgress(prev => ({ ...prev, current: prev.current + 1 }));
           console.log(`✓ Rēķins nosūtīts uz ${toAddresses}.`);
+
         } catch (itemError) {
           console.error(`Kļūda sūtot rēķinu ${invoice?.invoice_number}:`, itemError);
         }
 
-        // Pauze notiek jebkurā gadījumā, lai nepārslogotu sistēmu
         await new Promise(r => setTimeout(r, 15000));
       }
 
       showToast(`✓ Veiksmīgi nosūtīti ${sentCount} rēķini`);
       setSendingProgress({ current: 0, total: 0, active: false });
-      fetchData(); // Pārlādējam datus, lai redzētu "nosūtīts" statusu
+      fetchData();
     } catch (error) {
       console.error('E-pasta nosūtīšanas kļūda:', error);
       showToast('Kļūda nosūtot e-pastu: ' + error.message, 'error');
@@ -255,9 +238,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
     const response = await fetch(scriptUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-      },
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         to: to,
         subject: subject,
@@ -314,7 +295,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const previousDebt = calculatePreviousDebt(apt.id, currentInvoiceMonth);
         const overpayment = await calculateOverpayment(apt.id, currentInvoiceMonth);
 
-        // ✅ Unified Calculation Grouping [Tariffs -> Waste -> Water]
         const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
           apt, period: currentInvoiceMonth, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
           meterReadings, waterConsumption, apartments, previousDebt, overpayment,
@@ -324,7 +304,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         if (invoiceDetails.length === 0) continue;
         const timestamp = Math.floor(Date.now() / 1000);
         const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
-        // Iestatām termiņu uz nākamā mēneša 28. datumu
         const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
 
         invoicesToAdd.push({
@@ -472,7 +451,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         }
 
         const originalInvoiceId = invoice.id;
-        await supabase.from('invoices').delete().eq('id', originalInvoiceId); // Dzēšam veco rēķinu
+        await supabase.from('invoices').delete().eq('id', originalInvoiceId);
 
         const previousDebt = calculatePreviousDebt(apt.id, invoices, invoice.period, originalInvoiceId);
         const overpayment = calculateOverpayment(apt.id, invoices, invoice.period);
@@ -555,12 +534,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           console.error('PDF ģenerēšanas kļūda:', error);
           showToast('Kļūda PDF ģenerēšanā: ' + error.message, 'error');
         }
-
       }).catch(err => {
         console.error('Bibliotēku ielādes kļūda:', err);
         showToast('Kļūda ielādējot bibliotēkas', 'error');
       });
-
     } catch (error) {
       console.error('Neparedzēta kļūda:', error);
       showToast('Neparedzēta kļūda', 'error');
@@ -603,11 +580,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       showToast('⏳ Sagatavo PDF rēķinus ZIP failā...', 'info');
       
       const loadScript = (src) => new Promise((resolve, reject) => {
-        // const script = document.createElement('script');
-        // script.src = src;
-        // script.onload = resolve;
-        // script.onerror = reject;
-        // document.head.appendChild(script);
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
       });
 
       await Promise.all([
@@ -631,61 +608,57 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       let generatedCount = 0;
 
       for (let i = 0; i < monthInvoices.length; i++) {
-        // eslint-disable-next-line no-loop-func
-        (function() {
-          const invoice = monthInvoices[i];
-          const apt = apartments.find(a => a.id === invoice.apartment_id);
+        const invoice = monthInvoices[i];
+        const apt = apartments.find(a => a.id === invoice.apartment_id);
+        if (!apt) continue;
+
+        try {
+          const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
+          const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
+          const docDefinition = buildInvoicePdfDefinition(invoice, apt, settings, tableRows);
+          const pdfDoc = window.pdfMake.createPdf(docDefinition);
           
-          if (!apt) return;
-
-          try {
-            const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
-            const docDefinition = buildInvoicePdfDefinition(invoice, apt, settings, tableRows);
-            const pdfDoc = window.pdfMake.createPdf(docDefinition);
+          pdfDoc.getBase64((base64) => {
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let j = 0; j < binaryString.length; j++) {
+              bytes[j] = binaryString.charCodeAt(j);
+            }
+            const blob = new Blob([bytes], { type: 'application/pdf' });
             
-            pdfDoc.getBase64((base64) => {
-              const binaryString = atob(base64);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let j = 0; j < binaryString.length; j++) {
-                bytes[j] = binaryString.charCodeAt(j);
-              }
-              const blob = new Blob([bytes], { type: 'application/pdf' });
-              
-              const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
-              zip.file(`${safeFileName}.pdf`, blob);
-              
-              generatedCount++;
-              showToast(`📄 Ģenerēts ${generatedCount}/${monthInvoices.length}`, 'info');
-              
-              if (generatedCount === monthInvoices.length) {
-                setTimeout(() => {
-                  zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }).then(zipContent => {
-                    const zipUrl = URL.createObjectURL(zipContent);
-                    const link = document.createElement('a');
-                    link.href = zipUrl;
-                    link.download = `rekins_${period}.zip`;
-                    document.body.appendChild(link);
-                    link.click();
-                    
-                    setTimeout(() => {
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(zipUrl);
-                      showToast(`✓ ZIP lejuplādes ar ${generatedCount} PDF rēķiniem`);
-                    }, 200);
-                  }).catch(err => {
-                    console.error('ZIP ģenerēšanas kļūda:', err);
-                    showToast('Kļūda ZIP ģenerēšanā', 'error');
-                  });
-                }, 500);
-              }
-            });
+            const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
+            zip.file(`${safeFileName}.pdf`, blob);
+            
+            generatedCount++;
+            showToast(`📄 Ģenerēts ${generatedCount}/${monthInvoices.length}`, 'info');
+            
+            if (generatedCount === monthInvoices.length) {
+              setTimeout(() => {
+                zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }).then(zipContent => {
+                  const zipUrl = URL.createObjectURL(zipContent);
+                  const link = document.createElement('a');
+                  link.href = zipUrl;
+                  link.download = `rekins_${period}.zip`;
+                  document.body.appendChild(link);
+                  link.click();
+                  
+                  setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(zipUrl);
+                    showToast(`✓ ZIP lejuplādes ar ${generatedCount} PDF rēķiniem`);
+                  }, 200);
+                }).catch(err => {
+                  console.error('ZIP ģenerēšanas kļūda:', err);
+                  showToast('Kļūda ZIP ģenerēšanā', 'error');
+                });
+              }, 500);
+            }
+          });
 
-          } catch (err) {
-            console.error(`Kļūda rēķinam ${invoice.invoice_number}:`, err);
-          }
-        })();
+        } catch (err) {
+          console.error(`Kļūda rēķinam ${invoice.invoice_number}:`, err);
+        }
       }
-      
     } catch (error) {
       console.error('ZIP lejuplādes kļūda:', error);
       showToast('Kļūda: ' + error.message, 'error');
@@ -701,7 +674,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     
     let htmlContent = generateInvoicePdfHtml(invoice, apt);
 
-    // Pievieno drukāšanas pogu un stilus, kas to paslēpj drukāšanas brīdī
     const printButtonHtml = `
       <style>
         @media print { .no-print { display: none !important; } }
@@ -872,7 +844,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         console.error(`Kļūda sūtot atgādinājumu:`, error);
       }
       
-      // Pauze, lai nepārslogotu API
       await new Promise(resolve => setTimeout(resolve, 15000));
     }
 
@@ -889,14 +860,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     overpaymentForm, setOverpaymentForm,
     calculatePreviousDebt,
     calculateOverpayment,
-    saveDebtNote,
-    saveOverpayment,
-    updateOverpayment,
-    deleteOverpayment,
     generateInvoices,
     generateInvoiceForApartment,
     sendInvoicesByEmail,
-    sendEmailViaAppsScript, // Eksportējam, lai izmantotu citur (Settings)
+    sendEmailViaAppsScript,
     regenerateInvoice,
     regenerateInvoices,
     toggleInvoicePaid,
