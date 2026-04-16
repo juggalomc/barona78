@@ -29,6 +29,7 @@ export const loadPdfScripts = () => new Promise((resolve, reject) => {
  * @returns {Array} pdfMake tabulas rindu masīvs.
  */
 export const buildInvoiceTableRows = (invoiceDetails, apt) => {
+  if (!apt) return [];
   const tableRows = [];
   tableRows.push([
     { text: 'PAKALPOJUMS', bold: true, style: 'tableHeader' },
@@ -130,7 +131,16 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
  */
 export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
   if (!apt) return '<html><body><div style="padding:20px; color:red;">Kļūda: Dzīvokļa dati nav atrasti. Nevar ģenerēt priekšskatījumu.</div></body></html>';
-  const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
+  
+  let invoiceDetails = [];
+  try {
+    invoiceDetails = typeof invoice.invoice_details === 'string' 
+      ? JSON.parse(invoice.invoice_details) 
+      : (invoice.invoice_details || []);
+  } catch (e) {
+    console.error("Kļūda apstrādājot rēķina detaļas:", e);
+  }
+
   const amountWithoutVat = parseFloat(invoice.amount_without_vat) || 0;
   const amountWithVat = parseFloat(invoice.amount_with_vat) || 0;
   const vat21 = invoiceDetails.filter(d => Number(d.vat_rate) === 21).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
