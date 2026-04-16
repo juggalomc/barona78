@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { TOTAL_AREA } from '../shared/constants';
-import { calculateWaterDetails } from '../../utils/waterCalculations';
 import { calculateInvoiceAmounts } from '../../utils/invoiceCalculations';
 import { getEmailRecipients, formatEmailForDisplay } from '../../utils/emailHelpers';
+import { calculatePreviousDebt, calculateOverpayment } from '../../utils/debtCalculations';
+import { buildInvoicePdfDefinition } from '../../utils/invoicePdfDocDefinition';
 
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}, waterConsumption = []) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
@@ -19,66 +20,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     body: ''
   });
   const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0, active: false });
-
-  const calculatePreviousDebt = (apartmentId, currentPeriod, excludeInvoiceId = null) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
-    
-    const previousDebts = invoices.filter(inv => {
-      if (inv.apartment_id !== apartmentId) return false;
-      if (inv.paid) return false;
-      if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
-
-      const [invYear, invMonth] = inv.period.split('-').map(Number);
-      
-      // Nosacījums 1: Periods ir pirms pašreizējā rēķina perioda
-      const isEarlierPeriod = (invYear < currentYear) || (invYear === currentYear && invMonth < currentMonth);
-      
-      // Nosacījums 2: Termiņš ir beidzies uz ģenerēšanas brīdi
-      const isPastDue = todayStr > inv.due_date;
-
-      return isEarlierPeriod || isPastDue;
-    });
-
-    if (previousDebts.length === 0) return 0;
-
-    // Atrodam jaunāko neapmaksāto rēķinu (pēc perioda)
-    const latestInvoice = previousDebts.reduce((prev, current) => {
-      return (prev.period > current.period) ? prev : current;
-    });
-
-    return latestInvoice.amount;
-  };
-
-  const calculateOverpayment = async (apartmentId, currentPeriod) => {
-    const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
-    const previousMonth = currentMonth === 1 
-      ? `${currentYear - 1}-12` 
-      : `${currentYear}-${String(currentMonth - 1).padStart(2, '0')}`;
-    
-    try {
-      const previousInvoice = invoices.find(inv => 
-        inv.apartment_id === apartmentId && 
-        inv.period === previousMonth
-      );
-      
-      if (!previousInvoice) {
-        console.log(`ℹ️ Nav iepriekšējā mēneša rēķina dzīv. ${apartments.find(a => a.id === apartmentId)?.number} par ${previousMonth}`);
-        return 0;
-      }
-
-      const finalAmount = parseFloat(previousInvoice.amount_with_vat) || 0;
-      if (finalAmount < 0) {
-        const overpay = Math.abs(finalAmount);
-        console.log(`💰 Pārmaksa dzīv. ${apartments.find(a => a.id === apartmentId)?.number} par ${previousMonth}: €${overpay}`);
-        return overpay;
-      }
-      return 0;
-    } catch (err) {
-      console.error('Kļūda aprēķinot pārmaksu:', err);
-      return 0;
-    }
-  };
 
   const saveDebtNote = async (invoiceId, note) => {
     try {
@@ -264,8 +205,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       // Parāds
-      const previousDebt = calculatePreviousDebt(apt.id, currentInvoiceMonth);
-      const overpayment = await calculateOverpayment(apt.id, currentInvoiceMonth);
+      const previousDebt = calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth);
+      const overpayment = calculateOverpayment(apt.id, invoices, currentInvoiceMonth);
 
       // ✅ Unified Calculation Grouping [Tariffs -> Waste -> Water]
       const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
@@ -768,8 +709,6 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         });
 
         if (invoiceDetails.length === 0) continue;
-
-        const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
         const timestamp = Math.floor(Date.now() / 1000);
         const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
         // Iestatām termiņu uz nākamā mēneša 28. datumu
@@ -819,8 +758,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
     try {
       const apt = apartments.find(a => a.id === invoice.apartment_id);
-      const periodTariffs = tariffs.filter(t => t.period === invoice.period && t.include_in_invoice === true);
-      
+      const periodTariffs = tariffs.filter(t => t.period === invoice.period && t.include_in_invoice !== false);
+
       if (periodTariffs.length === 0) {
         showToast('Nav atzīmētu tarifū šim periodam', 'error');
         return;
@@ -828,192 +767,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       await supabase.from('invoices').delete().eq('id', invoice.id);
 
-      let totalAmountWithoutVat = 0;
-      let totalVatAmount = 0;
-      let invoiceDetails = [];
+      const previousDebt = calculatePreviousDebt(apt.id, invoices, invoice.period);
+      const overpayment = calculateOverpayment(apt.id, invoices, invoice.period);
 
-      const waterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'water' && wc.period === invoice.period);
-      const hotWaterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && wc.period === invoice.period);
-      const waterTariff = waterTariffs.find(w => w.period === invoice.period);
-      const hotWaterTariff = hotWaterTariffs.find(w => w.period === invoice.period);
-
-      for (const tariff of periodTariffs) {
-        // Filtrējam pēc telpas tipa (dzīvojamā/nedzīvojamā)
-        const isResidential = apt.is_residential !== false;
-        if (tariff.target_type === 'residential' && !isResidential) continue;
-        if (tariff.target_type === 'non_residential' && isResidential) continue;
-
-        const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
-        const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
-        const vatRate = parseFloat(tariff.vat_rate) || 0;
-        const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
-
-        totalAmountWithoutVat += amountWithoutVat;
-        totalVatAmount += vatAmount;
-
-        invoiceDetails.push({
-          tariff_id: tariff.id,
-          tariff_name: tariff.name,
-          amount_without_vat: amountWithoutVat,
-          vat_rate: vatRate,
-          vat_amount: vatAmount,
-          type: 'tariff'
-        });
-      }
-
-      // ✅ AUKSTAIS ŪDENS - ATSEVIŠĶI
-      if (waterCons && waterTariff && waterTariff.include_in_invoice !== false) {
-        const waterConsumptionM3 = Math.max(0, parseFloat(waterCons.consumption_m3) || 0);
-        const waterPricePerM3 = parseFloat(waterTariff.price_per_m3) || 0;
-        const waterAmountWithoutVat = Math.round(waterConsumptionM3 * waterPricePerM3 * 100) / 100;
-        const waterVatRate = parseFloat(waterTariff.vat_rate) || 0;
-        const waterVatAmount = Math.round(waterAmountWithoutVat * waterVatRate / 100 * 100) / 100;
-
-        totalAmountWithoutVat += waterAmountWithoutVat;
-        totalVatAmount += waterVatAmount;
-
-        invoiceDetails.push({
-          tariff_id: waterTariff.id,
-          tariff_name: `❄️ Aukstais ūdens (${waterConsumptionM3} m³)`,
-          consumption_m3: waterConsumptionM3,
-          price_per_m3: waterPricePerM3,
-          amount_without_vat: waterAmountWithoutVat,
-          vat_rate: waterVatRate,
-          vat_amount: waterVatAmount,
-          type: 'water'
-        });
-      }
-
-      // ✅ ŪDENS STARPĪBA - JA NAV RĀDĪJUMA
-      if (!waterCons && waterTariff && waterTariff.diff_m3 > 0) {
-        const nonReportingAptsCount = apartments.filter(aptItem => 
-          !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && wc.period === invoice.period)
-        ).length;
-
-        if (nonReportingAptsCount > 0) {
-          const shareM3 = parseFloat(waterTariff.diff_m3) / nonReportingAptsCount;
-          const diffPrice = parseFloat(waterTariff.diff_price) || 0;
-          const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
-          const diffVatRate = parseFloat(waterTariff.vat_rate) || 0;
-          const diffVatAmount = Math.round(diffAmount * diffVatRate / 100 * 100) / 100;
-
-          totalAmountWithoutVat += diffAmount;
-          totalVatAmount += diffVatAmount;
-          invoiceDetails.push({
-            tariff_id: waterTariff.id,
-            tariff_name: `💧 Ūdens patēriņa starpība (${shareM3.toFixed(2)} m³)`,
-            consumption_m3: shareM3,
-            price_per_m3: diffPrice,
-            amount_without_vat: diffAmount,
-            vat_rate: diffVatRate,
-            vat_amount: diffVatAmount,
-            type: 'water_diff'
-          });
-        }
-      }
-
-      // ✅ SILTĀ ŪDENS STARPĪBA - JA NAV RĀDĪJUMA
-      if (!hotWaterCons && hotWaterTariff && hotWaterTariff.diff_m3 > 0) {
-        const nonReportingHotAptsCount = apartments.filter(aptItem => 
-          !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && wc.period === invoice.period)
-        ).length;
-
-        if (nonReportingHotAptsCount > 0) {
-          const shareM3 = parseFloat(hotWaterTariff.diff_m3) / nonReportingHotAptsCount;
-          const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
-          const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
-          const diffVatRate = 12; // 12% PVN
-          const diffVatAmount = Math.round(diffAmount * diffVatRate / 100 * 100) / 100;
-
-          totalAmountWithoutVat += diffAmount;
-          totalVatAmount += diffVatAmount;
-          invoiceDetails.push({
-            tariff_id: hotWaterTariff.id,
-            tariff_name: `🔥 Siltā ūdens starpība (${shareM3.toFixed(2)} m³)`,
-            consumption_m3: shareM3,
-            price_per_m3: diffPrice,
-            amount_without_vat: diffAmount,
-            vat_rate: diffVatRate,
-            vat_amount: diffVatAmount,
-            type: 'hot_water_diff'
-          });
-        }
-      }
-
-      if (hotWaterCons && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
-        const hotWaterConsumptionM3 = Math.max(0, parseFloat(hotWaterCons.consumption_m3) || 0);
-        const hotWaterPricePerM3 = parseFloat(hotWaterTariff.price_per_m3) || 0;
-        const hotWaterAmountWithoutVat = Math.round(hotWaterConsumptionM3 * hotWaterPricePerM3 * 100) / 100;
-        const hotWaterVatRate = 12; // 12% PVN
-        const hotWaterVatAmount = Math.round(hotWaterAmountWithoutVat * hotWaterVatRate / 100 * 100) / 100;
-
-        totalAmountWithoutVat += hotWaterAmountWithoutVat;
-        totalVatAmount += hotWaterVatAmount;
-
-        invoiceDetails.push({
-          tariff_id: hotWaterTariff.id,
-          tariff_name: `🔥 Siltais ūdens (${hotWaterConsumptionM3} m³)`,
-          consumption_m3: hotWaterConsumptionM3,
-          price_per_m3: hotWaterPricePerM3,
-          amount_without_vat: hotWaterAmountWithoutVat,
-          vat_rate: hotWaterVatRate,
-          vat_amount: hotWaterVatAmount,
-          type: 'hot_water'
-        });
-      }
-
-      const wasteTariff = wasteTariffs.find(w => w.period === invoice.period);
-      if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-        const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
-        if (totalDeclaredPersons > 0) {
-          const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
-          const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
-          const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
-          const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
-
-          totalAmountWithoutVat += wasteAmountWithoutVat;
-          totalVatAmount += wasteVatAmount;
-
-          invoiceDetails.push({
-            tariff_id: wasteTariff.id,
-            tariff_name: `♻️ Atkritumu izvešana (${declaredPersonsInApt} pers.)`,
-            declared_persons: declaredPersonsInApt,
-            total_persons: totalDeclaredPersons,
-            amount_without_vat: wasteAmountWithoutVat,
-            vat_rate: wasteVatRate,
-            vat_amount: wasteVatAmount,
-            type: 'waste'
-          });
-        }
-      }
-
-      const previousDebt = calculatePreviousDebt(apt.id, invoice.period);
-      if (previousDebt > 0) {
-        totalAmountWithoutVat += previousDebt;
-        invoiceDetails.push({
-          tariff_id: null,
-          tariff_name: '⚠️ Parāds no iepriekšējiem mēnešiem',
-          amount_without_vat: previousDebt,
-          vat_rate: 0,
-          vat_amount: 0,
-          type: 'debt'
-        });
-      }
-
-      const overpayment = await calculateOverpayment(apt.id, invoice.period);
-      if (overpayment > 0) {
-        totalAmountWithoutVat -= overpayment;
-        invoiceDetails.push({
-          tariff_id: null,
-          tariff_name: '💰 Pārmaksa no iepriekšējā mēneša',
-          amount_without_vat: -overpayment,
-          vat_rate: 0,
-          vat_amount: 0,
-          type: 'overpayment'
-        });
-      }
-
-      const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
+      const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
+        apt, period: invoice.period, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
+        meterReadings, waterConsumption, apartments, previousDebt, overpayment
+      });
 
       const { error: insertError } = await supabase.from('invoices').insert([{
         apartment_id: apt.id,
@@ -1260,186 +1020,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (d.vat_amount || 0), 0);
 
           const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
-
-          const paymentRows = [
-            ['NOSAUKUMS:', settings.building_name || 'BIEDRĪBA "BARONA 78"'],
-            ['REĢISTRĀCIJAS KODS:', settings.building_code || '40008325768'],
-            ['ADRESE:', settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001'],
-            ['BANKA:', settings.payment_bank || 'Habib Bank'],
-            ['IBAN:', settings.payment_iban || 'LV62HABA0551064112797'],
-            ['E-PASTS:', settings.payment_email || 'info@barona78.lv'],
-            ['TĀLRUNIS:', settings.payment_phone || '+371 67800000']
-          ];
-
-          const docDefinition = {
-            pageSize: 'A4',
-            pageMargins: [15, 15, 15, 15],
-            content: [
-              {
-                columns: [
-                  { text: 'RĒĶINS', fontSize: 32, bold: true },
-                  {
-                    text: (settings.building_name || 'BIEDRĪBA "BARONA 78"') + '\n' +
-                          (settings.building_code || '40008325768') + '\n' +
-                          (settings.building_address || 'Kr. Barona iela 78-14, Rīga, LV-1001'),
-                    fontSize: 10,
-                    alignment: 'right'
-                  }
-                ],
-                marginBottom: 20
-              },
-
-              {
-                columns: [
-                  {
-                    width: '50%',
-                    text: [
-                      { text: 'Rēķina numurs:\n', bold: true },
-                      invoice.invoice_number + '\n\n',
-                      { text: 'Periods:\n', bold: true },
-                    `${invoice.period} (${new Date(invoice.date_from).toLocaleDateString('lv-LV')} - ${new Date(invoice.date_to).toLocaleDateString('lv-LV')})\n\n`,
-                    { text: 'Izrakstīts:\n', bold: true },
-                    `${new Date(invoice.created_at).toLocaleDateString('lv-LV')}\n\n`,
-                      { text: 'Termiņš:\n', bold: true },
-                      new Date(invoice.due_date).toLocaleDateString('lv-LV')
-                    ],
-                    fontSize: 11
-                  }
-                ],
-                marginBottom: 20
-              },
-
-              {
-                text: 'SAŅĒMĒJS',
-                fontSize: 12,
-                bold: true,
-                marginBottom: 8
-              },
-              {
-                text: 'Dzīvoklis Nr. ' + apt.number + '\n' +
-                      (apt.owner_name ? 'Vārds: ' + apt.owner_name + '\n' : '') +
-                      (apt.owner_surname ? 'Uzvārds: ' + apt.owner_surname + '\n' : '') +
-                      (apt.email ? 'E-pasts: ' + formatEmailForDisplay(apt.email) + '\n' : '') +
-                      (apt.declared_persons ? 'Deklarēto personu skaits: ' + apt.declared_persons + '\n' : '') +
-                      (apt.registration_number ? 'Reģistrācijas numurs: ' + apt.registration_number + '\n' : '') +
-                      (apt.apartment_address ? 'Adrese: ' + apt.apartment_address + '\n' : '') +
-                      'Platība: ' + apt.area + ' m²',
-                fontSize: 10,
-                marginBottom: 20
-              },
-
-              {
-                table: {
-                  headerRows: 1,
-                  widths: ['*', 90, 80, 80],
-                  body: tableRows
-                },
-                layout: {
-                  hLineWidth: function() { return 0.5; },
-                  vLineWidth: function() { return 0.5; },
-                  hLineColor: function() { return '#cccccc'; },
-                  vLineColor: function() { return '#cccccc'; }
-                },
-                marginBottom: 15
-              },
-
-              {
-                alignment: 'right',
-                columns: [
-                  { width: '70%', text: '' },
-                  {
-                    width: '30%',
-                    table: {
-                      widths: ['*', '*'],
-                      body: [
-                        [
-                          { text: 'Summa bez PVN:', bold: true },
-                          { text: '€' + amountWithoutVat.toFixed(2), alignment: 'right' }
-                        ],
-                        ...(vat21 > 0 ? [[
-                          { text: 'PVN 21%:', bold: true },
-                          { text: '€' + vat21.toFixed(2), alignment: 'right' }
-                        ]] : []),
-                        ...(vat12 > 0 ? [[
-                          { text: 'PVN 12%:', bold: true },
-                          { text: '€' + vat12.toFixed(2), alignment: 'right' }
-                        ]] : []),
-                        [
-                          { text: 'KOPĀ:', fontSize: 14, bold: true, color: '#003399' },
-                          { text: '€' + amountWithVat.toFixed(2), fontSize: 14, bold: true, color: '#003399', alignment: 'right' }
-                        ]
-                      ]
-                    },
-                    layout: 'noBorders'
-                  }
-                ],
-                marginBottom: 30
-              },
-
-              ...(settings.additional_invoice_info ? [{
-                text: '📝 Papildus Informācija:',
-                fontSize: 12,
-                bold: true,
-                marginBottom: 8,
-                marginTop: 20
-              },
-              {
-                text: settings.additional_invoice_info,
-                fontSize: 10,
-                marginBottom: 20
-              }] : []),
-
-              {
-                text: 'MAKSĀJUMA REKVIZĪTI',
-                fontSize: 12,
-                bold: true,
-                marginBottom: 10
-              },
-              {
-                table: {
-                  widths: ['30%', '70%'],
-                  body: paymentRows.map((row, idx) => [
-                    { text: row[0], bold: true, fontSize: 10, color: '#6b7280', fillColor: '#f3f4f6' },
-                    { text: row[1], fontSize: 10, color: '#4b5563', fillColor: '#f9fafb' }
-                  ])
-                },
-                layout: {
-                  hLineWidth: function() { return 1; },
-                  vLineWidth: function() { return 1; },
-                  hLineColor: function() { return '#e5e7eb'; },
-                  vLineColor: function() { return '#e5e7eb'; },
-                  fillColor: function(i, node) {
-                    return i % 2 === 0 ? '#f3f4f6' : '#f9fafb';
-                  }
-                },
-                marginBottom: 10
-              }
-            ],
-            styles: {
-              tableHeader: {
-                fontSize: 10,
-                color: '#000000',
-                fillColor: '#f5f5f5'
-              },
-              sectionHeader: {
-                fontSize: 11,
-                bold: true,
-                color: '#333',
-                fillColor: '#f5f5f5'
-              },
-              tableBody: {
-                fontSize: 10
-              },
-              debt: {
-                color: '#991b1b'
-              },
-              overpayment: {
-                color: '#1e40af'
-              }
-            }
-          };
-
-          window.pdfMake.createPdf(docDefinition).download('rekins_' + invoice.invoice_number + '.pdf');
+          
+          const docDefinition = buildInvoicePdfDefinition(invoice, apt, settings, tableRows);
+          window.pdfMake.createPdf(docDefinition).download(`rekins_${invoice.invoice_number}.pdf`);
           showToast('✓ PDF lejuplādēts: rekins_' + invoice.invoice_number + '.pdf');
 
         } catch (error) {
