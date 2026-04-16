@@ -100,7 +100,35 @@ export const calculateWaterDetails = ({
     }
   }
 
-  // 3. SILTAIS ŪDENS
+  // 3. SILTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
+  if (!hotWaterCons && hotWaterTariff && parseFloat(hotWaterTariff.diff_m3) > 0) {
+    const count = nonReportingHotCount ?? apartments.filter(a => 
+      !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && mr.period === period)
+    ).length;
+
+    if (count > 0) {
+      const shareM3 = parseFloat(hotWaterTariff.diff_m3) / count;
+      const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
+      const amount = Math.round(shareM3 * diffPrice * 100) / 100;
+      const vatRate = parseFloat(hotWaterTariff.vat_rate) || 12;
+      const vat = Math.round(amount * vatRate / 100 * 100) / 100;
+
+      totalAmountWithoutVat += amount;
+      totalVatAmount += vat;
+      details.push({
+        tariff_id: hotWaterTariff.id,
+        tariff_name: `🔥 Siltā ūdens starpība (${shareM3.toFixed(2)} m³)`,
+        consumption_m3: shareM3,
+        price_per_m3: diffPrice,
+        amount_without_vat: amount,
+        vat_rate: vatRate,
+        vat_amount: vat,
+        type: 'hot_water_diff'
+      });
+    }
+  }
+
+  // 4. SILTAIS ŪDENS
   if (hotWaterCons && hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
     const m3 = Math.max(0, parseFloat(hotWaterCons.consumption_m3) || 0);
     const price = parseFloat(hotWaterTariff.price_per_m3) || 0;
