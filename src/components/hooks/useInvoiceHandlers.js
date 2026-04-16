@@ -143,6 +143,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           // 1. Ģenerējam e-pasta tekstu (HTML)
           const emailGreeting = `
+          const emailGreeting = ` 
             <div style="font-family: Arial, sans-serif; color: #333; margin-bottom: 20px; padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
               <p style="margin: 0 0 10px 0;">Labdien${apt.owner_name ? ', ' + apt.owner_name : ''}!</p>
               <p style="margin: 0 0 10px 0;">Nosūtām Jums rēķinu Nr. <strong>${invoice.invoice_number}</strong> par periodu ${invoice.period}.</p>
