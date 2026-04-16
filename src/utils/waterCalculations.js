@@ -68,11 +68,12 @@ export const calculateWaterDetails = ({
   const hotM3 = getConsumption('hot_water');
 
   // 2. AUKSTAIS ŪDENS
-  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== false : true)) {
+  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== false : coldM3 > 0)) {
     const m3 = coldM3;
-    const price = waterTariff ? (parseFloat(waterTariff.price_per_m3) || 0) : 0;
+    const price = (waterTariff && waterTariff.price_per_m3 !== null) ? parseFloat(waterTariff.price_per_m3) : 0;
     const amount = Math.round(m3 * price * 100) / 100;
-    const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null)
+    // Labojums: PVN 0% apstrāde
+    const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null) 
       ? parseFloat(waterTariff.vat_rate)
       : 21;
     const vat = Math.round(amount * vatRate / 100 * 100) / 100;
@@ -80,7 +81,7 @@ export const calculateWaterDetails = ({
     totalAmountWithoutVat += amount;
     totalVatAmount += vat;
     details.push({
-      tariff_id: waterTariff.id,
+      tariff_id: waterTariff?.id || null,
       tariff_name: `❄️ Aukstais ūdens (${m3.toFixed(2)} m³)`,
       consumption_m3: m3,
       price_per_m3: price,
@@ -98,7 +99,7 @@ export const calculateWaterDetails = ({
       const shareM3 = parseFloat(waterTariff.diff_m3) / count;
       const diffPrice = parseFloat(waterTariff.diff_price) || 0;
       const amount = Math.round(shareM3 * diffPrice * 100) / 100;
-      const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null)
+      const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null) 
         ? parseFloat(waterTariff.vat_rate)
         : 21;
       const vat = Math.round(amount * vatRate / 100 * 100) / 100;
@@ -106,7 +107,7 @@ export const calculateWaterDetails = ({
       totalAmountWithoutVat += amount;
       totalVatAmount += vat;
       details.push({
-        tariff_id: waterTariff.id,
+        tariff_id: waterTariff?.id || null,
         tariff_name: `💧 Ūdens patēriņa starpība (${shareM3.toFixed(2)} m³)`,
         consumption_m3: shareM3,
         price_per_m3: diffPrice,
@@ -128,7 +129,7 @@ export const calculateWaterDetails = ({
       const shareM3 = parseFloat(hotWaterTariff.diff_m3) / count;
       const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
       const amount = Math.round(shareM3 * diffPrice * 100) / 100;
-      const vatRate = (hotWaterTariff && hotWaterTariff.vat_rate !== undefined && hotWaterTariff.vat_rate !== null)
+      const vatRate = (hotWaterTariff && hotWaterTariff.vat_rate !== undefined && hotWaterTariff.vat_rate !== null) 
         ? parseFloat(hotWaterTariff.vat_rate)
         : 12;
       const vat = Math.round(amount * vatRate / 100 * 100) / 100;
@@ -136,7 +137,7 @@ export const calculateWaterDetails = ({
       totalAmountWithoutVat += amount;
       totalVatAmount += vat;
       details.push({
-        tariff_id: hotWaterTariff.id,
+        tariff_id: hotWaterTariff?.id || null,
         tariff_name: `🔥 Siltā ūdens starpība (${shareM3.toFixed(2)} m³)`,
         consumption_m3: shareM3,
         price_per_m3: diffPrice,
@@ -149,11 +150,11 @@ export const calculateWaterDetails = ({
   }
 
   // 4. SILTAIS ŪDENS
-  if (hotM3 !== null && (hotWaterTariff ? hotWaterTariff.include_in_invoice !== false : true)) {
+  if (hotM3 !== null && (hotWaterTariff ? hotWaterTariff.include_in_invoice !== false : hotM3 > 0)) {
     const m3 = hotM3;
-    const price = hotWaterTariff ? (parseFloat(hotWaterTariff.price_per_m3) || 0) : 0;
+    const price = (hotWaterTariff && hotWaterTariff.price_per_m3 !== null) ? parseFloat(hotWaterTariff.price_per_m3) : 0;
     const amount = Math.round(m3 * price * 100) / 100;
-    const vatRate = (hotWaterTariff && hotWaterTariff.vat_rate !== undefined && hotWaterTariff.vat_rate !== null)
+    const vatRate = (hotWaterTariff && hotWaterTariff.vat_rate !== undefined && hotWaterTariff.vat_rate !== null) 
       ? parseFloat(hotWaterTariff.vat_rate)
       : 12;
     const vat = Math.round(amount * vatRate / 100 * 100) / 100;
@@ -161,7 +162,7 @@ export const calculateWaterDetails = ({
     totalAmountWithoutVat += amount;
     totalVatAmount += vat;
     details.push({
-      tariff_id: hotWaterTariff.id,
+      tariff_id: hotWaterTariff?.id || null,
       tariff_name: `🔥 Siltais ūdens (${m3.toFixed(2)} m³)`,
       consumption_m3: m3,
       price_per_m3: price,

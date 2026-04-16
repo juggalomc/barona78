@@ -151,14 +151,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
           const vat12 = invoiceDetails.filter(d => Number(d.vat_rate) === 12).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
 
           const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
-
-          invoiceDetails.filter(d => d.type === 'debt').forEach(d => 
-            tableRows.push([{text:d.tariff_name, style:'debt', bold:true}, {}, {}, {text:`€${d.amount_without_vat.toFixed(2)}`, alignment:'right', style:'debt', bold:true}])
-          );
-          invoiceDetails.filter(d => d.type === 'overpayment').forEach(d => 
-            tableRows.push([{text:d.tariff_name, style:'overpayment', bold:true}, {}, {}, {text:`€${d.amount_without_vat.toFixed(2)}`, alignment:'right', style:'overpayment', bold:true}])
-          );
-
+          
           const docDefinition = {
             pageSize: 'A4', pageMargins: [15, 15, 15, 15],
             content: [

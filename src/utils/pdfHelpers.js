@@ -35,7 +35,7 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
     { text: 'SUMMA', bold: true, style: 'tableHeader', alignment: 'right' }
   ]);
 
-  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff', 'cold_water', 'water_meter'];
+  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff'];
   const isService = d => ['tariff', 'waste', ...waterTypes].includes(d.type);
 
   // Pakalpojumi BEZ PVN
