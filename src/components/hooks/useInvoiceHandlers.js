@@ -602,32 +602,34 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       let generatedCount = 0;
 
-      const generateFile = (invoice) => new Promise((resolve) => {
+      for (let i = 0; i < monthInvoices.length; i++) {
+        const invoice = monthInvoices[i];
         const apt = apartments.find(a => a.id === invoice.apartment_id);
-        if (!apt) return resolve();
+        if (!apt) continue;
 
-        const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
-        const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
-        const docDefinition = buildInvoicePdfDefinition(invoice, apt, settings, tableRows);
-        
-        window.pdfMake.createPdf(docDefinition).getBase64((base64) => {
+        try {
+          const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
+          const tableRows = buildInvoiceTableRows(invoiceDetails, apt);
+          const docDefinition = buildInvoicePdfDefinition(invoice, apt, settings, tableRows);
+          const pdfDoc = window.pdfMake.createPdf(docDefinition);
+          
+          const base64 = await new Promise(resolve => pdfDoc.getBase64(resolve));
           const binaryString = atob(base64);
           const bytes = new Uint8Array(binaryString.length);
           for (let j = 0; j < binaryString.length; j++) {
             bytes[j] = binaryString.charCodeAt(j);
           }
           const blob = new Blob([bytes], { type: 'application/pdf' });
-          const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
           
+          const safeFileName = `${invoice.invoice_number}_dziv_${apt.number}`.replace(/[\\/:*?"<>|]/g, '_');
           zip.file(`${safeFileName}.pdf`, blob);
+          
           generatedCount++;
           showToast(`📄 Ģenerēts ${generatedCount}/${monthInvoices.length}`, 'info');
-          resolve();
-        });
-      });
 
-      for (const invoice of monthInvoices) {
-        await generateFile(invoice);
+        } catch (err) {
+          console.error(`Kļūda rēķinam ${invoice.invoice_number}:`, err);
+        }
       }
 
       if (generatedCount > 0) {
@@ -642,7 +644,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         setTimeout(() => {
           document.body.removeChild(link);
           URL.revokeObjectURL(zipUrl);
-          showToast(`✓ ZIP lejuplāde pabeigta (${generatedCount} rēķini)`);
+          showToast(`✓ ZIP lejuplādes ar ${generatedCount} PDF rēķiniem`);
         }, 200);
       }
     } catch (error) {

@@ -5,10 +5,6 @@
  */
 
 export function generateInvoicePdfHtml(invoice, apt, settings = {}) {
-  const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
-  const amountWithoutVat = invoice.amount_without_vat || 0;
-  const vatAmount = invoice.vat_amount || 0;
-  const amountWithVat = invoice.amount_with_vat || invoice.amount;
 
   const buildingName = settings.building_name || 'BIEDRĪBA "BARONA 78"';
   const buildingCode = settings.building_code || '40008325768';
