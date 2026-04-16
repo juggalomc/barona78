@@ -1400,9 +1400,22 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
         const coldReading = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'water' && mr.period === invoice.period);
         const hotReading = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'hot_water' && mr.period === invoice.period);
+        // ✅ ŪDENS APRĒĶINS MASU REĢENERĀCIJĀ
+        const waterResult = calculateWaterDetails({
+          apt,
+          period: invoice.period,
+          meterReadings,
+          waterConsumption,
+          waterTariff: waterTariffs.find(w => w.period === invoice.period),
+          hotWaterTariff: hotWaterTariffs.find(w => w.period === invoice.period),
+          apartments
+        });
 
         let waterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'water' && wc.period === invoice.period);
         let hotWaterCons = waterConsumption.find(wc => String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && wc.period === invoice.period);
+        invoiceDetails.push(...waterResult.details);
+        totalAmountWithoutVat += waterResult.waterAmountWithoutVat;
+        totalVatAmount += waterResult.waterVatAmount;
 
         if (coldReading && !waterCons) {
           const prev = getLastReading(apt.id, 'water', invoice.period, meterReadings);
