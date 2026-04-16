@@ -1,32 +1,8 @@
 import { useState } from 'react';
 import { TOTAL_AREA } from '../shared/constants';
 import { calculateWaterDetails } from '../../utils/waterCalculations';
-
-// Palīgfunkcija e-pastu saņēmēju iegūšanai
-// Atbalsta gan vienkāršu string, gan JSON formātu ar iestatījumiem
-// JSON formāts: [{ "email": "...", "invoice": true, "water": true }, ...]
-export const getEmailRecipients = (emailField, type = 'invoice') => {
-  if (!emailField) return [];
-  try {
-    // Pārbaudām vai izskatās pēc JSON
-    if (emailField.trim().startsWith('[')) {
-      const contacts = JSON.parse(emailField);
-      if (Array.isArray(contacts)) {
-        return contacts.filter(c => c[type] === true).map(c => c.email);
-      }
-    }
-  } catch (e) {
-    // Ja nav JSON, izmantojam kā parastu e-pastu
-  }
-  // Ja ir parasts e-pasts, sūtam visu (atpakaļsaderība)
-  return [emailField];
-};
-
-// Palīgfunkcija e-pasta attēlošanai rēķinā (pārvērš JSON sarakstā)
-export const formatEmailForDisplay = (emailField) => {
-  const recipients = getEmailRecipients(emailField, 'invoice');
-  return recipients.length > 0 ? recipients.join(', ') : emailField;
-};
+import { calculateInvoiceAmounts } from '../../utils/invoiceCalculations';
+import { getEmailRecipients, formatEmailForDisplay } from '../../utils/emailHelpers';
 
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}, waterConsumption = []) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
@@ -287,84 +263,18 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         invoiceDateTo = `${year}-${month}-${daysInMonth}`;
       }
 
-      let totalAmountWithoutVat = 0;
-      let totalVatAmount = 0;
-      let invoiceDetails = [];
-
-      // 1. Vispārīgie tarifi
-      for (const tariff of periodTariffs) {
-        const isResidential = apt.is_residential !== false;
-        if (tariff.target_type === 'residential' && !isResidential) continue;
-        if (tariff.target_type === 'non_residential' && isResidential) continue;
-        const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
-        const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
-        const vatRate = parseFloat(tariff.vat_rate) || 0;
-        const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
-        totalAmountWithoutVat += amountWithoutVat;
-        totalVatAmount += vatAmount;
-        invoiceDetails.push({ tariff_id: tariff.id, tariff_name: tariff.name, amount_without_vat: amountWithoutVat, vat_rate: vatRate, vat_amount: vatAmount, type: 'tariff' });
-      }
-
-      // 2. Atkritumu izvešana
-      const wasteTariff = wasteTariffs.find(w => w.period === currentInvoiceMonth);
-      if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-        const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
-        if (totalDeclaredPersons > 0) {
-          const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
-          const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
-          const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
-          totalAmountWithoutVat += wasteAmountWithoutVat;
-          totalVatAmount += Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
-          invoiceDetails.push({ tariff_id: wasteTariff.id, tariff_name: `♻️ Atkritumu izvešana (${declaredPersonsInApt} pers.)`, declared_persons: declaredPersonsInApt, total_persons: totalDeclaredPersons, amount_without_vat: wasteAmountWithoutVat, vat_rate: wasteVatRate, vat_amount: Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100, type: 'waste' });
-        }
-      }
-
-      // 3. Ūdens aprēķins
-      const waterResult = calculateWaterDetails({
-        apt,
-        period: currentInvoiceMonth,
-        meterReadings,
-        waterConsumption,
-        waterTariff: waterTariffs.find(w => w.period === currentInvoiceMonth),
-        hotWaterTariff: hotWaterTariffs.find(w => w.period === currentInvoiceMonth),
-        apartments
-      });
-      invoiceDetails.push(...waterResult.details);
-      totalAmountWithoutVat += waterResult.waterAmountWithoutVat;
-      totalVatAmount += waterResult.waterVatAmount;
-
       // Parāds
       const previousDebt = calculatePreviousDebt(apt.id, currentInvoiceMonth);
-      if (previousDebt > 0) {
-        totalAmountWithoutVat += previousDebt;
-        invoiceDetails.push({
-          tariff_id: null,
-          tariff_name: '⚠️ Parāds no iepriekšējiem mēnešiem',
-          amount_without_vat: previousDebt,
-          vat_rate: 0,
-          vat_amount: 0,
-          type: 'debt'
-        });
-      }
-
-      // Pārmaksa
       const overpayment = await calculateOverpayment(apt.id, currentInvoiceMonth);
-      if (overpayment > 0) {
-        totalAmountWithoutVat -= overpayment;
-        invoiceDetails.push({
-          tariff_id: null,
-          tariff_name: '💰 Pārmaksa no iepriekšējā mēneša',
-          amount_without_vat: -overpayment,
-          vat_rate: 0,
-          vat_amount: 0,
-          type: 'overpayment'
-        });
-      }
 
-      const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
+      // ✅ Unified Calculation Grouping [Tariffs -> Waste -> Water]
+      const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
+        apt, period: currentInvoiceMonth, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
+        meterReadings, waterConsumption, apartments, previousDebt, overpayment
+      });
+
       const timestamp = Math.floor(Date.now() / 1000);
       const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
-      // Iestatām termiņu uz nākamā mēneša 28. datumu (month ir index 0-11, Date konstruktorā tas jau ir nākamais mēnesis)
       const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
 
       const { error } = await supabase.from('invoices').insert([{
@@ -839,111 +749,23 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       const nonReportingColdAptsCount = apartments.filter(aptItem => 
-        !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && wc.period === currentInvoiceMonth)
         !meterReadings.find(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && mr.period === currentInvoiceMonth)
       ).length;
 
       const nonReportingHotAptsCount = apartments.filter(aptItem => 
-        !waterConsumption.find(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && wc.period === currentInvoiceMonth)
         !meterReadings.find(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && mr.period === currentInvoiceMonth)
       ).length;
 
       for (const apt of apartments) {
-        let totalAmountWithoutVat = 0;
-        let totalVatAmount = 0;
-        let invoiceDetails = [];
-
-        // ✅ ŪDENS APRĒĶINS CIKLĀ
-        const waterResult = calculateWaterDetails({
-          apt,
-          period: currentInvoiceMonth,
-          meterReadings,
-          waterConsumption,
-          waterTariff: waterTariffs.find(w => w.period === currentInvoiceMonth),
-          hotWaterTariff: hotWaterTariffs.find(w => w.period === currentInvoiceMonth),
-          apartments,
-          nonReportingColdCount: nonReportingColdAptsCount,
-          nonReportingHotCount: nonReportingHotAptsCount
-        });
-
-        invoiceDetails.push(...waterResult.details);
-        totalAmountWithoutVat += waterResult.waterAmountWithoutVat;
-        totalVatAmount += waterResult.waterVatAmount;
-
-        for (const tariff of periodTariffs) {
-          // Filtrējam pēc telpas tipa (dzīvojamā/nedzīvojamā)
-          const isResidential = apt.is_residential !== false;
-          if (tariff.target_type === 'residential' && !isResidential) continue;
-          if (tariff.target_type === 'non_residential' && isResidential) continue;
-
-          const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
-          const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
-          const vatRate = parseFloat(tariff.vat_rate) || 0;
-          const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
-
-          totalAmountWithoutVat += amountWithoutVat;
-          totalVatAmount += vatAmount;
-
-          invoiceDetails.push({
-            tariff_id: tariff.id,
-            tariff_name: tariff.name,
-            amount_without_vat: amountWithoutVat,
-            vat_rate: vatRate,
-            vat_amount: vatAmount,
-            type: 'tariff'
-          });
-        }
-
-        const wasteTariff = wasteTariffs.find(w => w.period === currentInvoiceMonth);
-        if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-          const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
-          if (totalDeclaredPersons > 0) {
-            const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
-            const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
-            const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
-            const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
-
-            totalAmountWithoutVat += wasteAmountWithoutVat;
-            totalVatAmount += wasteVatAmount;
-
-            invoiceDetails.push({
-              tariff_id: wasteTariff.id,
-              tariff_name: `♻️ Atkritumu izvešana (${declaredPersonsInApt} pers.)`,
-              declared_persons: declaredPersonsInApt,
-              total_persons: totalDeclaredPersons,
-              amount_without_vat: wasteAmountWithoutVat,
-              vat_rate: wasteVatRate,
-              vat_amount: wasteVatAmount,
-              type: 'waste'
-            });
-          }
-        }
-
         const previousDebt = calculatePreviousDebt(apt.id, currentInvoiceMonth);
-        if (previousDebt > 0) {
-          totalAmountWithoutVat += previousDebt;
-          invoiceDetails.push({
-            tariff_id: null,
-            tariff_name: '⚠️ Parāds no iepriekšējiem mēnešiem',
-            amount_without_vat: previousDebt,
-            vat_rate: 0,
-            vat_amount: 0,
-            type: 'debt'
-          });
-        }
-
         const overpayment = await calculateOverpayment(apt.id, currentInvoiceMonth);
-        if (overpayment > 0) {
-          totalAmountWithoutVat -= overpayment;
-          invoiceDetails.push({
-            tariff_id: null,
-            tariff_name: '💰 Pārmaksa no iepriekšējā mēneša',
-            amount_without_vat: -overpayment,
-            vat_rate: 0,
-            vat_amount: 0,
-            type: 'overpayment'
-          });
-        }
+
+        // ✅ Mass Calculation Utility Grouping
+        const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
+          apt, period: currentInvoiceMonth, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
+          meterReadings, waterConsumption, apartments, previousDebt, overpayment,
+          nonReportingColdCount: nonReportingColdAptsCount, nonReportingHotCount: nonReportingHotAptsCount
+        });
 
         if (invoiceDetails.length === 0) continue;
 
