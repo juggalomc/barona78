@@ -156,7 +156,7 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
   const additionalInfo = settings.additional_invoice_info || '';
 
   // ===== RINDAS GRUPĒŠANA =====
-  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff'];
+  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff', 'cold_water', 'water_meter'];
   const isService = d => ['tariff', 'waste', ...waterTypes].includes(d.type);
   
   const mapHtmlRow = d => {
