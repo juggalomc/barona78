@@ -1,5 +1,6 @@
 import React from 'react';
 import { styles } from '../shared/styles';
+import { normalizePeriod } from '../../utils/invoiceCalculations'; // Import normalizePeriod
 
 export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs }) {
   // Aprēķinām kopējo parādu, saskaitot katra dzīvokļa jaunāko neapmaksāto rēķinu
@@ -13,23 +14,27 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
   // Kopējā rēķinu summa (tīrā statistika bez parāda pārcelšanas būtu sarežģītāka, 
   // šeit rādām visu rēķinu summu, bet parāda sadaļa ir precizēta)
   const totalAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-
   // Aktuālā mēneša datu kopsavilkums (ņemam jaunāko rēķinu periodu)
-  const latestPeriod = invoices.length > 0 ? invoices[0].period : null;
+  const latestPeriod = invoices.length > 0
+    ? invoices.reduce((latest, inv) => {
+        const invPeriod = normalizePeriod(inv.period);
+        return (latest === null || invPeriod > latest) ? invPeriod : latest;
+      }, null)
+    : null;
   
   const monthlyStats = latestPeriod ? {
     period: latestPeriod,
     // Summa, ko māja maksā pakalpojumu sniedzējiem (tarifu ievadītās kopsummas)
-    expectedTotal: (
-      tariffs.filter(t => t.period === latestPeriod).reduce((sum, t) => sum + (parseFloat(t.total_amount) || 0), 0) +
-      (wasteTariffs.find(w => w.period === latestPeriod)?.total_amount || 0)
-    ),
+    expectedTotal: ( // Šī summa ir bez PVN
+      tariffs.filter(t => normalizePeriod(t.period) === latestPeriod).reduce((sum, t) => sum + (parseFloat(t.total_amount) || 0), 0) +
+      (wasteTariffs.find(w => normalizePeriod(w.period) === latestPeriod)?.total_amount || 0)
+    ), 
     // Summa, kas faktiski ir izrakstīta iedzīvotājiem (ieskaitot ūdeni un PVN)
     actualInvoiced: invoices.filter(inv => inv.period === latestPeriod).reduce((sum, inv) => sum + inv.amount, 0),
     // Tikai pakalpojumu daļa bez parādiem un pārmaksām (lai salīdzinātu ar expected)
     serviceInvoiced: invoices.filter(inv => inv.period === latestPeriod).reduce((sum, inv) => {
       const details = JSON.parse(inv.invoice_details || '[]');
-      return sum + details.filter(d => ['tariff', 'waste'].includes(d.type)).reduce((s, d) => s + (d.amount_without_vat + d.vat_amount), 0);
+      return sum + details.filter(d => ['tariff', 'waste'].includes(d.type)).reduce((s, d) => s + (d.amount_without_vat || 0), 0);
     }, 0)
   } : null;
 
