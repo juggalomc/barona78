@@ -218,11 +218,10 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         } catch (itemError) {
           console.error(`Kļūda sūtot rēķinu ${invoice?.invoice_number}:`, itemError);
         } finally {
-          // Vienmēr atjaunojam progresu, lai josla kustētos uz priekšu arī kļūdu gadījumā
           setSendingProgress(prev => ({ ...prev, current: prev.current + 1 }));
         }
 
-        // 3 sekunžu pauze starp e-pastiem, lai izvairītos no spam filtriem
+        // 3 sekunžu pauze starp e-pastiem, lai nebloķētu sūtīšanu
         await new Promise(r => setTimeout(r, 3000));
       }
 
@@ -242,8 +241,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
     const response = await fetch(scriptUrl, {
       method: 'POST',
+      mode: 'cors',
+      redirect: 'follow',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      redirect: 'follow', // Svarīgi Google Apps Script pāradresācijām
       body: JSON.stringify({
         to: to,
         subject: subject,
@@ -851,12 +851,14 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const toAddresses = recipients.join(',');
         await sendEmailViaAppsScript(toAddresses, subject, emailBodyHtml, scriptUrl);
         sentCount++;
-        setSendingProgress(prev => ({ ...prev, current: prev.current + 1 }));
       } catch (error) {
         console.error(`Kļūda sūtot atgādinājumu:`, error);
+      } finally {
+        setSendingProgress(prev => ({ ...prev, current: prev.current + 1 }));
       }
       
-      await new Promise(resolve => setTimeout(resolve, 15000));
+      // 3 sekunžu pauze starp atgādinājumiem
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
     showToast(`Pabeigts. Nosūtīti ${sentCount} atgādinājumi.`);
