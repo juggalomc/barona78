@@ -18,7 +18,7 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
   const [selectedTariffsToCopy, setSelectedTariffsToCopy] = useState({});
 
   const getTargetArea = (type) => {
-    if (!apartments || apartments.length === 0) return TOTAL_AREA;
+    if (!apartments || apartments.length === 0) return 0; // Should return 0 if no apartments
     let filtered = apartments;
     if (type === 'residential') filtered = apartments.filter(a => a.is_residential !== false);
     else if (type === 'non_residential') filtered = apartments.filter(a => a.is_residential === false);

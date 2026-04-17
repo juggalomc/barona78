@@ -46,7 +46,7 @@ export const calculateInvoiceAmounts = ({
     if (tariff.target_type === 'non_residential' && isResidential) continue;
     
     // Izmantojam specifiskās grupas platību kā dalītāju
-    const divisor = areaTotals[tariff.target_type || 'all'] || TOTAL_AREA;
+    const divisor = areaTotals[tariff.target_type || 'all']; // No fallback to TOTAL_AREA here
     const pricePerSqm = divisor > 0 ? (parseFloat(tariff.total_amount) / divisor) : 0;
 
     const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
