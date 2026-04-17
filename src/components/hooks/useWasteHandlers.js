@@ -37,7 +37,7 @@ export function useWasteHandlers(supabase, apartments, wasteTariffs, fetchData, 
     try {
       const totalAmount = parseFloat(wasteTariffForm.total_amount || 0);
       const vatRate = parseFloat(wasteTariffForm.vat_rate || 0);
-      const period = normalizePeriod(wasteTariffForm.period);
+      const period = normalizePeriod(tariffPeriod);
       const includeInvoice = wasteTariffForm.include_in_invoice;
 
       if (isNaN(totalAmount) || totalAmount <= 0) {

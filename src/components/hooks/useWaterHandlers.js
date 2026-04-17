@@ -61,7 +61,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     try {
       const priceValue = parseFloat(waterTariffForm.price_per_m3 || 0);
       const vatValue = parseFloat(waterTariffForm.vat_rate || 0);
-      const period = normalizePeriod(waterTariffForm.period);
+      const period = normalizePeriod(tariffPeriod);
       const diffM3 = parseFloat(waterTariffForm.diff_m3 || 0);
       const diffPrice = parseFloat(waterTariffForm.diff_price || 0);
       const includeInvoice = waterTariffForm.include_in_invoice;
@@ -101,7 +101,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     try {
       const priceValue = parseFloat(hotWaterTariffForm.price_per_m3 || 0);
       const vatValue = parseFloat(hotWaterTariffForm.vat_rate || 0);
-      const period = normalizePeriod(hotWaterTariffForm.period);
+      const period = normalizePeriod(tariffPeriod);
       const includeInvoice = hotWaterTariffForm.include_in_invoice;
       const diffM3 = parseFloat(hotWaterTariffForm.diff_m3 || 0);
       const diffPrice = parseFloat(hotWaterTariffForm.diff_price || 0);
