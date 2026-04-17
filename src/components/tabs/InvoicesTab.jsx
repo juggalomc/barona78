@@ -113,6 +113,7 @@ export function InvoicesTab({
   const [editingOverpaymentAmount, setEditingOverpaymentAmount] = React.useState('');
   const [filterMonth, setFilterMonth] = React.useState('');
   const [filterApartment, setFilterApartment] = React.useState('');
+  const [filterSentStatus, setFilterSentStatus] = React.useState('all');
 
   const groupedInvoices = {};
   invoices.forEach(inv => {
@@ -130,8 +131,29 @@ export function InvoicesTab({
       const apt = apartments.find(a => a.id === inv.apartment_id);
       if (!apt || apt.number !== filterApartment) return false;
     }
+    if (filterSentStatus === 'sent' && !inv.sent_at) return false;
+    if (filterSentStatus === 'unsent' && inv.sent_at) return false;
     return true;
   });
+
+  const toggleSelectAll = () => {
+    if (filteredInvoices.length === 0) return;
+    if (selectedInvoices.size === filteredInvoices.length) {
+      setSelectedInvoices(new Set());
+    } else {
+      setSelectedInvoices(new Set(filteredInvoices.map(inv => inv.id)));
+    }
+  };
+
+  const toggleSelectInvoice = (id) => {
+    const newSelection = new Set(selectedInvoices);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedInvoices(newSelection);
+  };
 
   return (
     <div style={{ padding: '20px' }}>
@@ -206,9 +228,11 @@ export function InvoicesTab({
               Izvēlēt VISUS ({invoices.filter(inv => inv.period === batchMonth).length})
             </button>
             {selectedInvoices.size > 0 && (
-              <div style={{display: 'flex', gap: '8px'}}>
-                <button onClick={() => regenerateInvoices(Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, fontSize: '12px'}}>🔄 Reģenerēt</button>
-                <button onClick={() => deleteInvoices(Array.from(selectedInvoices))} style={{...styles.btn, background: '#ef4444', flex: 1, fontSize: '12px'}}>🗑️ Dzēst</button>
+              <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
+                <button onClick={(e) => sendInvoicesByEmail(e, Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, background: '#059669', fontSize: '11px'}}>📧 Sūtīt izvēlētos ({selectedInvoices.size})</button>
+                <button onClick={() => downloadMonthAsZip(batchMonth, Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, background: '#8b5cf6', fontSize: '11px'}}>📦 ZIP ({selectedInvoices.size})</button>
+                <button onClick={() => regenerateInvoices(Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, fontSize: '11px'}}>🔄 Reģenerēt</button>
+                <button onClick={() => deleteInvoices(Array.from(selectedInvoices))} style={{...styles.btn, background: '#ef4444', flex: 1, fontSize: '11px'}}>🗑️ Dzēst</button>
               </div>
             )}
           </div>
@@ -252,6 +276,14 @@ export function InvoicesTab({
             </select>
           </div>
           <div>
+            <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>E-pasta statuss:</label>
+            <select value={filterSentStatus} onChange={(e) => setFilterSentStatus(e.target.value)} style={styles.input}>
+              <option value="all">Visi</option>
+              <option value="sent">Nosūtītie</option>
+              <option value="unsent">Nenosūtītie</option>
+            </select>
+          </div>
+          <div>
             <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Dzīvoklis:</label>
             <select value={filterApartment} onChange={(e) => setFilterApartment(e.target.value)} style={styles.input}>
               <option value="">Visi dzīvokļi</option>
@@ -275,6 +307,14 @@ export function InvoicesTab({
             <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}}>
               <thead>
                 <tr style={{background: '#f0f4f8', borderBottom: '2px solid #cbd5e1'}}>
+                  <th style={{padding: '12px', textAlign: 'center', width: '40px'}}>
+                    <input 
+                      type="checkbox" 
+                      checked={filteredInvoices.length > 0 && selectedInvoices.size === filteredInvoices.length} 
+                      onChange={toggleSelectAll}
+                      style={{cursor: 'pointer'}}
+                    />
+                  </th>
                   <th style={{padding: '12px', textAlign: 'left', fontWeight: '600'}}>Rēķins</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Dzīvoklis</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Periods</th>
@@ -293,6 +333,14 @@ export function InvoicesTab({
 
                   return (
                     <tr key={invoice.id} style={{borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#fafbfc' : '#fff'}}>
+                      <td style={{padding: '12px', textAlign: 'center'}}>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedInvoices.has(invoice.id)} 
+                          onChange={() => toggleSelectInvoice(invoice.id)}
+                          style={{cursor: 'pointer'}}
+                        />
+                      </td>
                       <td style={{padding: '12px', fontWeight: '600'}}>
                         <div style={{fontSize: '12px', display: 'flex', flexDirection: 'column'}}>
                           <span>{invoice.invoice_number}</span>
