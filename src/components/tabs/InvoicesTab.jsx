@@ -113,6 +113,7 @@ export function InvoicesTab({
   const [editingOverpaymentAmount, setEditingOverpaymentAmount] = React.useState('');
   const [filterMonth, setFilterMonth] = React.useState('');
   const [filterApartment, setFilterApartment] = React.useState('');
+  const [filterStatus, setFilterStatus] = React.useState('all');
   const [filterSentStatus, setFilterSentStatus] = React.useState('all');
 
   const groupedInvoices = {};
@@ -133,6 +134,15 @@ export function InvoicesTab({
     }
     if (filterSentStatus === 'sent' && !inv.sent_at) return false;
     if (filterSentStatus === 'unsent' && inv.sent_at) return false;
+
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'paid' && !inv.paid) return false;
+      if (filterStatus === 'unpaid' && inv.paid) return false;
+      if (filterStatus === 'overdue') {
+        const isOverdue = !inv.paid && new Date(inv.due_date) < new Date();
+        if (!isOverdue) return false;
+      }
+    }
     return true;
   });
 
@@ -209,38 +219,34 @@ export function InvoicesTab({
       {/* ===== DARBĪBAS AR RĒĶINIEM ===== */}
       <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px'}}>
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>⚙️ Masu darbības</h2>
+          <h2 style={styles.cardTitle}>⚙️ Darbības ar atlasītajiem</h2>
+          <div style={{background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#64748b'}}>
+            Izvēlēti: <strong>{selectedInvoices.size}</strong> rēķini
+          </div>
           <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-            <select value={batchMonth} onChange={(e) => {
-              setBatchMonth(e.target.value);
-              setSelectedInvoices(new Set());
-            }} style={styles.input}>
-              <option value="">-- Izvēlieties mēnesi --</option>
-              {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
-            </select>
-            <button 
-              onClick={() => {
-                const monthInvoices = invoices.filter(inv => inv.period === batchMonth);
-                setSelectedInvoices(new Set(monthInvoices.map(inv => inv.id)));
-              }}
-              style={{padding: '10px', background: '#0ea5e9', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600'}}
-            >
-              Izvēlēt VISUS ({invoices.filter(inv => inv.period === batchMonth).length})
-            </button>
             {selectedInvoices.size > 0 && (
               <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
                 <button onClick={(e) => sendInvoicesByEmail(e, Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, background: '#059669', fontSize: '11px'}}>📧 Sūtīt izvēlētos ({selectedInvoices.size})</button>
-                <button onClick={() => downloadMonthAsZip(batchMonth, Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, background: '#8b5cf6', fontSize: '11px'}}>📦 ZIP ({selectedInvoices.size})</button>
+                <button onClick={() => downloadMonthAsZip(null, Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, background: '#8b5cf6', fontSize: '11px'}}>📦 Lejuplādēt ZIP</button>
                 <button onClick={() => regenerateInvoices(Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, fontSize: '11px'}}>🔄 Reģenerēt</button>
                 <button onClick={() => deleteInvoices(Array.from(selectedInvoices))} style={{...styles.btn, background: '#ef4444', flex: 1, fontSize: '11px'}}>🗑️ Dzēst</button>
+              </div>
+            )}
+            {selectedInvoices.size === 0 && (
+              <div style={{textAlign: 'center', color: '#94a3b8', fontSize: '13px', padding: '10px'}}>
+                Atzīmē rēķinus tabulā, lai veiktu darbības
               </div>
             )}
           </div>
         </div>
 
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>📤 Nosūtīšana un lejuplāde</h2>
+          <h2 style={styles.cardTitle}>📤 Darbības pa mēnešiem</h2>
           <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+            <select value={batchMonth} onChange={(e) => setBatchMonth(e.target.value)} style={styles.input}>
+              <option value="">-- Izvēlieties mēnesi --</option>
+              {uniqueTariffPeriods.map(period => (<option key={period} value={period}>{new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}</option>))}
+            </select>
             <button onClick={(e) => sendInvoicesByEmail(e, 'period-' + batchMonth)} style={{...styles.btn, background: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
               📤 Izsūtīt rēķinus e-pastā
               <span style={{background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px'}}>
@@ -294,9 +300,12 @@ export function InvoicesTab({
           </div>
           <div>
             <label style={{fontSize: '12px', color: '#666', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Statuss:</label>
-            <div style={{fontSize: '13px', color: '#0369a1', fontWeight: '600', padding: '8px', background: '#dbeafe', borderRadius: '4px', textAlign: 'center'}}>
-              {filteredInvoices.length} rēķini
-            </div>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={styles.input}>
+              <option value="all">Visi statusi</option>
+              <option value="paid">Apmaksāti</option>
+              <option value="unpaid">Neapmaksāti</option>
+              <option value="overdue">Parāds (Kavēts)</option>
+            </select>
           </div>
         </div>
 
