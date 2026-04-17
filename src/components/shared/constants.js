@@ -9,6 +9,7 @@ export const TABS = [
   { id: 'users', label: '👥 Lietotāji' },
   { id: 'tariffs', label: '💰 Tarifi' },
   { id: 'water', label: '💧 Ūdens' },
+  { id: 'waste', label: '🗑️ Atkritumi' },
   { id: 'invoices', label: '📄 Rēķini' },
   { id: 'settings', label: '⚙️ Iestatījumi' }
 ];
