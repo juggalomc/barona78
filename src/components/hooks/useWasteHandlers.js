@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
 
+const normalizePeriod = (p) => {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('-');
+  if (parts.length !== 2) return p;
+  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
 export function useWasteHandlers(supabase, apartments, wasteTariffs, fetchData, showToast) {
   const today = new Date();
   const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -14,10 +21,11 @@ export function useWasteHandlers(supabase, apartments, wasteTariffs, fetchData, 
 
   // Ielādē atkritumu tarifu datus formā, kad mainās periods vai ielādējas dati
   useEffect(() => {
-    const waste = wasteTariffs.find(t => t.period === tariffPeriod);
+    const normPeriod = normalizePeriod(tariffPeriod);
+    const waste = wasteTariffs.find(t => normalizePeriod(t.period) === normPeriod);
     setWasteTariffForm(prev => ({
       ...prev,
-      period: tariffPeriod,
+      period: normPeriod,
       total_amount: waste ? waste.total_amount : '',
       vat_rate: waste ? waste.vat_rate : 21,
       include_in_invoice: waste ? (waste.include_in_invoice !== false) : true
@@ -29,7 +37,7 @@ export function useWasteHandlers(supabase, apartments, wasteTariffs, fetchData, 
     try {
       const totalAmount = parseFloat(wasteTariffForm.total_amount || 0);
       const vatRate = parseFloat(wasteTariffForm.vat_rate || 0);
-      const period = wasteTariffForm.period;
+      const period = normalizePeriod(wasteTariffForm.period);
       const includeInvoice = wasteTariffForm.include_in_invoice;
 
       if (isNaN(totalAmount) || totalAmount <= 0) {
@@ -42,32 +50,16 @@ export function useWasteHandlers(supabase, apartments, wasteTariffs, fetchData, 
         return;
       }
 
-      const { data: existing } = await supabase
+      const { error } = await supabase
         .from('waste_tariffs')
-        .select('*')
-        .eq('period', period);
+        .upsert({
+          period: period,
+          total_amount: totalAmount,
+          vat_rate: vatRate,
+          include_in_invoice: includeInvoice
+        }, { onConflict: 'period' });
 
-      if (existing && existing.length > 0) {
-        const { error } = await supabase
-          .from('waste_tariffs')
-          .update({
-            total_amount: totalAmount,
-            vat_rate: vatRate,
-            include_in_invoice: includeInvoice
-          })
-          .eq('id', existing[0].id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('waste_tariffs')
-          .insert([{
-            period: period,
-            total_amount: totalAmount,
-            vat_rate: vatRate,
-            include_in_invoice: includeInvoice
-          }]);
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       fetchData();
       showToast('✓ Atkritumu tarifs saglabāts');

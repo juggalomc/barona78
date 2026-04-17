@@ -1,5 +1,12 @@
 import React from 'react';
 
+const normalizePeriod = (p) => {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('-');
+  if (parts.length !== 2) return p;
+  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
 export function WaterTab({
   apartments,
   meterReadings,
@@ -216,19 +223,20 @@ export function WaterTab({
             </thead>
             <tbody>
               {apartments.map((apt, index) => {
+                const normPeriod = normalizePeriod(tariffPeriod);
                 // AUKSTAIS ŪDENS DATI
-                const coldReadingObj = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'water' && mr.period === tariffPeriod);
+                const coldReadingObj = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod);
                 const coldCurrent = coldReadingObj ? coldReadingObj.reading_value : '';
                 
-                const coldLastObj = getLastReading(apt.id, 'water', tariffPeriod, meterReadings);
+                const coldLastObj = getLastReading(apt.id, 'water', normPeriod, meterReadings);
                 const coldPrev = coldLastObj ? coldLastObj.reading_value : '';
                 const coldDiff = (coldCurrent !== '' && coldPrev !== '') ? (coldCurrent - coldPrev).toFixed(2) : '-';
 
                 // SILTAIS ŪDENS DATI
-                const hotReadingObj = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'hot_water' && mr.period === tariffPeriod);
+                const hotReadingObj = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod);
                 const hotCurrent = hotReadingObj ? hotReadingObj.reading_value : '';
 
-                const hotLastObj = getLastReading(apt.id, 'hot_water', tariffPeriod, meterReadings);
+                const hotLastObj = getLastReading(apt.id, 'hot_water', normPeriod, meterReadings);
                 const hotPrev = hotLastObj ? hotLastObj.reading_value : '';
                 const hotDiff = (hotCurrent !== '' && hotPrev !== '') ? (hotCurrent - hotPrev).toFixed(2) : '-';
 

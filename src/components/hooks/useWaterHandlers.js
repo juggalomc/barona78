@@ -76,36 +76,18 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         return;
       }
 
-      const { data: existing } = await supabase
+      const { error } = await supabase
         .from('water_tariffs')
-        .select('*')
-        .eq('period', period);
+        .upsert({
+          period: period,
+          price_per_m3: priceValue,
+          vat_rate: vatValue,
+          diff_m3: diffM3,
+          diff_price: diffPrice,
+          include_in_invoice: includeInvoice
+        }, { onConflict: 'period' });
 
-      if (existing && existing.length > 0) {
-        const { error } = await supabase
-          .from('water_tariffs')
-          .update({
-            price_per_m3: priceValue,
-            vat_rate: vatValue,
-            include_in_invoice: includeInvoice,
-            diff_m3: diffM3,
-            diff_price: diffPrice
-          })
-          .eq('id', existing[0].id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('water_tariffs')
-          .insert([{
-            period: period,
-            price_per_m3: priceValue,
-            vat_rate: vatValue,
-            diff_m3: diffM3,
-            diff_price: diffPrice,
-            include_in_invoice: includeInvoice
-          }]);
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       fetchData();
       showToast('✓ Aukstais ūdens tarifs saglabāts');
@@ -134,36 +116,18 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         return;
       }
 
-      const { data: existing } = await supabase
+      const { error } = await supabase
         .from('hot_water_tariffs')
-        .select('*')
-        .eq('period', period);
+        .upsert({
+          period: period,
+          price_per_m3: priceValue,
+          vat_rate: vatValue,
+          include_in_invoice: includeInvoice,
+          diff_m3: diffM3,
+          diff_price: diffPrice
+        }, { onConflict: 'period' });
 
-      if (existing && existing.length > 0) {
-        const { error } = await supabase
-          .from('hot_water_tariffs')
-          .update({
-            price_per_m3: priceValue,
-            vat_rate: vatValue,
-            include_in_invoice: includeInvoice,
-            diff_m3: diffM3,
-            diff_price: diffPrice
-          })
-          .eq('id', existing[0].id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('hot_water_tariffs')
-          .insert([{
-            period: period,
-            price_per_m3: priceValue,
-            vat_rate: vatValue,
-            include_in_invoice: includeInvoice,
-            diff_m3: diffM3,
-            diff_price: diffPrice
-          }]);
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       fetchData();
       showToast('✓ Siltais ūdens tarifs saglabāts');
