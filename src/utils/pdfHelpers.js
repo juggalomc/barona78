@@ -136,8 +136,9 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
 
   const amountWithoutVat = parseFloat(invoice.amount_without_vat) || 0;
   const amountWithVat = parseFloat(invoice.amount_with_vat) || 0;
-  const vat21 = invoiceDetails.filter(d => Number(d.vat_rate) === 21).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
-  const vat12 = invoiceDetails.filter(d => Number(d.vat_rate) === 12).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
+  // Summas tiek noapaļotas pēc summēšanas, lai novērstu peldošā komata (floating point) nobīdes
+  const vat21 = Math.round(invoiceDetails.filter(d => Number(d.vat_rate) === 21).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0) * 100) / 100;
+  const vat12 = Math.round(invoiceDetails.filter(d => Number(d.vat_rate) === 12).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0) * 100) / 100;
 
   const buildingName = settings.building_name || 'BIEDRĪBA "BARONA 78"';
   const buildingCode = settings.building_code || '40008325768';
@@ -145,22 +146,43 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
   const paymentIban = settings.payment_iban || 'LV62HABA0551064112797';
 
   const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff'];
+  const isService = d => ['tariff', 'waste', ...waterTypes].includes(d.type);
   
   const mapHtmlRow = d => {
-    const qtyLabel = waterTypes.includes(d.type) ? `${(d.consumption_m3 || 0).toFixed(2)} m³` : 
-                     (d.type === 'waste' ? `${d.declared_persons || 0} pers.` : `${apt.area || 0} m²`);
+    let qtyLabel = '';
+    let unitPrice = 0;
+    if (waterTypes.includes(d.type)) {
+      qtyLabel = `${(d.consumption_m3 || 0).toFixed(2)} m³`;
+      unitPrice = parseFloat(d.price_per_m3) || 0;
+    } else if (d.type === 'waste') {
+      qtyLabel = `${d.declared_persons || 0} pers.`;
+      unitPrice = d.price_per_person || ((parseFloat(d.amount_without_vat) || 0) / (d.declared_persons || 1));
+    } else {
+      qtyLabel = `${apt.area || 0} m²`;
+      unitPrice = d.price_per_sqm || ((parseFloat(d.amount_without_vat) || 0) / (apt.area || 1));
+    }
     
     return `<tr>
       <td>${d.tariff_name}</td>
       <td style="text-align: center;">${qtyLabel}</td>
-      <td style="text-align: right;">€${(parseFloat(d.price_per_m3) || (d.amount_without_vat / (apt.area || 1))).toFixed(4)}</td>
+      <td style="text-align: right;">€${unitPrice.toFixed(4)}</td>
       <td style="text-align: right;">€${(parseFloat(d.amount_without_vat) || 0).toFixed(2)}</td>
     </tr>`;
   };
 
-  const rowsWithoutVatHtml = invoiceDetails.filter(d => Number(d.vat_rate) === 0).map(mapHtmlRow).join('');
-  const rows21Html = invoiceDetails.filter(d => Number(d.vat_rate) === 21).map(mapHtmlRow).join('');
-  const rows12Html = invoiceDetails.filter(d => Number(d.vat_rate) === 12).map(mapHtmlRow).join('');
+  // Pievienots isService filtrs, lai grupās neiekļautu parādus/pārmaksas
+  const rowsWithoutVatHtml = invoiceDetails.filter(d => isService(d) && (Number(d.vat_rate) === 0 || d.vat_rate === undefined)).map(mapHtmlRow).join('');
+  
+  const getVatSectionHtml = (rate) => {
+    const rows = invoiceDetails.filter(d => isService(d) && Number(d.vat_rate) === rate);
+    if (rows.length === 0) return '';
+    return `<tr><td colspan="4" class="section-header">Pakalpojumi ar PVN (${rate}%)</td></tr>${rows.map(mapHtmlRow).join('')}`;
+  };
+
+  let allServiceRowsHtml = '';
+  if (rowsWithoutVatHtml) allServiceRowsHtml += `<tr><td colspan="4" class="section-header">Pakalpojumi bez PVN</td></tr>${rowsWithoutVatHtml}`;
+  allServiceRowsHtml += getVatSectionHtml(21);
+  allServiceRowsHtml += getVatSectionHtml(12);
 
   const debtRows = invoiceDetails.filter(d => d.type === 'debt').map(d => 
     `<tr style="background:#fee2e2; font-weight:bold; color:#991b1b;"><td>${d.tariff_name}</td><td></td><td></td><td style="text-align:right;">€${Math.abs(d.amount_without_vat).toFixed(2)}</td></tr>`

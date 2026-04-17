@@ -143,8 +143,8 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
 
   const amountWithoutVat = parseFloat(invoice.amount_without_vat) || 0;
   const amountWithVat = parseFloat(invoice.amount_with_vat) || 0;
-  const vat21 = invoiceDetails.filter(d => Number(d.vat_rate) === 21).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
-  const vat12 = invoiceDetails.filter(d => Number(d.vat_rate) === 12).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
+  const vat21 = Math.round(invoiceDetails.filter(d => Number(d.vat_rate) === 21).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0) * 100) / 100;
+  const vat12 = Math.round(invoiceDetails.filter(d => Number(d.vat_rate) === 12).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0) * 100) / 100;
 
   const buildingName = settings.building_name || 'BIEDRĪBA "BARONA 78"';
   const buildingCode = settings.building_code || '40008325768';
@@ -156,19 +156,20 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
   const additionalInfo = settings.additional_invoice_info || '';
 
   // ===== RINDAS GRUPĒŠANA =====
-  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff', 'cold_water', 'water_meter'];
+  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff'];
   const isService = d => ['tariff', 'waste', ...waterTypes].includes(d.type);
   
   const mapHtmlRow = d => {
     if (waterTypes.includes(d.type)) {
-      // Emoži jau ir ietverts tariff_name (piem. ❄️ Aukstais ūdens)
       const nameWithEmoji = d.tariff_name;
       const consumption = parseFloat(d.consumption_m3 || 0);
       return `<tr><td>${nameWithEmoji}</td><td style="text-align: center;">${consumption.toFixed(2)} m³</td><td style="text-align: right;">€${(parseFloat(d.price_per_m3) || 0).toFixed(4)}</td><td style="text-align: right;">€${(parseFloat(d.amount_without_vat) || 0).toFixed(2)}</td></tr>`;
     } else if (d.type === 'waste') {
-      return `<tr><td>${d.tariff_name}</td><td style="text-align: center;">${d.declared_persons || 0} pers.</td><td style="text-align: right;">€${((parseFloat(d.amount_without_vat) || 0) / (d.declared_persons || 1)).toFixed(4)}</td><td style="text-align: right;">€${(parseFloat(d.amount_without_vat) || 0).toFixed(2)}</td></tr>`;
+      const unitPrice = d.price_per_person || ((parseFloat(d.amount_without_vat) || 0) / (d.declared_persons || 1));
+      return `<tr><td>${d.tariff_name}</td><td style="text-align: center;">${d.declared_persons || 0} pers.</td><td style="text-align: right;">€${unitPrice.toFixed(4)}</td><td style="text-align: right;">€${(parseFloat(d.amount_without_vat) || 0).toFixed(2)}</td></tr>`;
     } else {
-      return `<tr><td>${d.tariff_name}</td><td style="text-align: center;">${apt.area || 0} m²</td><td style="text-align: right;">€${((parseFloat(d.amount_without_vat) || 0) / (apt.area || 1)).toFixed(4)}</td><td style="text-align: right;">€${(parseFloat(d.amount_without_vat) || 0).toFixed(2)}</td></tr>`;
+      const unitPrice = d.price_per_sqm || ((parseFloat(d.amount_without_vat) || 0) / (apt.area || 1));
+      return `<tr><td>${d.tariff_name}</td><td style="text-align: center;">${apt.area || 0} m²</td><td style="text-align: right;">€${unitPrice.toFixed(4)}</td><td style="text-align: right;">€${(parseFloat(d.amount_without_vat) || 0).toFixed(2)}</td></tr>`;
     }
   };
 
