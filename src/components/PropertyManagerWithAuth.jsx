@@ -273,6 +273,7 @@ export default function PropertyManager() {
                 waterTariffs={waterTariffs}
                 hotWaterTariffs={hotWaterTariffs}
                 wasteTariffs={wasteTariffs}
+                waterConsumption={waterConsumption}
               />
             ) : activeTab === 'apartments' ? (
               <ApartmentsTab
