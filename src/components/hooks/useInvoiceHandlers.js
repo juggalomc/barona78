@@ -101,7 +101,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
     let invoicesToSend = [];
 
-    if (selectedValue.startsWith('period-')) {
+      if (Array.isArray(selectedValue)) {
+        invoicesToSend = invoices.filter(inv => selectedValue.includes(inv.id));
+      } else if (typeof selectedValue === 'string' && selectedValue.startsWith('period-')) {
       const period = selectedValue.replace('period-', '');
       invoicesToSend = invoices.filter(inv => inv.period === period);
     } else {
@@ -608,10 +610,12 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       const JSZip = window.JSZip;
       const zip = new JSZip();
       
-      const monthInvoices = invoices.filter(inv => inv.period === period);
+      const monthInvoices = specificIds 
+        ? invoices.filter(inv => specificIds.includes(inv.id))
+        : invoices.filter(inv => inv.period === period);
       
       if (monthInvoices.length === 0) {
-        showToast('Nav šī perioda rēķinu', 'error');
+        showToast('Nav rēķinu lejuplādei', 'error');
         return;
       }
 
