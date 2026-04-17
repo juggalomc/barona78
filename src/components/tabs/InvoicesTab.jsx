@@ -219,15 +219,29 @@ export function InvoicesTab({
       {/* ===== DARBĪBAS AR RĒĶINIEM ===== */}
       <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px'}}>
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>⚙️ Darbības ar atlasītajiem</h2>
+          <h2 style={styles.cardTitle}>✔️ Darbības ar atlasītajiem</h2>
           <div style={{background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', marginBottom: '15px', fontSize: '13px', color: '#64748b'}}>
             Izvēlēti: <strong>{selectedInvoices.size}</strong> rēķini
           </div>
           <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
             {selectedInvoices.size > 0 && (
               <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
-                <button onClick={(e) => sendInvoicesByEmail(e, Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, background: '#059669', fontSize: '11px'}}>📧 Sūtīt izvēlētos ({selectedInvoices.size})</button>
-                <button onClick={() => downloadMonthAsZip(null, Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, background: '#8b5cf6', fontSize: '11px'}}>📦 Lejuplādēt ZIP</button>
+                <button 
+                  onClick={(e) => sendInvoicesByEmail(e, Array.from(selectedInvoices))} 
+                  style={{...styles.btn, flex: 1, background: '#059669', fontSize: '11px'}}
+                >
+                  📧 Sūtīt atlasītos
+                </button>
+                <button 
+                  onClick={() => {
+                    const ids = Array.from(selectedInvoices);
+                    const inferredMonth = batchMonth || (ids.length > 0 ? invoices.find(inv => inv.id === ids[0])?.period : null);
+                    downloadMonthAsZip(inferredMonth, ids);
+                  }} 
+                  style={{...styles.btn, flex: 1, background: '#8b5cf6', fontSize: '11px'}}
+                >
+                  📦 Lejuplādēt ZIP
+                </button>
                 <button onClick={() => regenerateInvoices(Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, fontSize: '11px'}}>🔄 Reģenerēt</button>
                 <button onClick={() => deleteInvoices(Array.from(selectedInvoices))} style={{...styles.btn, background: '#ef4444', flex: 1, fontSize: '11px'}}>🗑️ Dzēst</button>
               </div>
