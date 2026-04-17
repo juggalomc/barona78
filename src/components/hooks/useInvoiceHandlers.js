@@ -584,9 +584,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     showToast(`✓ Eksportēti ${invoices.length} rēķini`);
   };
 
-  const downloadMonthAsZip = async (period) => {
-    if (!period) {
-      showToast('Izvēlieties periodu', 'error');
+  const downloadMonthAsZip = async (period, specificIds = null) => {
+    if (!period && !specificIds) {
+      showToast('Izvēlieties periodu vai atlasiet rēķinus', 'error');
       return;
     }
 
