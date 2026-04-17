@@ -9,18 +9,24 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
     is_per_m2: false,
     vat_rate: 0,
     include_in_invoice: true,
-    target_type: 'all'
+    target_type: 'all',
+    excluded_apartments: []
   });
   const [editingTariff, setEditingTariff] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [copySourceMonth, setCopySourceMonth] = useState(null);
   const [selectedTariffsToCopy, setSelectedTariffsToCopy] = useState({});
 
-  const getTargetArea = (type) => {
+  const getTargetArea = (type, excludedIds = []) => {
     if (!apartments || apartments.length === 0) return 0; // Should return 0 if no apartments
     let filtered = apartments;
     if (type === 'residential') filtered = apartments.filter(a => a.is_residential !== false);
     else if (type === 'non_residential') filtered = apartments.filter(a => a.is_residential === false);
+    
+    if (excludedIds && excludedIds.length > 0) {
+      filtered = filtered.filter(a => !excludedIds.includes(a.id));
+    }
+    
     return filtered.reduce((sum, a) => sum + (parseFloat(a.area) || 0), 0);
   };
 
@@ -34,7 +40,7 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
     }
 
     try {
-      const targetArea = getTargetArea(tariffForm.target_type);
+      const targetArea = getTargetArea(tariffForm.target_type, tariffForm.excluded_apartments);
       
       const dataToInsert = {
         name: tariffForm.name.trim(),
@@ -44,13 +50,14 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
         vat_rate: parseFloat(tariffForm.vat_rate) || 0,
         period: tariffPeriod,
         include_in_invoice: tariffForm.include_in_invoice,
-        target_type: tariffForm.target_type || 'all'
+        target_type: tariffForm.target_type || 'all',
+        excluded_apartments: tariffForm.excluded_apartments || []
       };
 
       const { error } = await supabase.from('tariffs').insert([dataToInsert]);
       if (error) throw error;
       
-      setTariffForm({ name: '', total_amount: '', price_per_m2: '', is_per_m2: false, vat_rate: 0, include_in_invoice: true, target_type: 'all' });
+      setTariffForm({ name: '', total_amount: '', price_per_m2: '', is_per_m2: false, vat_rate: 0, include_in_invoice: true, target_type: 'all', excluded_apartments: [] });
       fetchData();
       showToast('✓ Tarifs pievienots');
     } catch (error) {
@@ -68,13 +75,14 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
       is_per_m2: false, // Pēc noklusējuma rediģējam kopējo summu, lietotājs var pārslēgt
       vat_rate: tariff.vat_rate || 0,
       include_in_invoice: tariff.include_in_invoice !== false,
-      target_type: tariff.target_type || 'all'
+      target_type: tariff.target_type || 'all',
+      excluded_apartments: Array.isArray(tariff.excluded_apartments) ? tariff.excluded_apartments : JSON.parse(tariff.excluded_apartments || '[]')
     });
   };
 
   const saveEditTariff = async (id) => {
     try {
-      const targetArea = getTargetArea(editForm.target_type);
+      const targetArea = getTargetArea(editForm.target_type, editForm.excluded_apartments);
       
       const totalAmount = editForm.is_per_m2 
         ? parseFloat(editForm.price_per_m2) * targetArea 
@@ -87,7 +95,8 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
           total_amount: totalAmount,
           vat_rate: parseFloat(editForm.vat_rate) || 0,
           include_in_invoice: editForm.include_in_invoice,
-          target_type: editForm.target_type || 'all'
+          target_type: editForm.target_type || 'all',
+          excluded_apartments: editForm.excluded_apartments || []
         })
         .eq('id', id);
       
@@ -126,7 +135,8 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
         total_amount: t.total_amount,
         vat_rate: t.vat_rate,
         period: toPeriod,
-        target_type: t.target_type || 'all'
+        target_type: t.target_type || 'all',
+        excluded_apartments: t.excluded_apartments || []
       }));
 
       const { error } = await supabase.from('tariffs').insert(newTariffs);
