@@ -214,14 +214,16 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
           await supabase.from('invoices').update({ sent_at: new Date().toISOString() }).eq('id', invoice.id);
           sentCount++;
-          setSendingProgress(prev => ({ ...prev, current: prev.current + 1 }));
           console.log(`✓ Rēķins nosūtīts uz ${toAddresses}.`);
-
         } catch (itemError) {
           console.error(`Kļūda sūtot rēķinu ${invoice?.invoice_number}:`, itemError);
+        } finally {
+          // Vienmēr atjaunojam progresu, lai josla kustētos uz priekšu arī kļūdu gadījumā
+          setSendingProgress(prev => ({ ...prev, current: prev.current + 1 }));
         }
 
-        await new Promise(r => setTimeout(r, 15000));
+        // 3 sekunžu pauze starp e-pastiem, lai izvairītos no spam filtriem
+        await new Promise(r => setTimeout(r, 3000));
       }
 
       showToast(`✓ Veiksmīgi nosūtīti ${sentCount} rēķini`);
@@ -241,6 +243,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     const response = await fetch(scriptUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow', // Svarīgi Google Apps Script pāradresācijām
       body: JSON.stringify({
         to: to,
         subject: subject,
