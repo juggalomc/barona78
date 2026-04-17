@@ -119,7 +119,7 @@ export const calculateWaterDetails = ({
       totalVatAmount += vat;
       details.push({
         tariff_id: waterTariff?.id || null,
-        tariff_name: `❄️ Aukstā ūdens starpība (${shareM3.toFixed(2)} m³)`,
+        tariff_name: `❄️ Aukstā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
         consumption_m3: shareM3,
         price_per_m3: diffPrice,
         amount_without_vat: amount,
@@ -179,35 +179,7 @@ export const calculateWaterDetails = ({
         vat_amount: vat,
         type: 'hot_water_diff'
       });
-  } else if (hotM3 === null && hotWaterTariff && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
-    // SILTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
-    const count = nonReportingHotCount ?? apartments.filter(a =>
-      !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
-    ).length;
-
-    if (count > 0) {
-      const shareM3 = parseFloat(hotWaterTariff.diff_m3) / count;
-      const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
-      const amount = Math.round(shareM3 * diffPrice * 100) / 100;
-      const vatRate = (hotWaterTariff && hotWaterTariff.vat_rate !== undefined && hotWaterTariff.vat_rate !== null)
-        ? parseFloat(hotWaterTariff.vat_rate)
-        : 12;
-      const vat = Math.round(amount * vatRate / 100 * 100) / 100;
-
-      totalAmountWithoutVat += amount;
-      totalVatAmount += vat;
-      details.push({
-        tariff_id: hotWaterTariff?.id || null,
-        tariff_name: `🔥 Siltā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
-        consumption_m3: shareM3,
-        price_per_m3: diffPrice,
-        amount_without_vat: amount,
-        vat_rate: vatRate,
-        vat_amount: vat,
-        type: 'hot_water_diff'
-      });
-    }
-    }
+  }
   }
 
   return { details, waterAmountWithoutVat: totalAmountWithoutVat, waterVatAmount: totalVatAmount };
