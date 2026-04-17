@@ -55,7 +55,9 @@ export const calculateInvoiceAmounts = ({
   }
 
   // 2. Atkritumi (pēc personām)
-  const wasteTariff = wasteTariffs.find(w => tduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
+  const wasteTariff = wasteTariffs.find(w => normalizePeriod(w.period) === normPeriod);
+  if (wasteTariff && wasteTariff.include_in_invoice !== false) {
+    const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
     if (totalDeclaredPersons > 0) {
       const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
       const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
@@ -80,8 +82,13 @@ export const calculateInvoiceAmounts = ({
   // 3. Ūdens (izmantojot waterCalculations utilītu)
   const waterResult = calculateWaterDetails({
     apt, period, meterReadings, waterConsumption, apartments,
-    waterTariff: waterTariffs.find(w => normalizePeriod(Wfur
-  });.l
+    waterTariff: waterTariffs.find(w => normalizePeriod(w.period) === normPeriod),
+    hotWaterTariff: hotWaterTariffs.find(w => normalizePeriod(w.period) === normPeriod),
+    nonReportingColdCount,
+    nonReportingHotCount
+  });
+
+  invoiceDetails.push(...waterResult.details);
   totalAmountWithoutVat += waterResult.waterAmountWithoutVat;
   totalVatAmount += waterResult.waterVatAmount;
 

@@ -273,6 +273,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         return;
       }
 
+      const normPeriod = normalizePeriod(period);
       const value = parseFloat(readingValue);
       
       if (readingValue === '' || readingValue === null) {
@@ -281,7 +282,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
           .select('*')
           .eq('apartment_id', apartmentId)
           .eq('meter_type', 'hot_water')
-          .eq('period', period);
+          .eq('period', normPeriod);
         
         const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
@@ -292,7 +293,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
             .delete()
             .eq('apartment_id', String(apartmentId))
             .eq('meter_type', 'hot_water')
-            .eq('period', period);
+            .eq('period', normPeriod);
           fetchReadings();
         }
         return;
@@ -315,7 +316,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         .select('*')
         .eq('apartment_id', apartmentId)
         .eq('meter_type', 'hot_water')
-        .eq('period', period);
+        .eq('period', normPeriod);
 
       if (existing && existing.length > 0) {
         const { error } = await supabase
@@ -332,20 +333,20 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
             meter_type: 'hot_water',
             reading_date: today,
             reading_value: value,
-            period: period
+            period: normPeriod
           }]);
         if (error) throw error;
       }
 
       // ✅ Sinhronizējam ar water_consumption tabulu
-      const lastReading = getLastReading(apartmentId, 'hot_water', period, meterReadings);
+      const lastReading = getLastReading(apartmentId, 'hot_water', normPeriod, meterReadings);
       const currentVal = parseFloat(value) || 0;
       const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
       const consumption = Math.max(0, currentVal - prevVal);
       
       await supabase.from('water_consumption').upsert({
         apartment_id: String(apartmentId),
-        period: period,
+        period: normPeriod,
         meter_type: 'hot_water',
         consumption_m3: consumption
       }, { onConflict: 'apartment_id,period,meter_type' });

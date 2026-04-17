@@ -45,10 +45,10 @@ export const calculateWaterDetails = ({
   const details = [];
   let totalAmountWithoutVat = 0;
   let totalVatAmount = 0;
+  const normPeriod = normalizePeriod(period);
 
   // Helper funkcija patēriņa noteikšanai
   const getConsumption = (type) => {
-    const normPeriod = normalizePeriod(period);
     // 1. Prioritāte: Sinhronizētais patēriņš no tabulas
     const entry = waterConsumption.find(wc => 
       String(wc.apartment_id) === String(apt.id) && 
@@ -105,7 +105,7 @@ export const calculateWaterDetails = ({
   } else if (coldM3 === null && waterTariff && parseFloat(waterTariff.diff_m3 || 0) > 0) {
     // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
     const count = nonReportingColdCount ?? apartments.filter(a => 
-      !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && mr.period === period)
+      !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
     ).length;
     if (count > 0) {
       const shareM3 = parseFloat(waterTariff.diff_m3) / count;
@@ -134,7 +134,7 @@ export const calculateWaterDetails = ({
   // 3. SILTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
   if (hotM3 === null && hotWaterTariff && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
     const count = nonReportingHotCount ?? apartments.filter(a => 
-      !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && mr.period === period)
+      !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
     ).length;
 
     if (count > 0) {
