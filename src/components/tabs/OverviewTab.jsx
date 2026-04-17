@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { styles } from '../shared/styles';
-import { normalizePeriod } from '../../utils/invoiceCalculations';
 import { calculateMonthlySummary } from '../../utils/summaryCalculations';
 
 export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, waterConsumption }) {

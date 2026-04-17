@@ -9,9 +9,6 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
   const periodWaterTariff = waterTariffs.find(t => t.period === period);
   const periodHotWaterTariff = hotWaterTariffs.find(t => t.period === period);
 
-  const totalArea = apartments.reduce((sum, apt) => sum + (parseFloat(apt.area) || 0), 0);
-  const totalPeople = apartments.reduce((sum, apt) => sum + (parseInt(apt.people_count) || 0), 0);
-
   const summary = {
     management: { calculated: 0, invoiced: 0 },
     waste: { calculated: 0, invoiced: 0 },
