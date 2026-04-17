@@ -153,6 +153,7 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
     startEditTariff,
     saveEditTariff,
     deleteTariff,
-    copySelectedTariffs
+    copySelectedTariffs,
+    getTargetArea
   };
 }

@@ -15,7 +15,8 @@ export function TariffsTab({
   startEditTariff,
   saveEditTariff,
   deleteTariff,
-  copySelectedTariffs
+  copySelectedTariffs,
+  getTargetArea
 }) {
   const [targetMonth, setTargetMonth] = useState('');
 
@@ -36,6 +37,8 @@ export function TariffsTab({
     }
     copySelectedTariffs(tariffs, copySourceMonth, targetMonth);
   };
+
+  const currentTargetArea = getTargetArea(tariffForm.target_type || 'all');
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
@@ -66,6 +69,9 @@ export function TariffsTab({
                 <option value="residential">🏠 Tikai dzīvojamām</option>
                 <option value="non_residential">🏢 Tikai nedzīvojamām</option>
               </select>
+              <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', marginTop: '2px' }}>
+                Grupas platība: <strong>{currentTargetArea.toFixed(2)} m²</strong>
+              </div>
             </div>
           </div>
           

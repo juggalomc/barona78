@@ -266,7 +266,14 @@ export default function PropertyManager() {
             {loading ? (
               <div style={styles.loading}>⏳ Ielāde...</div>
             ) : activeTab === 'overview' ? (
-              <OverviewTab apartments={apartments} tariffs={tariffs} invoices={invoices} />
+              <OverviewTab 
+                apartments={apartments} 
+                tariffs={tariffs} 
+                invoices={invoices} 
+                waterTariffs={waterTariffs}
+                hotWaterTariffs={hotWaterTariffs}
+                wasteTariffs={wasteTariffs}
+              />
             ) : activeTab === 'apartments' ? (
               <ApartmentsTab
                 apartments={apartments}

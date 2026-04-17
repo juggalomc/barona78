@@ -1,7 +1,7 @@
 import React from 'react';
 import { styles } from '../shared/styles';
 
-export function OverviewTab({ apartments, tariffs, invoices }) {
+export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs }) {
   // Aprēķinām kopējo parādu, saskaitot katra dzīvokļa jaunāko neapmaksāto rēķinu
   const totalDebt = apartments.reduce((sum, apt) => {
     const aptInvoices = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid);
@@ -13,6 +13,25 @@ export function OverviewTab({ apartments, tariffs, invoices }) {
   // Kopējā rēķinu summa (tīrā statistika bez parāda pārcelšanas būtu sarežģītāka, 
   // šeit rādām visu rēķinu summu, bet parāda sadaļa ir precizēta)
   const totalAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+  // Aktuālā mēneša datu kopsavilkums (ņemam jaunāko rēķinu periodu)
+  const latestPeriod = invoices.length > 0 ? invoices[0].period : null;
+  
+  const monthlyStats = latestPeriod ? {
+    period: latestPeriod,
+    // Summa, ko māja maksā pakalpojumu sniedzējiem (tarifu ievadītās kopsummas)
+    expectedTotal: (
+      tariffs.filter(t => t.period === latestPeriod).reduce((sum, t) => sum + (parseFloat(t.total_amount) || 0), 0) +
+      (wasteTariffs.find(w => w.period === latestPeriod)?.total_amount || 0)
+    ),
+    // Summa, kas faktiski ir izrakstīta iedzīvotājiem (ieskaitot ūdeni un PVN)
+    actualInvoiced: invoices.filter(inv => inv.period === latestPeriod).reduce((sum, inv) => sum + inv.amount, 0),
+    // Tikai pakalpojumu daļa bez parādiem un pārmaksām (lai salīdzinātu ar expected)
+    serviceInvoiced: invoices.filter(inv => inv.period === latestPeriod).reduce((sum, inv) => {
+      const details = JSON.parse(inv.invoice_details || '[]');
+      return sum + details.filter(d => ['tariff', 'waste'].includes(d.type)).reduce((s, d) => s + (d.amount_without_vat + d.vat_amount), 0);
+    }, 0)
+  } : null;
 
   return (
     <div>
@@ -37,6 +56,35 @@ export function OverviewTab({ apartments, tariffs, invoices }) {
 
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>💳 Kopsavilkums</h2>
+        
+        {monthlyStats && (
+          <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mēneša kopsavilkums: {monthlyStats.period}</div>
+              <div style={{ display: 'flex', gap: '40px', marginTop: '10px' }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>Sagaidāmā summa (Tarifi)</div>
+                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#334155' }}>€{monthlyStats.expectedTotal.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>Izrakstīts iedzīvotājiem (Kopā)</div>
+                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#003399' }}>€{monthlyStats.actualInvoiced.toFixed(2)}</div>
+                </div>
+              </div>
+            </div>
+            <div style={{ width: '1px', background: '#e2e8f0' }}></div>
+            <div style={{ flex: 1, paddingLeft: '10px' }}>
+               <div style={{ fontSize: '11px', color: '#64748b' }}>Starpība (Sagaidāmais vs Pakalpojumi)</div>
+               <div style={{ fontSize: '20px', fontWeight: 'bold', color: Math.abs(monthlyStats.expectedTotal - monthlyStats.serviceInvoiced) < 0.1 ? '#10b981' : '#f59e0b' }}>
+                 €{(monthlyStats.serviceInvoiced - monthlyStats.expectedTotal).toFixed(2)}
+                 <span style={{ fontSize: '12px', fontWeight: 'normal', marginLeft: '8px' }}>
+                   {Math.abs(monthlyStats.expectedTotal - monthlyStats.serviceInvoiced) < 0.1 ? '✅ Sakrīt' : '⚠️ Nesakrīt'}
+                 </span>
+               </div>
+            </div>
+          </div>
+        )}
+
         {totalDebt > 0 && (
           <div style={{background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '15px', marginBottom: '15px', color: '#991b1b'}}>
             <div style={{fontWeight: 'bold', marginBottom: '8px'}}>⚠️ SVARĪGI - Ir parāds!</div>
