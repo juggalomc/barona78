@@ -1,287 +1,188 @@
-import React, { useState, useEffect } from 'react';
-import { styles } from '../shared/styles';
+import React from 'react';
+
+const styles = {
+  card: {
+    background: '#fff',
+    borderRadius: '8px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    marginBottom: '20px',
+    border: '1px solid #e2e8f0'
+  },
+  cardTitle: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: '15px'
+  },
+  input: {
+    width: '100%',
+    padding: '10px',
+    border: '1px solid #cbd5e1',
+    borderRadius: '4px',
+    fontSize: '14px',
+    boxSizing: 'border-box'
+  },
+  btn: {
+    padding: '10px 16px',
+    background: '#2563eb',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '14px'
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+    gap: '10px',
+    maxHeight: '200px',
+    overflowY: 'auto',
+    padding: '12px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    background: '#f8fafc',
+    marginTop: '5px'
+  },
+  checkboxItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '4px',
+    transition: 'background 0.2s'
+  }
+};
 
 export function TariffsTab({
   tariffs,
+  uniqueTariffPeriods,
+  apartments,
   tariffPeriod, setTariffPeriod,
   tariffForm, setTariffForm,
   editingTariff, setEditingTariff,
   editForm, setEditForm,
   copySourceMonth, setCopySourceMonth,
   selectedTariffsToCopy, setSelectedTariffsToCopy,
-  uniqueTariffPeriods,
   addTariff,
   startEditTariff,
   saveEditTariff,
   deleteTariff,
-  copySelectedTariffs,
-  getTargetArea
+  copySelectedTariffs
 }) {
-  const [targetMonth, setTargetMonth] = useState('');
+  const currentTariffs = tariffs.filter(t => t.period === tariffPeriod);
 
-  useEffect(() => {
-    if (copySourceMonth) {
-      // Pēc noklusējuma piedāvājam nākamo mēnesi
-      const [y, m] = copySourceMonth.split('-').map(Number);
-      const nextDate = new Date(y, m, 1); // JS mēneši Date objektā sākas no 0, bet šeit m ir 1-based no split, tāpēc tas efektīvi ir +1 mēnesis
-      const nextMonthStr = nextDate.toISOString().slice(0, 7);
-      setTargetMonth(nextMonthStr);
-    }
-  }, [copySourceMonth]);
-
-  const handleCopyExecute = () => {
-    if (!targetMonth) {
-      alert('Izvēlieties mērķa mēnesi');
-      return;
-    }
-    copySelectedTariffs(tariffs, copySourceMonth, targetMonth);
+  const handleExclusionChange = (aptId, isEdit = false) => {
+    const form = isEdit ? editForm : tariffForm;
+    const setForm = isEdit ? setEditForm : setTariffForm;
+    const current = form.excluded_apartments || [];
+    const updated = current.includes(aptId)
+      ? current.filter(id => id !== aptId)
+      : [...current, aptId];
+    setForm({ ...form, excluded_apartments: updated });
   };
 
-  const currentTargetArea = getTargetArea(tariffForm.target_type || 'all');
+  const currentForm = editingTariff ? editForm : tariffForm;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-      {/* PIEVIENOT TARIFU */}
+    <div style={{ padding: '20px' }}>
       <div style={styles.card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-          <h2 style={{ ...styles.cardTitle, margin: 0 }}>➕ Pievienot jaunu tarifu</h2>
-        </div>
-        
-        <form onSubmit={addTariff} style={{ ...styles.form, padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* 1. Rinda - Pamata informācija */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 180px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Periods</label>
-              <input type="month" value={tariffPeriod} onChange={(e) => setTariffPeriod(e.target.value)} style={{ ...styles.input, width: '100%', padding: '8px' }} />
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '2 1 300px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Nosaukums *</label>
-              <input type="text" placeholder="Piem., Apsaimniekošana" value={tariffForm.name} onChange={(e) => setTariffForm({...tariffForm, name: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }} />
-            </div>
+        <h2 style={styles.cardTitle}>📅 Periods</h2>
+        <input type="month" value={tariffPeriod} onChange={(e) => setTariffPeriod(e.target.value)} style={styles.input} />
+      </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 200px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Attiecas uz</label>
-              <select value={tariffForm.target_type || 'all'} onChange={(e) => setTariffForm({...tariffForm, target_type: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }}>
-                <option value="all">🏠+🏢 Visiem</option>
-                <option value="residential">🏠 Tikai dzīvojamām</option>
-                <option value="non_residential">🏢 Tikai nedzīvojamām</option>
-              </select>
-              <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', marginTop: '2px' }}>
-                Grupas platība: <strong>{currentTargetArea.toFixed(2)} m²</strong>
-              </div>
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>{editingTariff ? '✏️ Labot tarifu' : '💰 Pievienot jaunu tarifu'}</h2>
+        <form onSubmit={editingTariff ? (e) => { e.preventDefault(); saveEditTariff(editingTariff); } : addTariff} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <input type="text" placeholder="Tarifa nosaukums" value={currentForm.name} onChange={(e) => editingTariff ? setEditForm({...editForm, name: e.target.value}) : setTariffForm({...tariffForm, name: e.target.value})} style={styles.input} />
+            <input type="number" placeholder="PVN likme %" value={currentForm.vat_rate} onChange={(e) => editingTariff ? setEditForm({...editForm, vat_rate: e.target.value}) : setTariffForm({...tariffForm, vat_rate: e.target.value})} style={styles.input} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', alignItems: 'center' }}>
+            <input 
+              type="number" 
+              step="0.0001" 
+              placeholder={currentForm.is_per_m2 ? "Cena par m²" : "Kopējā summa"} 
+              value={currentForm.is_per_m2 ? currentForm.price_per_m2 : currentForm.total_amount} 
+              onChange={(e) => editingTariff ? (editForm.is_per_m2 ? setEditForm({...editForm, price_per_m2: e.target.value}) : setEditForm({...editForm, total_amount: e.target.value})) : (tariffForm.is_per_m2 ? setTariffForm({...tariffForm, price_per_m2: e.target.value}) : setTariffForm({...tariffForm, total_amount: e.target.value}))} 
+              style={styles.input} 
+            />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={currentForm.is_per_m2} onChange={(e) => editingTariff ? setEditForm({...editForm, is_per_m2: e.target.checked}) : setTariffForm({...tariffForm, is_per_m2: e.target.checked})} />
+              Aprēķināt pēc m²
+            </label>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>
+              🚫 Izslēgtie dzīvokļi (šī pozīcija viņiem netiks rēķināta)
+            </label>
+            <div style={styles.grid}>
+              {apartments.sort((a, b) => parseInt(a.number) - parseInt(b.number)).map(apt => (
+                <label key={apt.id} style={styles.checkboxItem}>
+                  <input 
+                    type="checkbox" 
+                    checked={(currentForm.excluded_apartments || []).includes(apt.id)} 
+                    onChange={() => handleExclusionChange(apt.id, !!editingTariff)} 
+                  />
+                  Dz. {apt.number}
+                </label>
+              ))}
             </div>
           </div>
-          
-          {/* 2. Rinda - Finanšu dati un darbības */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 220px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>{tariffForm.is_per_m2 ? 'Cena par m² (€) *' : 'Summa mājai (€) *'}</label>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }} onClick={() => setTariffForm({...tariffForm, is_per_m2: !tariffForm.is_per_m2})}>
-                   <input type="checkbox" checked={tariffForm.is_per_m2} onChange={(e) => setTariffForm({...tariffForm, is_per_m2: e.target.checked})} style={{ width: '12px', height: '12px', cursor: 'pointer', margin: 0 }} />
-                   <span style={{ fontSize: '10px', color: '#0369a1', fontWeight: '600' }}>m² cena</span>
-                 </div>
-              </div>
-              {tariffForm.is_per_m2 ? (
-                <input type="number" step="0.0001" placeholder="0.0000" value={tariffForm.price_per_m2} onChange={(e) => setTariffForm({...tariffForm, price_per_m2: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }} />
-              ) : (
-                <input type="number" step="0.01" placeholder="0.00" value={tariffForm.total_amount} onChange={(e) => setTariffForm({...tariffForm, total_amount: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }} />
-              )}
-            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '0 1 100px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>PVN (%)</label>
-              <input type="number" step="0.01" placeholder="0" value={tariffForm.vat_rate} onChange={(e) => setTariffForm({...tariffForm, vat_rate: e.target.value})} style={{ ...styles.input, width: '100%', padding: '8px' }} />
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 15px', background: 'white', borderRadius: '6px', border: '1px solid #d1d5db', height: '38px', marginBottom: '1px' }} onClick={() => setTariffForm({...tariffForm, include_in_invoice: !tariffForm.include_in_invoice})}>
-              <input type="checkbox" checked={tariffForm.include_in_invoice} onChange={(e) => setTariffForm({...tariffForm, include_in_invoice: e.target.checked})} style={{width: '16px', height: '16px', cursor: 'pointer', margin: 0}} />
-              <label style={{fontSize: '13px', color: '#374151', cursor: 'pointer', margin: 0, whiteSpace: 'nowrap', fontWeight: '500'}}>Iekļaut rēķinā</label>
-            </div>
-
-            <button type="submit" style={{ ...styles.btn, background: '#10b981', color: 'white', padding: '10px 24px', height: '40px', display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-              ➕ Pievienot
-            </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="submit" style={styles.btn}>{editingTariff ? 'Saglabāt' : 'Pievienot'}</button>
+            {editingTariff && <button type="button" onClick={() => setEditingTariff(null)} style={{ ...styles.btn, background: '#64748b' }}>Atcelt</button>}
           </div>
         </form>
       </div>
 
-      {/* TARIFI PA MĒNEŠIEM */}
       <div style={styles.card}>
-        <h2 style={{ ...styles.cardTitle, borderBottom: '2px solid #e2e8f0', paddingBottom: '10px', marginBottom: '20px' }}>💰 Tarifi pa mēnešiem</h2>
-        
-        {copySourceMonth && (
-          <div style={{ position: 'sticky', top: '20px', zIndex: 50, background: '#fffbeb', padding: '20px', borderRadius: '8px', border: '1px solid #fcd34d', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>📋</span> Kopēšanas režīms
-              </div>
-              <button onClick={() => {setCopySourceMonth(null); setSelectedTariffsToCopy({});}} style={{background: 'transparent', color: '#92400e', border: 'none', cursor: 'pointer', fontSize: '20px'}}>✕</button>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-               <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', color: '#92400e', marginBottom: '4px' }}>No perioda:</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '14px', padding: '8px', background: 'white', border: '1px solid #fed7aa', borderRadius: '4px' }}>
-                    {new Date(copySourceMonth + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
-                  </div>
-               </div>
-               <div style={{ fontSize: '20px', color: '#d97706' }}>➔</div>
-               <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', color: '#92400e', marginBottom: '4px' }}>Uz periodu:</div>
-                  <input 
-                    type="month" 
-                    value={targetMonth} 
-                    onChange={(e) => setTargetMonth(e.target.value)}
-                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #f59e0b', fontSize: '14px', fontWeight: 'bold' }}
-                  />
-               </div>
-            </div>
+        <h2 style={styles.cardTitle}>Mēneša tarifi ({tariffPeriod})</h2>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
+                <th style={{ padding: '10px' }}>Nosaukums</th>
+                <th style={{ padding: '10px' }}>Summa</th>
+                <th style={{ padding: '10px' }}>PVN</th>
+                <th style={{ padding: '10px' }}>Izslēgtie</th>
+                <th style={{ padding: '10px', textAlign: 'right' }}>Darbības</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentTariffs.map(t => (
+                <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '10px', fontWeight: '600' }}>{t.name}</td>
+                  <td style={{ padding: '10px' }}>€{parseFloat(t.total_amount).toFixed(2)}</td>
+                  <td style={{ padding: '10px' }}>{t.vat_rate}%</td>
+                  <td style={{ padding: '10px', color: '#ef4444', fontSize: '12px' }}>
+                    {Array.isArray(t.excluded_apartments) && t.excluded_apartments.length > 0 
+                      ? t.excluded_apartments.map(id => apartments.find(a => a.id === id)?.number).join(', ')
+                      : '—'}
+                  </td>
+                  <td style={{ padding: '10px', textAlign: 'right' }}>
+                    <button onClick={() => startEditTariff(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginRight: '10px' }}>✏️</button>
+                    <button onClick={() => deleteTariff(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}>🗑️</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-               <div style={{ fontSize: '13px', color: '#92400e', display: 'flex', alignItems: 'center', marginRight: 'auto' }}>
-                 👇 Atzīmējiet zemāk tarifus, kurus vēlaties kopēt
-               </div>
-               <button onClick={() => {setCopySourceMonth(null); setSelectedTariffsToCopy({});}} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #92400e', background: 'transparent', color: '#92400e', cursor: 'pointer', fontWeight: '600' }}>Atcelt</button>
-               <button onClick={handleCopyExecute} style={{ padding: '8px 20px', borderRadius: '6px', border: 'none', background: '#d97706', color: 'white', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>✓ Kopēt atlasītos</button>
-            </div>
-          </div>
-        )}
-
-        {uniqueTariffPeriods.map(period => {
-          const periodTariffs = tariffs.filter(t => t.period === period);
-          const isSource = copySourceMonth === period;
-
-          return (
-            <div key={period} style={{ marginBottom: '20px', background: isSource ? '#fffbeb' : 'transparent', borderRadius: '8px', padding: isSource ? '15px' : '0', border: isSource ? '1px dashed #f59e0b' : 'none' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: isSource ? 'none' : '1px solid #e2e8f0', paddingBottom: isSource ? '0' : '10px' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '18px' }}>📅</span>
-                  {new Date(period + '-01').toLocaleDateString('lv-LV', {month: 'long', year: 'numeric'})}
-                  <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '10px' }}>{periodTariffs.length} tarifi</span>
-                </div>
-                {!copySourceMonth && (
-                  <button onClick={() => setCopySourceMonth(period)} style={{ fontSize: '12px', padding: '6px 12px', background: 'white', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span>📋</span> Kopēt šī mēneša tarifus
-                  </button>
-                )}
-                {copySourceMonth && copySourceMonth !== period && (
-                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>-</div>
-                )}
-              </div>
-              
-              {periodTariffs.map(tar => {
-                const targetArea = getTargetArea(tar.target_type || 'all');
-                const pricePerSqm = targetArea > 0 ? parseFloat(tar.total_amount) / targetArea : 0;
-                const isEditing = editingTariff === tar.id;
-                const isSelected = selectedTariffsToCopy[tar.id] || false;
-
-                return (
-                  <div 
-                    key={tar.id} 
-                    style={{
-                      ...styles.listItem, 
-                      marginBottom: '8px', 
-                      display: 'flex', 
-                      gap: '12px',
-                      background: isEditing ? '#f8fafc' : 'white',
-                      border: isSelected ? '1px solid #f59e0b' : styles.listItem.border,
-                      backgroundColor: isSelected ? '#ffffff' : styles.listItem.backgroundColor,
-                      transition: 'all 0.2s'
-                    }}
-                    onClick={() => {
-                      if (copySourceMonth === period) {
-                        setSelectedTariffsToCopy({...selectedTariffsToCopy, [tar.id]: !isSelected});
-                      }
-                    }}
-                  >
-                    {copySourceMonth === period && (
-                      <div style={{ display: 'flex', alignItems: 'center', paddingRight: '10px', borderRight: '1px solid #e2e8f0' }}>
-                         <input 
-                           type="checkbox" 
-                           checked={isSelected} 
-                           onChange={() => {}} // handled by parent onClick
-                           style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#d97706' }} 
-                         />
-                      </div>
-                    )}
-                    
-                    {isEditing ? (
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', padding: '5px' }} onClick={(e) => e.stopPropagation()}>
-                        <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
-                        <select value={editForm.target_type} onChange={(e) => setEditForm({...editForm, target_type: e.target.value})} style={{...styles.input, fontSize: '12px'}}>
-                          <option value="all">🏠+🏢 Visiem</option>
-                          <option value="residential">🏠 Tikai dzīvojamām</option>
-                          <option value="non_residential">🏢 Tikai nedzīvojamām</option>
-                        </select>
-                        
-                        <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px'}}>
-                           <input type="checkbox" checked={editForm.is_per_m2} onChange={(e) => setEditForm({...editForm, is_per_m2: e.target.checked})} id={`edit-m2-${tar.id}`} style={{ width: '14px', height: '14px' }} />
-                           <label htmlFor={`edit-m2-${tar.id}`} style={{ fontSize: '11px', color: '#666', cursor: 'pointer' }}>Rediģēt m² cenu</label>
-                        </div>
-
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
-                          {editForm.is_per_m2 ? (
-                             <input type="number" step="0.0001" placeholder="€/m²" value={editForm.price_per_m2} onChange={(e) => setEditForm({...editForm, price_per_m2: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
-                          ) : (
-                             <input type="number" step="0.01" placeholder="Kopā €" value={editForm.total_amount} onChange={(e) => setEditForm({...editForm, total_amount: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
-                          )}
-                          
-                          <input type="number" step="0.01" placeholder="PVN %" value={editForm.vat_rate} onChange={(e) => setEditForm({...editForm, vat_rate: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
-                        </div>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: '#f9fafb', borderRadius: '4px'}}>
-                          <input type="checkbox" checked={editForm.include_in_invoice !== false} onChange={(e) => setEditForm({...editForm, include_in_invoice: e.target.checked})} style={{width: '16px', height: '16px', cursor: 'pointer'}} />
-                          <label style={{fontSize: '12px', color: '#333', cursor: 'pointer', margin: 0}}>Iekļaut rēķinā</label>
-                        </div>
-                        <div style={{display: 'flex', gap: '8px'}}>
-                          <button onClick={() => saveEditTariff(tar.id)} style={{...styles.btn, fontSize: '11px', padding: '6px 12px', flex: 1}}>✓ Saglabāt</button>
-                          <button onClick={() => setEditingTariff(null)} style={{background: '#e5e7eb', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', flex: 1}}>Atcelt</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{flex: 1}}>
-                        <div style={{ fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', marginBottom: '4px' }}>
-                          {tar.name}
-                          {tar.target_type === 'residential' && (
-                            <span title="Tikai dzīvojamām telpām">🏠</span>
-                          )}
-                          {tar.target_type === 'non_residential' && (
-                            <span title="Tikai nedzīvojamām telpām">🏢</span>
-                          )}
-                          {tar.include_in_invoice === false && (
-                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#fee2e2', color: '#991b1b', fontWeight: '600' }}>
-                              ✕ Neiekļaut rēķinā
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '13px', color: '#64748b', display: 'flex', gap: '15px' }}>
-                          <span><strong>€{parseFloat(tar.total_amount).toFixed(2)}</strong> <span style={{fontSize:'11px'}}>kopā</span></span>
-                          <span style={{ color: '#94a3b8' }}>|</span>
-                          <span><strong>€{pricePerSqm.toFixed(4)}</strong><span style={{fontSize:'11px'}}>/m²</span></span>
-                          {tar.vat_rate > 0 && (
-                            <>
-                              <span style={{ color: '#94a3b8' }}>|</span>
-                              <span style={{ color: '#64748b' }}>PVN: {tar.vat_rate}%</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {!isEditing && !copySourceMonth && (
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button onClick={(e) => { e.stopPropagation(); startEditTariff(tar); }} style={{ background: 'white', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '4px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="Rediģēt">✏️</button>
-                        <button onClick={(e) => { e.stopPropagation(); deleteTariff(tar.id); }} style={{ background: 'white', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="Dzēst">🗑️</button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>Kopēt tarifus</h2>
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <input type="month" value={copySourceMonth || ''} onChange={(e) => setCopySourceMonth(e.target.value)} style={{ ...styles.input, flex: 1 }} />
+          <button onClick={() => copySelectedTariffs(tariffs, copySourceMonth, tariffPeriod)} style={{ ...styles.btn, background: '#10b981' }} disabled={!copySourceMonth}>Kopēt uz šo mēnesi</button>
+        </div>
       </div>
     </div>
   );

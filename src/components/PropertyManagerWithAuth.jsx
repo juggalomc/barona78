@@ -292,6 +292,7 @@ export default function PropertyManager() {
               <TariffsTab
                 tariffs={tariffs}
                 uniqueTariffPeriods={uniqueTariffPeriods}
+                apartments={apartments}
                 {...tariffHandlers}
               />
             ) : activeTab === 'water' ? (

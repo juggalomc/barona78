@@ -60,7 +60,7 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {summary.rows.map((row, idx) => {
+          {summary.rows && summary.rows.map((row, idx) => {
             const maxVal = Math.max(row.calculated, row.invoiced, 1);
             const calcWidth = (row.calculated / maxVal) * 100;
             const invWidth = (row.invoiced / maxVal) * 100;
@@ -69,7 +69,7 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
             return (
               <div key={idx} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: '600', color: '#334155' }}>{row.label}</span>
+                  <span style={{ fontWeight: '600', color: '#334155' }}>{row.label} <span style={{fontWeight: 'normal', fontSize: '11px', color: '#94a3b8'}}>(bez PVN)</span></span>
                   <span style={{ fontSize: '12px', color: Math.abs(diff) > 0.05 ? '#ef4444' : '#10b981', fontWeight: 'bold' }}>
                     {Math.abs(diff) > 0.05 ? `Starpība: ${formatCurrency(diff)}` : '✅ Sakrīt'}
                   </span>
@@ -97,6 +97,18 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
               </div>
             );
           })}
+        </div>
+
+        <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontWeight: 'bold', color: '#1e293b' }}>KOPĀ (bez PVN):</span>
+          <div style={{ display: 'flex', gap: '20px', fontWeight: 'bold' }}>
+            <div style={{ color: '#64748b', fontSize: '13px' }}>
+              Aprēķināts: {formatCurrency(summary.total?.calculated)}
+            </div>
+            <div style={{ color: '#1e40af', fontSize: '14px' }}>
+              Izrakstīts: {formatCurrency(summary.total?.invoiced)}
+            </div>
+          </div>
         </div>
 
         {totalDebt > 0 && (
