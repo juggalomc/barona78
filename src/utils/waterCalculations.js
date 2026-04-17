@@ -130,6 +130,7 @@ export const calculateWaterDetails = ({
       vat_amount: vat,
       type: 'water'
     });
+  }
 
   // 3. SILTĀ ŪDENS STARPĪBA
   if (hotM3 === null && hotWaterTariff && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
