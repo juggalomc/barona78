@@ -78,29 +78,8 @@ export const calculateWaterDetails = ({
   const coldM3 = getConsumption('water');
   const hotM3 = getConsumption('hot_water');
 
-  // 2. AUKSTAIS ŪDENS
-  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== false : coldM3 >= 0)) {
-    const m3 = coldM3;
-    const price = waterTariff ? (parseFloat(waterTariff.price_per_m3) || 0) : 0;
-    const amount = Math.round(m3 * price * 100) / 100;
-    const vatRate = (waterTariff && waterTariff.vat_rate !== null && waterTariff.vat_rate !== undefined) 
-      ? Number(waterTariff.vat_rate) 
-      : 21;
-    const vat = Math.round(amount * vatRate / 100 * 100) / 100;
-
-    totalAmountWithoutVat += amount;
-    totalVatAmount += vat;
-    details.push({
-      tariff_id: waterTariff?.id || null,
-      tariff_name: `❄️ Aukstais ūdens (${Number(m3).toFixed(2)} m³)`,
-      consumption_m3: m3,
-      price_per_m3: price,
-      amount_without_vat: amount,
-      vat_rate: vatRate,
-      vat_amount: vat,
-      type: 'water'
-    });
-  } else if (coldM3 === null && waterTariff && parseFloat(waterTariff.diff_m3 || 0) > 0) {
+  // 2. AUKSTĀ ŪDENS STARPĪBA
+  if (coldM3 === null && waterTariff && parseFloat(waterTariff.diff_m3 || 0) > 0) {
     // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
     const count = nonReportingColdCount ?? apartments.filter(a => 
       !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
@@ -124,10 +103,33 @@ export const calculateWaterDetails = ({
         amount_without_vat: amount,
         vat_rate: vatRate,
         vat_amount: vat,
-        type: 'water_diff' // Atpazīstams kā aukstā ūdens starpība
+        type: 'water_diff'
       });
     }
   }
+
+  // 2.1 AUKSTAIS ŪDENS (Patēriņš)
+  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== false : coldM3 >= 0)) {
+    const m3 = coldM3;
+    const price = waterTariff ? (parseFloat(waterTariff.price_per_m3) || 0) : 0;
+    const amount = Math.round(m3 * price * 100) / 100;
+    const vatRate = (waterTariff && waterTariff.vat_rate !== null && waterTariff.vat_rate !== undefined) 
+      ? Number(waterTariff.vat_rate) 
+      : 21;
+    const vat = Math.round(amount * vatRate / 100 * 100) / 100;
+
+    totalAmountWithoutVat += amount;
+    totalVatAmount += vat;
+    details.push({
+      tariff_id: waterTariff?.id || null,
+      tariff_name: `❄️ Aukstais ūdens (${Number(m3).toFixed(2)} m³)`,
+      consumption_m3: m3,
+      price_per_m3: price,
+      amount_without_vat: amount,
+      vat_rate: vatRate,
+      vat_amount: vat,
+      type: 'water'
+    });
 
   // 3. SILTĀ ŪDENS STARPĪBA
   if (hotM3 === null && hotWaterTariff && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {

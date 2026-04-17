@@ -50,23 +50,23 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         invoiceDateTo = `${year}-${month}-${daysInMonth}`;
       }
 
-      const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth)) || 0;
-      const overpayment = Number(calculateOverpayment(apt.id, invoices, currentInvoiceMonth)) || 0;
+      const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, normPeriod)) || 0;
+      const overpayment = Number(calculateOverpayment(apt.id, invoices, normPeriod)) || 0;
 
       const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
-        apt, period: currentInvoiceMonth, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
+        apt, period: normPeriod, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
         meterReadings, waterConsumption, apartments, previousDebt, overpayment
       });
 
       const timestamp = Math.floor(Date.now() / 1000);
       const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
-      const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
+      const dueDate = new Date(parseInt(year), parseInt(month), 25, 12).toISOString().split('T')[0];
 
       const { error } = await supabase.from('invoices').insert([{
         apartment_id: apt.id,
         tariff_id: periodTariffs[0].id,
         invoice_number: invoiceNumber,
-        period: currentInvoiceMonth,
+        period: normPeriod,
         amount: totalAmountWithVat,
         amount_without_vat: totalAmountWithoutVat,
         amount_with_vat: totalAmountWithVat,
@@ -305,7 +305,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         if (invoiceDetails.length === 0) continue;
         const timestamp = Math.floor(Date.now() / 1000);
         const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
-        const dueDate = new Date(parseInt(year), parseInt(month) - 1, 28, 12).toISOString().split('T')[0];
+        const dueDate = new Date(parseInt(year), parseInt(month), 25, 12).toISOString().split('T')[0];
 
         invoicesToAdd.push({
           apartment_id: apt.id,
