@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { TOTAL_AREA } from '../shared/constants';
 import { styles } from '../shared/styles';
 
 export function TariffsTab({
@@ -174,7 +173,8 @@ export function TariffsTab({
               </div>
               
               {periodTariffs.map(tar => {
-                const pricePerSqm = parseFloat(tar.total_amount) / TOTAL_AREA;
+                const targetArea = getTargetArea(tar.target_type || 'all');
+                const pricePerSqm = targetArea > 0 ? parseFloat(tar.total_amount) / targetArea : 0;
                 const isEditing = editingTariff === tar.id;
                 const isSelected = selectedTariffsToCopy[tar.id] || false;
 
