@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { styles } from '../shared/styles';
-import { normalizePeriod } from '../../utils/invoiceCalculations'; // Import normalizePeriod
+import { normalizePeriod } from '../../utils/invoiceCalculations';
+import { calculateMonthlySummary } from '../../utils/summaryCalculations';
 
-export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs }) {
+export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, waterConsumption }) {
   // Aprēķinām kopējo parādu, saskaitot katra dzīvokļa jaunāko neapmaksāto rēķinu
   const totalDebt = apartments.reduce((sum, apt) => {
     const aptInvoices = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid);
@@ -11,32 +12,27 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
     return sum + latest.amount;
   }, 0);
 
-  // Kopējā rēķinu summa (tīrā statistika bez parāda pārcelšanas būtu sarežģītāka, 
-  // šeit rādām visu rēķinu summu, bet parāda sadaļa ir precizēta)
-  const totalAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-  // Aktuālā mēneša datu kopsavilkums (ņemam jaunāko rēķinu periodu)
-  const latestPeriod = invoices.length > 0
-    ? invoices.reduce((latest, inv) => {
-        const invPeriod = normalizePeriod(inv.period);
-        return (latest === null || invPeriod > latest) ? invPeriod : latest;
-      }, null)
-    : null;
-  
-  const monthlyStats = latestPeriod ? {
-    period: latestPeriod,
-    // Summa, ko māja maksā pakalpojumu sniedzējiem (tarifu ievadītās kopsummas)
-    expectedTotal: ( // Šī summa ir bez PVN
-      tariffs.filter(t => normalizePeriod(t.period) === latestPeriod).reduce((sum, t) => sum + (parseFloat(t.total_amount) || 0), 0) +
-      (wasteTariffs.find(w => normalizePeriod(w.period) === latestPeriod)?.total_amount || 0)
-    ), 
-    // Summa, kas faktiski ir izrakstīta iedzīvotājiem (ieskaitot ūdeni un PVN)
-    actualInvoiced: invoices.filter(inv => inv.period === latestPeriod).reduce((sum, inv) => sum + inv.amount, 0),
-    // Tikai pakalpojumu daļa bez parādiem un pārmaksām (lai salīdzinātu ar expected)
-    serviceInvoiced: invoices.filter(inv => inv.period === latestPeriod).reduce((sum, inv) => {
-      const details = JSON.parse(inv.invoice_details || '[]');
-      return sum + details.filter(d => ['tariff', 'waste'].includes(d.type)).reduce((s, d) => s + (d.amount_without_vat || 0), 0);
-    }, 0)
-  } : null;
+  // Iegūstam visus unikālos periodus no rēķiniem sakārtotā secībā
+  const periods = useMemo(() => {
+    const p = [...new Set(invoices.map(inv => inv.period))].sort().reverse();
+    return p.length > 0 ? p : [new Date().toISOString().slice(0, 7)];
+  }, [invoices]);
+
+  const [selectedPeriod, setSelectedPeriod] = useState(periods[0]);
+
+  const summary = useMemo(() => 
+    calculateMonthlySummary(selectedPeriod, invoices, apartments, tariffs, wasteTariffs, waterTariffs, hotWaterTariffs, waterConsumption),
+    [selectedPeriod, invoices, apartments, tariffs, wasteTariffs, waterTariffs, hotWaterTariffs, waterConsumption]
+  );
+
+  const formatCurrency = (val) => `€${(val || 0).toFixed(2)}`;
+
+  const categories = [
+    { label: 'Apsaimniekošana', data: summary.management, color: '#3b82f6' },
+    { label: 'Atkritumu izvešana', data: summary.waste, color: '#10b981' },
+    { label: 'Aukstais ūdens', data: summary.water, color: '#0ea5e9' },
+    { label: 'Siltais ūdens', data: summary.hotWater, color: '#f59e0b' },
+  ];
 
   return (
     <div>
@@ -60,38 +56,59 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
       </div>
 
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}>💳 Kopsavilkums</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+          <h2 style={{ ...styles.cardTitle, margin: 0 }}>📊 Detalizēts salīdzinājums</h2>
+          <select 
+            value={selectedPeriod} 
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '500' }}
+          >
+            {periods.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
         
-        {monthlyStats && (
-          <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mēneša kopsavilkums: {monthlyStats.period}</div>
-              <div style={{ display: 'flex', gap: '40px', marginTop: '10px' }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Sagaidāmā summa (Tarifi)</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#334155' }}>€{monthlyStats.expectedTotal.toFixed(2)}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {categories.map((cat, idx) => {
+            const maxVal = Math.max(cat.data.calculated, cat.data.invoiced, 1);
+            const calcWidth = (cat.data.calculated / maxVal) * 100;
+            const invWidth = (cat.data.invoiced / maxVal) * 100;
+            const diff = cat.data.invoiced - cat.data.calculated;
+
+            return (
+              <div key={idx} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: '600', color: '#334155' }}>{cat.label}</span>
+                  <span style={{ fontSize: '12px', color: Math.abs(diff) > 0.05 ? '#ef4444' : '#10b981', fontWeight: 'bold' }}>
+                    {Math.abs(diff) > 0.05 ? `Starpība: ${formatCurrency(diff)}` : '✅ Sakrīt'}
+                  </span>
                 </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Izrakstīts iedzīvotājiem (Kopā)</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#003399' }}>€{monthlyStats.actualInvoiced.toFixed(2)}</div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {/* Aprēķinātais stabiņš */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '100px', fontSize: '11px', color: '#64748b' }}>Aprēķināts:</div>
+                    <div style={{ flex: 1, height: '12px', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
+                      <div style={{ width: `${calcWidth}%`, height: '100%', background: '#94a3b8', transition: 'width 0.3s' }}></div>
+                    </div>
+                    <div style={{ width: '70px', textAlign: 'right', fontSize: '12px', fontWeight: '500' }}>{formatCurrency(cat.data.calculated)}</div>
+                  </div>
+
+                  {/* Izrakstītais stabiņš */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '100px', fontSize: '11px', color: '#64748b' }}>Izrakstīts:</div>
+                    <div style={{ flex: 1, height: '12px', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
+                      <div style={{ width: `${invWidth}%`, height: '100%', background: cat.color, transition: 'width 0.3s' }}></div>
+                    </div>
+                    <div style={{ width: '70px', textAlign: 'right', fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(cat.data.invoiced)}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div style={{ width: '1px', background: '#e2e8f0' }}></div>
-            <div style={{ flex: 1, paddingLeft: '10px' }}>
-               <div style={{ fontSize: '11px', color: '#64748b' }}>Starpība (Sagaidāmais vs Pakalpojumi)</div>
-               <div style={{ fontSize: '20px', fontWeight: 'bold', color: Math.abs(monthlyStats.expectedTotal - monthlyStats.serviceInvoiced) < 0.1 ? '#10b981' : '#f59e0b' }}>
-                 €{(monthlyStats.serviceInvoiced - monthlyStats.expectedTotal).toFixed(2)}
-                 <span style={{ fontSize: '12px', fontWeight: 'normal', marginLeft: '8px' }}>
-                   {Math.abs(monthlyStats.expectedTotal - monthlyStats.serviceInvoiced) < 0.1 ? '✅ Sakrīt' : '⚠️ Nesakrīt'}
-                 </span>
-               </div>
-            </div>
-          </div>
-        )}
+            );
+          })}
+        </div>
 
         {totalDebt > 0 && (
-          <div style={{background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '15px', marginBottom: '15px', color: '#991b1b'}}>
+          <div style={{background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '15px', marginTop: '20px', color: '#991b1b'}}>
             <div style={{fontWeight: 'bold', marginBottom: '8px'}}>⚠️ SVARĪGI - Ir parāds!</div>
             <div style={{fontSize: '13px'}}>
               Kopā parāds: <strong>€{totalDebt.toFixed(2)}</strong><br/>
@@ -99,21 +116,6 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
             </div>
           </div>
         )}
-        
-        <div style={styles.summaryGrid}>
-          <div style={styles.summaryItem}>
-            <div style={styles.summaryLabel}>Kopā apmaksāt</div>
-            <div style={{fontSize: '24px', fontWeight: 'bold', color: '#0066cc'}}>€{totalAmount.toFixed(2)}</div>
-          </div>
-          <div style={styles.summaryItem}>
-            <div style={styles.summaryLabel}>Apmaksāts</div>
-            <div style={{fontSize: '24px', fontWeight: 'bold', color: '#10b981'}}>€{(totalAmount - totalDebt).toFixed(2)}</div>
-          </div>
-          <div style={styles.summaryItem}>
-            <div style={styles.summaryLabel}>Parāds</div>
-            <div style={{fontSize: '24px', fontWeight: 'bold', color: '#ff6b6b'}}>€{totalDebt.toFixed(2)}</div>
-          </div>
-        </div>
       </div>
 
       <div style={styles.card}>

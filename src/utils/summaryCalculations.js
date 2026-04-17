@@ -58,6 +58,7 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
         if (name.includes('atkritum')) summary.waste.invoiced += amount;
         if (item.type === 'water' || item.type === 'water_diff') summary.water.invoiced += amount;
         if (item.type === 'hot_water' || item.type === 'hot_water_diff') summary.hotWater.invoiced += amount;
+        if (item.type === 'tariff') summary.management.invoiced += amount;
       });
     } catch (e) {
       console.error("Kļūda apstrādājot rēķina detaļas kopsavilkumam", e);
