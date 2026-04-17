@@ -391,7 +391,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       await supabase.from('water_consumption').upsert({
         apartment_id: String(reading.apartment_id),
-        period: reading.period,
+        period: normalizePeriod(reading.period),
         meter_type: reading.meter_type,
         consumption_m3: consumption
       }, { onConflict: 'apartment_id,period,meter_type' });
@@ -438,24 +438,25 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       const consumptionData = [];
       // Izmantojam datus, kas padoti no UI, vai hook iekšējos datus
       const activeReadings = readingsFromProps || meterReadings || [];
+      const normTariffPeriod = normalizePeriod(tariffPeriod);
 
       for (const apt of (apartments || [])) {
         for (const type of ['water', 'hot_water']) {
           const currentReadingObj = activeReadings.find(mr => 
             String(mr.apartment_id) === String(apt.id) && 
             mr.meter_type === type && 
-            mr.period === tariffPeriod
+            normalizePeriod(mr.period) === normTariffPeriod
           );
 
           if (currentReadingObj) {
-            const lastReading = getLastReading(apt.id, type, tariffPeriod, activeReadings);
+            const lastReading = getLastReading(apt.id, type, normTariffPeriod, activeReadings);
             const currentVal = parseFloat(currentReadingObj.reading_value);
             const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
             const consumption = Math.max(0, currentVal - prevVal);
 
             consumptionData.push({
               apartment_id: String(apt.id),
-              period: tariffPeriod,
+              period: normTariffPeriod,
               meter_type: type,
               consumption_m3: consumption
             });
