@@ -83,8 +83,8 @@ export const calculateWaterDetails = ({
     const m3 = coldM3;
     const price = waterTariff ? (parseFloat(waterTariff.price_per_m3) || 0) : 0;
     const amount = Math.round(m3 * price * 100) / 100;
-    const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null)
-      ? parseFloat(waterTariff.vat_rate)
+    const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null) 
+      ? parseFloat(waterTariff.vat_rate) 
       : 21;
     const vat = Math.round(amount * vatRate / 100 * 100) / 100;
 
@@ -105,11 +105,12 @@ export const calculateWaterDetails = ({
     const count = nonReportingColdCount ?? apartments.filter(a => 
       !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
     ).length;
+
     if (count > 0) {
       const shareM3 = parseFloat(waterTariff.diff_m3) / count;
       const diffPrice = parseFloat(waterTariff.diff_price) || 0;
       const amount = Math.round(shareM3 * diffPrice * 100) / 100;
-      const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null) 
+      const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null)
         ? parseFloat(waterTariff.vat_rate)
         : 21;
       const vat = Math.round(amount * vatRate / 100 * 100) / 100;
@@ -118,13 +119,13 @@ export const calculateWaterDetails = ({
       totalVatAmount += vat;
       details.push({
         tariff_id: waterTariff?.id || null,
-        tariff_name: `❄️ Aukstā ūdens starpība (${shareM3.toFixed(2)} m³)`,
+        tariff_name: `❄️ Aukstā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
         consumption_m3: shareM3,
         price_per_m3: diffPrice,
         amount_without_vat: amount,
         vat_rate: vatRate,
         vat_amount: vat,
-        type: 'water_diff' // Atpazīstams kā aukstā ūdens starpība
+        type: 'water_diff'
       });
     }
   }
