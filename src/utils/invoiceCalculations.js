@@ -32,13 +32,23 @@ export const calculateInvoiceAmounts = ({
   let missingTariffs = [];
   const normPeriod = normalizePeriod(period);
 
+  // Aprēķinām grupu kopējās platības precīzai sadalei
+  const areaTotals = {
+    all: apartments.reduce((sum, a) => sum + (parseFloat(a.area) || 0), 0),
+    residential: apartments.filter(a => a.is_residential !== false).reduce((sum, a) => sum + (parseFloat(a.area) || 0), 0),
+    non_residential: apartments.filter(a => a.is_residential === false).reduce((sum, a) => sum + (parseFloat(a.area) || 0), 0)
+  };
+
   // 1. Vispārīgie tarifi (pēc platības)
   for (const tariff of periodTariffs) {
     const isResidential = apt.is_residential !== false;
     if (tariff.target_type === 'residential' && !isResidential) continue;
     if (tariff.target_type === 'non_residential' && isResidential) continue;
     
-    const pricePerSqm = parseFloat(tariff.total_amount) / TOTAL_AREA;
+    // Izmantojam specifiskās grupas platību kā dalītāju
+    const divisor = areaTotals[tariff.target_type || 'all'] || TOTAL_AREA;
+    const pricePerSqm = divisor > 0 ? (parseFloat(tariff.total_amount) / divisor) : 0;
+
     const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
     const vatRate = parseFloat(tariff.vat_rate) || 0;
     const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
@@ -51,6 +61,7 @@ export const calculateInvoiceAmounts = ({
       amount_without_vat: amountWithoutVat, 
       vat_rate: vatRate, 
       vat_amount: vatAmount, 
+      price_per_sqm: pricePerSqm,
       type: 'tariff' 
     });
   }
@@ -61,7 +72,8 @@ export const calculateInvoiceAmounts = ({
     const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
     if (totalDeclaredPersons > 0) {
       const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
-      const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
+      const pricePerPerson = parseFloat(wasteTariff.total_amount) / totalDeclaredPersons;
+      const wasteAmountWithoutVat = Math.round((pricePerPerson * declaredPersonsInApt) * 100) / 100;
       const wasteVatRate = parseFloat(wasteTariff.vat_rate) || 0;
       const wasteVatAmount = Math.round(wasteAmountWithoutVat * wasteVatRate / 100 * 100) / 100;
       
@@ -75,6 +87,7 @@ export const calculateInvoiceAmounts = ({
         amount_without_vat: wasteAmountWithoutVat, 
         vat_rate: wasteVatRate, 
         vat_amount: wasteVatAmount, 
+        price_per_person: pricePerPerson,
         type: 'waste' 
       });
     }

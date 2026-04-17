@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { TOTAL_AREA } from '../shared/constants';
 
-export function useTariffHandlers(supabase, fetchData, showToast) {
+export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
   const [tariffPeriod, setTariffPeriod] = useState('2026-01');
   const [tariffForm, setTariffForm] = useState({
     name: '',
@@ -17,6 +17,14 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
   const [copySourceMonth, setCopySourceMonth] = useState(null);
   const [selectedTariffsToCopy, setSelectedTariffsToCopy] = useState({});
 
+  const getTargetArea = (type) => {
+    if (!apartments || apartments.length === 0) return TOTAL_AREA;
+    let filtered = apartments;
+    if (type === 'residential') filtered = apartments.filter(a => a.is_residential !== false);
+    else if (type === 'non_residential') filtered = apartments.filter(a => a.is_residential === false);
+    return filtered.reduce((sum, a) => sum + (parseFloat(a.area) || 0), 0);
+  };
+
   const addTariff = async (e) => {
     e.preventDefault();
     const hasAmount = tariffForm.is_per_m2 ? tariffForm.price_per_m2 : tariffForm.total_amount;
@@ -27,10 +35,12 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
     }
 
     try {
+      const targetArea = getTargetArea(tariffForm.target_type);
+      
       const dataToInsert = {
         name: tariffForm.name.trim(),
         total_amount: tariffForm.is_per_m2 
-          ? parseFloat(tariffForm.price_per_m2) * TOTAL_AREA 
+          ? parseFloat(tariffForm.price_per_m2) * targetArea 
           : parseFloat(tariffForm.total_amount),
         vat_rate: parseFloat(tariffForm.vat_rate) || 0,
         period: tariffPeriod,
@@ -51,10 +61,11 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
 
   const startEditTariff = (tariff) => {
     setEditingTariff(tariff.id);
+    const targetArea = getTargetArea(tariff.target_type || 'all');
     setEditForm({
       name: tariff.name,
       total_amount: tariff.total_amount,
-      price_per_m2: (parseFloat(tariff.total_amount) / TOTAL_AREA).toFixed(4),
+      price_per_m2: targetArea > 0 ? (parseFloat(tariff.total_amount) / targetArea).toFixed(4) : "0.0000",
       is_per_m2: false, // Pēc noklusējuma rediģējam kopējo summu, lietotājs var pārslēgt
       vat_rate: tariff.vat_rate || 0,
       include_in_invoice: tariff.include_in_invoice !== false,
@@ -64,8 +75,10 @@ export function useTariffHandlers(supabase, fetchData, showToast) {
 
   const saveEditTariff = async (id) => {
     try {
+      const targetArea = getTargetArea(editForm.target_type);
+      
       const totalAmount = editForm.is_per_m2 
-        ? parseFloat(editForm.price_per_m2) * TOTAL_AREA 
+        ? parseFloat(editForm.price_per_m2) * targetArea 
         : parseFloat(editForm.total_amount);
 
       const { error } = await supabase

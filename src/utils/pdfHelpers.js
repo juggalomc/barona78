@@ -55,10 +55,10 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
         unitPrice = '€' + (detail.price_per_m3 || 0).toFixed(4);
       } else if (detail.type === 'waste') {
         quantity = (detail.declared_persons || 0) + ' pers.';
-        unitPrice = '€' + ((detail.amount_without_vat || 0) / (detail.declared_persons || 1)).toFixed(4);
+        unitPrice = '€' + (detail.price_per_person || ((detail.amount_without_vat || 0) / (detail.declared_persons || 1))).toFixed(4);
       } else {
         quantity = (apt.area || 0) + ' m²';
-        unitPrice = '€' + ((detail.amount_without_vat || 0) / (apt.area || 1)).toFixed(4);
+        unitPrice = '€' + (detail.price_per_sqm || ((detail.amount_without_vat || 0) / (apt.area || 1))).toFixed(4);
       }
       tableRows.push([
         { text: detail.tariff_name, style: 'tableBody' },
@@ -81,10 +81,10 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
           unitPrice = '€' + (detail.price_per_m3 || 0).toFixed(4);
         } else if (detail.type === 'waste') {
           quantity = (detail.declared_persons || 0) + ' pers.';
-          unitPrice = '€' + ((detail.amount_without_vat || 0) / (detail.declared_persons || 1)).toFixed(4);
+          unitPrice = '€' + (detail.price_per_person || ((detail.amount_without_vat || 0) / (detail.declared_persons || 1))).toFixed(4);
         } else {
           quantity = (apt.area || 0) + ' m²';
-          unitPrice = '€' + ((detail.amount_without_vat || 0) / (apt.area || 1)).toFixed(4);
+          unitPrice = '€' + (detail.price_per_sqm || ((detail.amount_without_vat || 0) / (apt.area || 1))).toFixed(4);
         }
         tableRows.push([{ text: detail.tariff_name, style: 'tableBody' }, { text: quantity, alignment: 'center', style: 'tableBody' }, { text: unitPrice, alignment: 'right', style: 'tableBody' }, { text: '€' + (detail.amount_without_vat || 0).toFixed(2), alignment: 'right', style: 'tableBody' }]);
       });
