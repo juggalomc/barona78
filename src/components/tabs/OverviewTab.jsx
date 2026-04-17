@@ -26,13 +26,6 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
 
   const formatCurrency = (val) => `€${(val || 0).toFixed(2)}`;
 
-  const categories = [
-    { label: 'Apsaimniekošana', data: summary.management, color: '#3b82f6' },
-    { label: 'Atkritumu izvešana', data: summary.waste, color: '#10b981' },
-    { label: 'Aukstais ūdens', data: summary.water, color: '#0ea5e9' },
-    { label: 'Siltais ūdens', data: summary.hotWater, color: '#f59e0b' },
-  ];
-
   return (
     <div>
       <div style={styles.statsGrid}>
@@ -67,16 +60,16 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {categories.map((cat, idx) => {
-            const maxVal = Math.max(cat.data.calculated, cat.data.invoiced, 1);
-            const calcWidth = (cat.data.calculated / maxVal) * 100;
-            const invWidth = (cat.data.invoiced / maxVal) * 100;
-            const diff = cat.data.invoiced - cat.data.calculated;
+          {summary.rows.map((row, idx) => {
+            const maxVal = Math.max(row.calculated, row.invoiced, 1);
+            const calcWidth = (row.calculated / maxVal) * 100;
+            const invWidth = (row.invoiced / maxVal) * 100;
+            const diff = row.invoiced - row.calculated;
 
             return (
               <div key={idx} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: '600', color: '#334155' }}>{cat.label}</span>
+                  <span style={{ fontWeight: '600', color: '#334155' }}>{row.label}</span>
                   <span style={{ fontSize: '12px', color: Math.abs(diff) > 0.05 ? '#ef4444' : '#10b981', fontWeight: 'bold' }}>
                     {Math.abs(diff) > 0.05 ? `Starpība: ${formatCurrency(diff)}` : '✅ Sakrīt'}
                   </span>
@@ -89,16 +82,16 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
                     <div style={{ flex: 1, height: '12px', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
                       <div style={{ width: `${calcWidth}%`, height: '100%', background: '#94a3b8', transition: 'width 0.3s' }}></div>
                     </div>
-                    <div style={{ width: '70px', textAlign: 'right', fontSize: '12px', fontWeight: '500' }}>{formatCurrency(cat.data.calculated)}</div>
+                    <div style={{ width: '70px', textAlign: 'right', fontSize: '12px', fontWeight: '500' }}>{formatCurrency(row.calculated)}</div>
                   </div>
 
                   {/* Izrakstītais stabiņš */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '100px', fontSize: '11px', color: '#64748b' }}>Izrakstīts:</div>
                     <div style={{ flex: 1, height: '12px', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden' }}>
-                      <div style={{ width: `${invWidth}%`, height: '100%', background: cat.color, transition: 'width 0.3s' }}></div>
+                      <div style={{ width: `${invWidth}%`, height: '100%', background: row.color, transition: 'width 0.3s' }}></div>
                     </div>
-                    <div style={{ width: '70px', textAlign: 'right', fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(cat.data.invoiced)}</div>
+                    <div style={{ width: '70px', textAlign: 'right', fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(row.invoiced)}</div>
                   </div>
                 </div>
               </div>
