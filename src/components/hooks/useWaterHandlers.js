@@ -189,32 +189,18 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
-      const { data: existing } = await supabase
+      const today = new Date().toISOString().split('T')[0];
+      const { error } = await supabase
         .from('meter_readings')
-        .select('*')
-        .eq('apartment_id', apartmentId)
-        .eq('meter_type', 'water')
-        .eq('period', normPeriod);
+        .upsert({
+          apartment_id: apartmentId,
+          meter_type: 'water',
+          reading_date: today,
+          reading_value: value,
+          period: normPeriod
+        }, { onConflict: 'apartment_id,period,meter_type' });
 
-      if (existing && existing.length > 0) {
-        const { error } = await supabase
-          .from('meter_readings')
-          .update({ reading_value: value })
-          .eq('id', existing[0].id);
-        if (error) throw error;
-      } else {
-        const today = new Date().toISOString().split('T')[0];
-        const { error } = await supabase
-          .from('meter_readings')
-          .insert([{
-            apartment_id: apartmentId,
-            meter_type: 'water',
-            reading_date: today,
-            reading_value: value,
-            period: normPeriod
-          }]);
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       // ✅ Sinhronizējam ar water_consumption tabulu
       const currentVal = parseFloat(value) || 0;
@@ -288,32 +274,18 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
-      const { data: existing } = await supabase
+      const today = new Date().toISOString().split('T')[0];
+      const { error } = await supabase
         .from('meter_readings')
-        .select('*')
-        .eq('apartment_id', apartmentId)
-        .eq('meter_type', 'hot_water')
-        .eq('period', normPeriod);
+        .upsert({
+          apartment_id: apartmentId,
+          meter_type: 'hot_water',
+          reading_date: today,
+          reading_value: value,
+          period: normPeriod
+        }, { onConflict: 'apartment_id,period,meter_type' });
 
-      if (existing && existing.length > 0) {
-        const { error } = await supabase
-          .from('meter_readings')
-          .update({ reading_value: value })
-          .eq('id', existing[0].id);
-        if (error) throw error;
-      } else {
-        const today = new Date().toISOString().split('T')[0];
-        const { error } = await supabase
-          .from('meter_readings')
-          .insert([{
-            apartment_id: apartmentId,
-            meter_type: 'hot_water',
-            reading_date: today,
-            reading_value: value,
-            period: normPeriod
-          }]);
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       // ✅ Sinhronizējam ar water_consumption tabulu
       const currentVal = parseFloat(value) || 0;

@@ -243,7 +243,7 @@ export function WaterTab({
                 const rowBg = index % 2 === 0 ? 'white' : '#f8fafc';
 
                 return (
-                  <tr key={apt.id} style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0' }}>
+                  <tr key={`${apt.id}-${tariffPeriod}`} style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0' }}>
                     <td style={{ padding: '10px 12px', fontWeight: 'bold', color: '#334155' }}>{apt.number}</td>
                     <td style={{ padding: '10px 12px', color: '#64748b', fontSize: '12px' }}>{apt.owner_name}</td>
 
