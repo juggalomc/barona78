@@ -253,7 +253,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       }
 
       // ✅ Sinhronizējam ar water_consumption tabulu
-      const lastReading = getLastReading(apartmentId, 'water', normPeriod, meterReadings);
       const currentVal = parseFloat(value) || 0;
       const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
       const consumption = Math.max(0, currentVal - prevVal);
@@ -353,7 +352,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       }
 
       // ✅ Sinhronizējam ar water_consumption tabulu
-      const lastReading = getLastReading(apartmentId, 'hot_water', normPeriod, meterReadings);
       const currentVal = parseFloat(value) || 0;
       const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
       const consumption = Math.max(0, currentVal - prevVal);
@@ -406,7 +404,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       if (error) throw error;
 
       // ✅ Atjaunojam arī patēriņa tabulu pēc manuālas labošanas
-      const lastReading = getLastReading(reading.apartment_id, reading.meter_type, reading.period, meterReadings);
       const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
       const consumption = Math.max(0, value - prevVal);
 

@@ -65,7 +65,7 @@ export const calculateWaterDetails = ({
       normalizePeriod(mr.period) === normPeriod
     );
     if (currentReading && currentReading.reading_value !== null && currentReading.reading_value !== undefined) {
-      const prev = getLastReading(apt.id, type, period, meterReadings);
+      const prev = getLastReading(apt.id, type, normPeriod, meterReadings);
       const currentVal = parseFloat(currentReading.reading_value) || 0;
       const prevVal = (prev && prev.reading_value !== null && prev.reading_value !== undefined) 
         ? parseFloat(prev.reading_value) 
