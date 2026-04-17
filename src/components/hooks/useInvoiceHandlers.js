@@ -63,7 +63,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       // Termiņš nākamā mēneša 28. datums
       const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
 
-      const { error } = await supabase.from('invoices').insert([{
+      const { error } = await supabase.from('invoices').upsert([{
         apartment_id: apt.id,
         tariff_id: periodTariffs[0].id,
         invoice_number: invoiceNumber,
@@ -81,7 +81,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         previous_debt_amount: previousDebt,
         previous_debt_note: '',
         overpayment_amount: overpayment
-      }]);
+      }], { onConflict: 'apartment_id,period,tariff_id' });
 
       if (error) throw error;
 
@@ -335,7 +335,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         return;
       }
 
-      const { error } = await supabase.from('invoices').insert(invoicesToAdd);
+      const { error } = await supabase.from('invoices').upsert(invoicesToAdd, { onConflict: 'apartment_id,period,tariff_id' });
       if (error) throw error;
 
       setInvoiceMonth('');

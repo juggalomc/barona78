@@ -23,9 +23,12 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
 
   if (previousDebts.length === 0) return 0;
 
-  // Atrodam jaunāko neapmaksāto rēķinu (pēc perioda)
+  // Atrodam jaunāko neapmaksāto rēķinu pēc perioda un ID
   const latestInvoice = previousDebts.reduce((prev, current) => {
-    return (prev.period > current.period) ? prev : current;
+    if (prev.period > current.period) return prev;
+    if (current.period > prev.period) return current;
+    // Ja periodi ir identiski, izvēlamies to, kuram ir lielāks ID (pēdējais ģenerētais)
+    return (prev.id > current.id) ? prev : current;
   });
 
   return parseFloat(latestInvoice.amount) || 0;
