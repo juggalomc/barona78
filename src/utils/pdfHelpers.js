@@ -172,17 +172,8 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
 
   // Pievienots isService filtrs, lai grupās neiekļautu parādus/pārmaksas
   const rowsWithoutVatHtml = invoiceDetails.filter(d => isService(d) && (Number(d.vat_rate) === 0 || d.vat_rate === undefined)).map(mapHtmlRow).join('');
-  
-  const getVatSectionHtml = (rate) => {
-    const rows = invoiceDetails.filter(d => isService(d) && Number(d.vat_rate) === rate);
-    if (rows.length === 0) return '';
-    return `<tr><td colspan="4" class="section-header">Pakalpojumi ar PVN (${rate}%)</td></tr>${rows.map(mapHtmlRow).join('')}`;
-  };
-
-  let allServiceRowsHtml = '';
-  if (rowsWithoutVatHtml) allServiceRowsHtml += `<tr><td colspan="4" class="section-header">Pakalpojumi bez PVN</td></tr>${rowsWithoutVatHtml}`;
-  allServiceRowsHtml += getVatSectionHtml(21);
-  allServiceRowsHtml += getVatSectionHtml(12);
+  const rows21Html = invoiceDetails.filter(d => isService(d) && Number(d.vat_rate) === 21).map(mapHtmlRow).join('');
+  const rows12Html = invoiceDetails.filter(d => isService(d) && Number(d.vat_rate) === 12).map(mapHtmlRow).join('');
 
   const debtRows = invoiceDetails.filter(d => d.type === 'debt').map(d => 
     `<tr style="background:#fee2e2; font-weight:bold; color:#991b1b;"><td>${d.tariff_name}</td><td></td><td></td><td style="text-align:right;">€${Math.abs(d.amount_without_vat).toFixed(2)}</td></tr>`
