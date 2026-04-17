@@ -53,8 +53,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth)) || 0;
       const overpayment = Number(calculateOverpayment(apt.id, invoices, currentInvoiceMonth)) || 0;
 
+      const apartmentTariffs = periodTariffs.filter(t => {
+        const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
+        return !excluded.includes(apt.id);
+      });
+
       const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
-        apt, period: currentInvoiceMonth, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
+        apt, period: currentInvoiceMonth, periodTariffs: apartmentTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
         meterReadings, waterConsumption, apartments, previousDebt, overpayment
       });
 
@@ -301,8 +306,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, normPeriod)) || 0;
         const overpayment = Number(await calculateOverpayment(apt.id, invoices, normPeriod)) || 0;
 
+        const apartmentTariffs = periodTariffs.filter(t => {
+          const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
+          return !excluded.includes(apt.id);
+        });
+
         const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
-          apt, period: normPeriod, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
+          apt, period: normPeriod, periodTariffs: apartmentTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
           meterReadings, waterConsumption, apartments, previousDebt, overpayment,
           nonReportingColdCount: nonReportingColdAptsCount, nonReportingHotCount: nonReportingHotAptsCount
         });
@@ -368,8 +378,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period)) || 0;
       const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
 
+      const apartmentTariffs = periodTariffs.filter(t => {
+        const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
+        return !excluded.includes(apt.id);
+      });
+
       const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
-        apt, period: invoice.period, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
+        apt, period: invoice.period, periodTariffs: apartmentTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
         meterReadings, waterConsumption, apartments, previousDebt, overpayment
       });
 
@@ -477,8 +492,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period, originalInvoiceId)) || 0;
         const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
 
+        const apartmentTariffs = periodTariffs.filter(t => {
+          const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
+          return !excluded.includes(apt.id);
+        });
+
         const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
-          apt, period: invoice.period, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
+          apt, period: invoice.period, periodTariffs: apartmentTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
           meterReadings, waterConsumption, apartments, previousDebt, overpayment
         });
 
