@@ -39,7 +39,6 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
   ]);
 
   const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff'];
-  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff'];
   const isService = d => ['tariff', 'waste', ...waterTypes].includes(d.type);
 
   // Pakalpojumi BEZ PVN
@@ -157,7 +156,7 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
   const additionalInfo = settings.additional_invoice_info || '';
 
   // ===== RINDAS GRUPĒŠANA =====
-  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff', 'cold_water', 'water_meter'];
+  const waterTypes = ['water', 'hot_water', 'water_diff', 'hot_water_diff'];
   const isService = d => ['tariff', 'waste', ...waterTypes].includes(d.type);
   
   const mapHtmlRow = d => {

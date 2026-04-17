@@ -3,17 +3,28 @@
  */
 
 /**
+ * Normalizē perioda virkni uz YYYY-MM formātu (piem. 2024-3 -> 2024-03)
+ */
+const normalizePeriod = (p) => {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('-');
+  if (parts.length !== 2) return p;
+  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
+/**
  * Atrod pēdējo pieejamo rādījumu pirms norādītā perioda
  */
 export const getLastReading = (apartmentId, meterType, currentPeriod, readings) => {
   if (!readings) return null;
+  const normCurrent = normalizePeriod(currentPeriod);
   const relevant = readings
     .filter(mr => 
       String(mr.apartment_id) === String(apartmentId) && 
       mr.meter_type === meterType && 
-      mr.period < currentPeriod
+      normalizePeriod(mr.period) < normCurrent
     )
-    .sort((a, b) => b.period.localeCompare(a.period));
+    .sort((a, b) => normalizePeriod(b.period).localeCompare(normalizePeriod(a.period)));
   return relevant.length > 0 ? relevant[0] : null;
 };
 
@@ -37,11 +48,12 @@ export const calculateWaterDetails = ({
 
   // Helper funkcija patēriņa noteikšanai
   const getConsumption = (type) => {
+    const normPeriod = normalizePeriod(period);
     // 1. Prioritāte: Sinhronizētais patēriņš no tabulas
     const entry = waterConsumption.find(wc => 
       String(wc.apartment_id) === String(apt.id) && 
       wc.meter_type === type && 
-      wc.period === period
+      normalizePeriod(wc.period) === normPeriod
     );
     if (entry && entry.consumption_m3 !== null && entry.consumption_m3 !== undefined) {
       return parseFloat(entry.consumption_m3);
@@ -51,10 +63,10 @@ export const calculateWaterDetails = ({
     const currentReading = meterReadings.find(mr => 
       String(mr.apartment_id) === String(apt.id) && 
       mr.meter_type === type && 
-      mr.period === period
+      normalizePeriod(mr.period) === normPeriod
     );
     if (currentReading && currentReading.reading_value !== null && currentReading.reading_value !== undefined) {
-      const prev = getLastReading(apt.id, type, period, meterReadings);
+      const prev = getLastReading(apt.id, type, normPeriod, meterReadings);
       const currentVal = parseFloat(currentReading.reading_value) || 0;
       const prevVal = (prev && prev.reading_value !== null && prev.reading_value !== undefined) 
         ? parseFloat(prev.reading_value) 
@@ -68,11 +80,11 @@ export const calculateWaterDetails = ({
   const hotM3 = getConsumption('hot_water');
 
   // 2. AUKSTAIS ŪDENS
-  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== false : coldM3 > 0)) {
+  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== false : true)) {
     const m3 = coldM3;
-    const price = (waterTariff && waterTariff.price_per_m3 !== null) ? parseFloat(waterTariff.price_per_m3) : 0;
+    const price = (waterTariff && waterTariff.price_per_m3 !== undefined && waterTariff.price_per_m3 !== null) ? parseFloat(waterTariff.price_per_m3) : 0;
     const amount = Math.round(m3 * price * 100) / 100;
-    // Labojums: PVN 0% apstrāde
+    // PVN apstrāde ar noklusējumu 21%
     const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null) 
       ? parseFloat(waterTariff.vat_rate)
       : 21;
@@ -150,9 +162,9 @@ export const calculateWaterDetails = ({
   }
 
   // 4. SILTAIS ŪDENS
-  if (hotM3 !== null && (hotWaterTariff ? hotWaterTariff.include_in_invoice !== false : hotM3 > 0)) {
+  if (hotM3 !== null && (hotWaterTariff ? hotWaterTariff.include_in_invoice !== false : true)) {
     const m3 = hotM3;
-    const price = (hotWaterTariff && hotWaterTariff.price_per_m3 !== null) ? parseFloat(hotWaterTariff.price_per_m3) : 0;
+    const price = (hotWaterTariff && hotWaterTariff.price_per_m3 !== undefined && hotWaterTariff.price_per_m3 !== null) ? parseFloat(hotWaterTariff.price_per_m3) : 0;
     const amount = Math.round(m3 * price * 100) / 100;
     const vatRate = (hotWaterTariff && hotWaterTariff.vat_rate !== undefined && hotWaterTariff.vat_rate !== null) 
       ? parseFloat(hotWaterTariff.vat_rate)

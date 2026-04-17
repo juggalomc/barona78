@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react';
 import { getLastReading } from '../../utils/waterCalculations'; // Import getLastReading
 
+const normalizePeriod = (p) => {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('-');
+  if (parts.length !== 2) return p;
+  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
 export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly, meterReadings = []) {
   const [enabledMeters, setEnabledMeters] = useState({ water: true, hot_water: false });
   const today = new Date();
   const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   const [tariffPeriod, setTariffPeriod] = useState(currentMonth);
   const [waterTariffForm, setWaterTariffForm] = useState({
-    period: '2026-01',
+    period: currentMonth,
     price_per_m3: '',
     vat_rate: 0,
     include_in_invoice: true,
@@ -15,7 +22,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     diff_price: ''
   });
   const [hotWaterTariffForm, setHotWaterTariffForm] = useState({
-    period: '2026-01',
+    period: currentMonth,
     price_per_m3: '',
     vat_rate: 0,
     include_in_invoice: true,
@@ -25,10 +32,11 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
   // Ielādē tarifu datus formā, kad mainās periods vai ielādējas dati
   useEffect(() => {
-    const water = waterTariffs.find(t => t.period === tariffPeriod);
+    const normPeriod = normalizePeriod(tariffPeriod);
+    const water = waterTariffs.find(t => normalizePeriod(t.period) === normPeriod);
     setWaterTariffForm(prev => ({
       ...prev,
-      period: tariffPeriod,
+      period: normPeriod,
       price_per_m3: water ? water.price_per_m3 : '',
       vat_rate: water ? water.vat_rate : 21,
       include_in_invoice: water ? (water.include_in_invoice !== false) : true,
@@ -36,10 +44,10 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       diff_price: water ? water.diff_price : ''
     }));
 
-    const hot = hotWaterTariffs.find(t => t.period === tariffPeriod);
+    const hot = hotWaterTariffs.find(t => normalizePeriod(t.period) === normPeriod);
     setHotWaterTariffForm(prev => ({
       ...prev,
-      period: tariffPeriod,
+      period: normPeriod,
       price_per_m3: hot ? hot.price_per_m3 : '',
       vat_rate: hot ? hot.vat_rate : 12, // Noklusējums siltajam ūdenim 12%
       include_in_invoice: hot ? (hot.include_in_invoice !== false) : true,
@@ -53,7 +61,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     try {
       const priceValue = parseFloat(waterTariffForm.price_per_m3 || 0);
       const vatValue = parseFloat(waterTariffForm.vat_rate || 0);
-      const period = waterTariffForm.period;
+      const period = normalizePeriod(waterTariffForm.period);
       const diffM3 = parseFloat(waterTariffForm.diff_m3 || 0);
       const diffPrice = parseFloat(waterTariffForm.diff_price || 0);
       const includeInvoice = waterTariffForm.include_in_invoice;
@@ -111,7 +119,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     try {
       const priceValue = parseFloat(hotWaterTariffForm.price_per_m3 || 0);
       const vatValue = parseFloat(hotWaterTariffForm.vat_rate || 0);
-      const period = hotWaterTariffForm.period;
+      const period = normalizePeriod(hotWaterTariffForm.period);
       const includeInvoice = hotWaterTariffForm.include_in_invoice;
       const diffM3 = parseFloat(hotWaterTariffForm.diff_m3 || 0);
       const diffPrice = parseFloat(hotWaterTariffForm.diff_price || 0);
@@ -172,6 +180,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         return;
       }
 
+      const normPeriod = normalizePeriod(period);
       const value = parseFloat(readingValue);
       
       if (readingValue === '' || readingValue === null) {
@@ -180,7 +189,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
           .select('*')
           .eq('apartment_id', apartmentId)
           .eq('meter_type', 'water')
-          .eq('period', period);
+          .eq('period', normPeriod);
         
         const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
@@ -191,7 +200,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
             .delete()
             .eq('apartment_id', String(apartmentId))
             .eq('meter_type', 'water')
-            .eq('period', period);
+            .eq('period', normPeriod);
           fetchReadings();
         }
         return;
@@ -214,7 +223,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         .select('*')
         .eq('apartment_id', apartmentId)
         .eq('meter_type', 'water')
-        .eq('period', period);
+        .eq('period', normPeriod);
 
       if (existing && existing.length > 0) {
         const { error } = await supabase
@@ -231,20 +240,20 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
             meter_type: 'water',
             reading_date: today,
             reading_value: value,
-            period: period
+            period: normPeriod
           }]);
         if (error) throw error;
       }
 
       // ✅ Sinhronizējam ar water_consumption tabulu
-      const lastReading = getLastReading(apartmentId, 'water', period, meterReadings);
+      const lastReading = getLastReading(apartmentId, 'water', normPeriod, meterReadings);
       const currentVal = parseFloat(value) || 0;
       const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
       const consumption = Math.max(0, currentVal - prevVal);
       
       await supabase.from('water_consumption').upsert({
         apartment_id: String(apartmentId),
-        period: period,
+        period: normPeriod,
         meter_type: 'water',
         consumption_m3: consumption
       }, { onConflict: 'apartment_id,period,meter_type' });

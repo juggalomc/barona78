@@ -1,6 +1,13 @@
 import { TOTAL_AREA } from '../components/shared/constants';
 import { calculateWaterDetails } from './waterCalculations';
 
+const normalizePeriod = (p) => {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('-');
+  if (parts.length !== 2) return p;
+  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
 /**
  * Centralizēta funkcija rēķina rindu un summu aprēķināšanai
  */
@@ -22,6 +29,7 @@ export const calculateInvoiceAmounts = ({
   let totalAmountWithoutVat = 0;
   let totalVatAmount = 0;
   let invoiceDetails = [];
+  const normPeriod = normalizePeriod(period);
 
   // 1. Vispārīgie tarifi (pēc platības)
   for (const tariff of periodTariffs) {
@@ -47,9 +55,7 @@ export const calculateInvoiceAmounts = ({
   }
 
   // 2. Atkritumi (pēc personām)
-  const wasteTariff = wasteTariffs.find(w => w.period === period);
-  if (wasteTariff && wasteTariff.include_in_invoice !== false) {
-    const totalDeclaredPersons = apartments.reduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
+  const wasteTariff = wasteTariffs.find(w => tduce((sum, a) => sum + (parseInt(a.declared_persons) || 0), 0);
     if (totalDeclaredPersons > 0) {
       const declaredPersonsInApt = parseInt(apt.declared_persons) || 0;
       const wasteAmountWithoutVat = Math.round((parseFloat(wasteTariff.total_amount) / totalDeclaredPersons * declaredPersonsInApt) * 100) / 100;
@@ -74,12 +80,8 @@ export const calculateInvoiceAmounts = ({
   // 3. Ūdens (izmantojot waterCalculations utilītu)
   const waterResult = calculateWaterDetails({
     apt, period, meterReadings, waterConsumption, apartments,
-    waterTariff: waterTariffs.find(w => w.period === period),
-    hotWaterTariff: hotWaterTariffs.find(w => w.period === period),
-    nonReportingColdCount, nonReportingHotCount
-  });
-
-  invoiceDetails.push(...waterResult.details);
+    waterTariff: waterTariffs.find(w => normalizePeriod(Wfur
+  });.l
   totalAmountWithoutVat += waterResult.waterAmountWithoutVat;
   totalVatAmount += waterResult.waterVatAmount;
 
