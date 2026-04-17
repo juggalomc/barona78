@@ -62,7 +62,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
       const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
 
-      const { error } = await supabase.from('invoices').insert([{
+      const { error } = await supabase.from('invoices').upsert([{
         apartment_id: apt.id,
         tariff_id: periodTariffs[0].id,
         invoice_number: invoiceNumber,
@@ -80,7 +80,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         previous_debt_amount: previousDebt,
         previous_debt_note: '',
         overpayment_amount: overpayment
-      }]);
+      }], { onConflict: 'apartment_id,period,tariff_id' });
 
       if (error) throw error;
 
@@ -305,7 +305,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         if (invoiceDetails.length === 0) continue;
         const timestamp = Math.floor(Date.now() / 1000);
         const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
-        const dueDate = new Date(parseInt(year), parseInt(month) - 1, 28, 12).toISOString().split('T')[0];
+        const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
 
         invoicesToAdd.push({
           apartment_id: apt.id,
@@ -333,7 +333,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         return;
       }
 
-      const { error } = await supabase.from('invoices').insert(invoicesToAdd);
+      const { error } = await supabase.from('invoices').upsert(invoicesToAdd, { onConflict: 'apartment_id,period,tariff_id' });
       if (error) throw error;
 
       setInvoiceMonth('');
