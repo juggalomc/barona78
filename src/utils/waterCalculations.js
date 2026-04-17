@@ -118,7 +118,7 @@ export const calculateWaterDetails = ({
       totalVatAmount += vat;
       details.push({
         tariff_id: waterTariff?.id || null,
-        tariff_name: `💧 Ūdens patēriņa starpība (${shareM3.toFixed(2)} m³)`,
+        tariff_name: `❄️ Aukstā ūdens starpība (${shareM3.toFixed(2)} m³)`,
         consumption_m3: shareM3,
         price_per_m3: diffPrice,
         amount_without_vat: amount,
@@ -177,7 +177,8 @@ export const calculateWaterDetails = ({
         vat_rate: vatRate,
         vat_amount: vat,
         type: 'hot_water_diff'
-    });
+      });
+    }
   }
 
   return { details, waterAmountWithoutVat: totalAmountWithoutVat, waterVatAmount: totalVatAmount };
