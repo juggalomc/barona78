@@ -71,7 +71,8 @@ export function TariffsTab({
   startEditTariff,
   saveEditTariff,
   deleteTariff,
-  copySelectedTariffs
+  copySelectedTariffs,
+  getTargetArea
 }) {
   const currentTariffs = tariffs.filter(t => t.period === tariffPeriod);
 
@@ -150,20 +151,34 @@ export function TariffsTab({
               <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
                 <th style={{ padding: '10px' }}>Nosaukums</th>
                 <th style={{ padding: '10px' }}>Summa</th>
+                <th style={{ padding: '10px' }}>Cena par m²</th>
+                <th style={{ padding: '10px' }}>Platība</th>
                 <th style={{ padding: '10px' }}>PVN</th>
+                <th style={{ padding: '10px' }}>Kopā ar PVN</th>
                 <th style={{ padding: '10px' }}>Izslēgtie</th>
                 <th style={{ padding: '10px', textAlign: 'right' }}>Darbības</th>
               </tr>
             </thead>
             <tbody>
-              {currentTariffs.map(t => (
+              {currentTariffs.map(t => {
+                const excludedIds = Array.isArray(t.excluded_apartments) 
+                  ? t.excluded_apartments 
+                  : JSON.parse(t.excluded_apartments || '[]');
+                const area = getTargetArea(t.target_type || 'all', excludedIds);
+                const pricePerM2 = area > 0 ? (parseFloat(t.total_amount) / area) : 0;
+                const totalWithVat = parseFloat(t.total_amount) * (1 + (parseFloat(t.vat_rate) || 0) / 100);
+
+                return (
                 <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '10px', fontWeight: '600' }}>{t.name}</td>
                   <td style={{ padding: '10px' }}>€{parseFloat(t.total_amount).toFixed(2)}</td>
+                  <td style={{ padding: '10px', color: '#64748b' }}>€{pricePerM2.toFixed(4)}</td>
+                  <td style={{ padding: '10px', color: '#64748b' }}>{area.toFixed(2)} m²</td>
                   <td style={{ padding: '10px' }}>{t.vat_rate}%</td>
+                  <td style={{ padding: '10px', fontWeight: '600' }}>€{totalWithVat.toFixed(2)}</td>
                   <td style={{ padding: '10px', color: '#ef4444', fontSize: '12px' }}>
-                    {Array.isArray(t.excluded_apartments) && t.excluded_apartments.length > 0 
-                      ? t.excluded_apartments.map(id => apartments.find(a => a.id === id)?.number).join(', ')
+                    {excludedIds.length > 0 
+                      ? excludedIds.map(id => apartments.find(a => a.id === id)?.number).join(', ')
                       : '—'}
                   </td>
                   <td style={{ padding: '10px', textAlign: 'right' }}>
@@ -171,7 +186,8 @@ export function TariffsTab({
                     <button onClick={() => deleteTariff(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}>🗑️</button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
