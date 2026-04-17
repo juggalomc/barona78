@@ -5,6 +5,13 @@ import { calculatePreviousDebt, calculateOverpayment } from '../../utils/debtCal
 import { buildInvoicePdfDefinition } from '../../utils/invoicePdfDocDefinition';
 import { buildInvoiceTableRows, loadPdfScripts, generateInvoicePdfHtml } from '../../utils/pdfHelpers';
 
+const normalizePeriod = (p) => {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('-');
+  if (parts.length !== 2) return p;
+  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}, waterConsumption = []) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
@@ -30,7 +37,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
     try {
       const apt = apartments.find(a => a.id === apartmentId);
-      const [year, month] = currentInvoiceMonth.split('-');
+      const normPeriod = normalizePeriod(currentInvoiceMonth);
+      const [year, month] = normPeriod.split('-');
       
       let invoiceDateFrom = dateFrom;
       let invoiceDateTo = dateTo;
@@ -263,7 +271,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
     try {
       const invoicesToAdd = [];
-      const [year, month] = currentInvoiceMonth.split('-');
+      const normPeriod = normalizePeriod(currentInvoiceMonth);
+      const [year, month] = normPeriod.split('-');
       
       let dateFrom = invoiceFromDate;
       let dateTo = invoiceToDate;
@@ -276,19 +285,19 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       }
 
       const nonReportingColdAptsCount = apartments.filter(aptItem => 
-        !meterReadings.find(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && mr.period === currentInvoiceMonth)
+        !meterReadings.find(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
       ).length;
 
       const nonReportingHotAptsCount = apartments.filter(aptItem => 
-        !meterReadings.find(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && mr.period === currentInvoiceMonth)
+        !meterReadings.find(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
       ).length;
 
       for (const apt of apartments) {
-        const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth)) || 0;
-        const overpayment = Number(await calculateOverpayment(apt.id, invoices, currentInvoiceMonth)) || 0;
+        const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, normPeriod)) || 0;
+        const overpayment = Number(await calculateOverpayment(apt.id, invoices, normPeriod)) || 0;
 
         const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
-          apt, period: currentInvoiceMonth, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
+          apt, period: normPeriod, periodTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
           meterReadings, waterConsumption, apartments, previousDebt, overpayment,
           nonReportingColdCount: nonReportingColdAptsCount, nonReportingHotCount: nonReportingHotAptsCount
         });
@@ -296,13 +305,13 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
         if (invoiceDetails.length === 0) continue;
         const timestamp = Math.floor(Date.now() / 1000);
         const invoiceNumber = `${year}/${month}-${apt.number}-${timestamp}`;
-        const dueDate = new Date(parseInt(year), parseInt(month), 28, 12).toISOString().split('T')[0];
+        const dueDate = new Date(parseInt(year), parseInt(month) - 1, 28, 12).toISOString().split('T')[0];
 
         invoicesToAdd.push({
           apartment_id: apt.id,
           tariff_id: periodTariffs[0].id,
           invoice_number: invoiceNumber,
-          period: currentInvoiceMonth,
+          period: normPeriod,
           amount: totalAmountWithVat,
           amount_without_vat: totalAmountWithoutVat,
           amount_with_vat: totalAmountWithVat,

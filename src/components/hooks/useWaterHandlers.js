@@ -216,6 +216,13 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         return;
       }
 
+      // ✅ Validācija pret iepriekšējo rādījumu
+      const lastReading = getLastReading(apartmentId, 'water', normPeriod, meterReadings);
+      if (lastReading && value < parseFloat(lastReading.reading_value)) {
+        showToast(`Kļūda: Jaunais rādījums (${value}) nevar būt mazāks par iepriekšējo (${lastReading.reading_value})`, 'error');
+        return;
+      }
+
       const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
       const { data: existing } = await supabase
@@ -309,6 +316,13 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         return;
       }
 
+      // ✅ Validācija pret iepriekšējo rādījumu
+      const lastReading = getLastReading(apartmentId, 'hot_water', normPeriod, meterReadings);
+      if (lastReading && value < parseFloat(lastReading.reading_value)) {
+        showToast(`Kļūda: Jaunais rādījums (${value}) nevar būt mazāks par iepriekšējo (${lastReading.reading_value})`, 'error');
+        return;
+      }
+
       const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
       const { data: existing } = await supabase
@@ -372,6 +386,13 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       if (value > 9999.99) {
         showToast('Rādījums nevar būt lielāks par 9999.99', 'error');
+        return;
+      }
+
+      // ✅ Validācija pret iepriekšējo rādījumu manuālas labošanas laikā
+      const lastReading = getLastReading(reading.apartment_id, reading.meter_type, reading.period, meterReadings);
+      if (lastReading && value < parseFloat(lastReading.reading_value)) {
+        showToast(`Kļūda: Rādījums nevar būt mazāks par iepriekšējo (${lastReading.reading_value})`, 'error');
         return;
       }
 
