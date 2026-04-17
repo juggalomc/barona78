@@ -79,7 +79,7 @@ export const calculateWaterDetails = ({
   const hotM3 = getConsumption('hot_water');
 
   // 2. AUKSTAIS ŪDENS
-  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== false : coldM3 >= 0)) {
+  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== true : coldM3 >= 0)) {
     const m3 = coldM3;
     const price = waterTariff ? (parseFloat(waterTariff.price_per_m3) || 0) : 0;
     const amount = Math.round(m3 * price * 100) / 100;
