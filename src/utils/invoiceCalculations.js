@@ -1,7 +1,7 @@
 import { TOTAL_AREA } from '../components/shared/constants';
 import { calculateWaterDetails } from './waterCalculations';
 
-const normalizePeriod = (p) => {
+export const normalizePeriod = (p) => {
   if (!p || typeof p !== 'string') return p;
   const parts = p.split('-');
   if (parts.length !== 2) return p;
@@ -29,6 +29,7 @@ export const calculateInvoiceAmounts = ({
   let totalAmountWithoutVat = 0;
   let totalVatAmount = 0;
   let invoiceDetails = [];
+  let missingTariffs = [];
   const normPeriod = normalizePeriod(period);
 
   // 1. Vispārīgie tarifi (pēc platības)
@@ -80,10 +81,16 @@ export const calculateInvoiceAmounts = ({
   }
 
   // 3. Ūdens (izmantojot waterCalculations utilītu)
+  const waterT = waterTariffs.find(w => normalizePeriod(w.period) === normPeriod);
+  const hotWaterT = hotWaterTariffs.find(w => normalizePeriod(w.period) === normPeriod);
+
+  if (!waterT) missingTariffs.push('Aukstā ūdens tarifs');
+  if (!hotWaterT) missingTariffs.push('Siltā ūdens tarifs');
+
   const waterResult = calculateWaterDetails({
     apt, period, meterReadings, waterConsumption, apartments,
-    waterTariff: waterTariffs.find(w => normalizePeriod(w.period) === normPeriod),
-    hotWaterTariff: hotWaterTariffs.find(w => normalizePeriod(w.period) === normPeriod),
+    waterTariff: waterT,
+    hotWaterTariff: hotWaterT,
     nonReportingColdCount,
     nonReportingHotCount
   });
@@ -109,6 +116,7 @@ export const calculateInvoiceAmounts = ({
     invoiceDetails,
     totalAmountWithoutVat,
     totalVatAmount,
-    totalAmountWithVat
+    totalAmountWithVat,
+    missingTariffs
   };
 };

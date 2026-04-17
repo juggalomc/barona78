@@ -5,7 +5,7 @@
 /**
  * Normalizē perioda virkni uz YYYY-MM formātu (piem. 2024-3 -> 2024-03)
  */
-const normalizePeriod = (p) => {
+export const normalizePeriod = (p) => {
   if (!p || typeof p !== 'string') return p;
   const parts = p.split('-');
   if (parts.length !== 2) return p;
@@ -179,7 +179,7 @@ export const calculateWaterDetails = ({
         vat_amount: vat,
         type: 'hot_water_diff'
       });
-  }
+    }
   }
 
   return { details, waterAmountWithoutVat: totalAmountWithoutVat, waterVatAmount: totalVatAmount };
