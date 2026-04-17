@@ -100,7 +100,10 @@ export const calculateWaterDetails = ({
       vat_amount: vat,
       type: 'water'
     });
-  } else if (coldM3 === null && waterTariff && parseFloat(waterTariff.diff_m3 || 0) > 0) {
+  }
+
+  // 2.1 AUKSTĀ ŪDENS STARPĪBA (ja nav nodots rādījums)
+  if (coldM3 === null && waterTariff && parseFloat(waterTariff.diff_m3 || 0) > 0) {
     // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
     const count = nonReportingColdCount ?? apartments.filter(a => 
       !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
