@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { TOTAL_AREA } from '../shared/constants';
 
 export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
   const [tariffPeriod, setTariffPeriod] = useState('2026-01');

@@ -1,4 +1,3 @@
-import { TOTAL_AREA } from '../components/shared/constants';
 import { calculateWaterDetails } from './waterCalculations';
 
 export const normalizePeriod = (p) => {
