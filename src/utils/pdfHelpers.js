@@ -205,7 +205,11 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
         <p>Nr: ${invoice.invoice_number}<br>Periods: ${invoice.period}<br>Termiņš: ${new Date(invoice.due_date).toLocaleDateString('lv-LV')}</p>
         
         <div style="background:#f9fafb; padding:15px; border-radius:5px;">
-          <strong>SAŅĒMĒJS:</strong><br>Dzīvoklis Nr. ${apt.number}<br>${apt.owner_name} ${apt.owner_surname || ''}
+          <strong>SAŅĒMĒJS:</strong><br>
+          Dzīvoklis Nr. ${apt.number}<br>
+          ${apt.owner_name} ${apt.owner_surname || ''}<br>
+          ${apt.registration_number ? `Reģ. Nr.: ${apt.registration_number}<br>` : ''}
+          ${apt.apartment_address ? `Adrese: ${apt.apartment_address}<br>` : ''}
         </div>
 
         <table>
