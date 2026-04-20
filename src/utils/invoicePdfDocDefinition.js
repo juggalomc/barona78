@@ -45,7 +45,17 @@ export const buildInvoicePdfDefinition = (invoice, apt, settings, tableRows) => 
         marginBottom: 20
       },
       { text: 'SAŅĒMĒJS', fontSize: 12, bold: true, marginBottom: 8 },
-      { text: `Dzīvoklis Nr. ${apt.number}\n${apt.owner_name ? 'Vārds: ' + apt.owner_name + '\n' : ''}${apt.email ? 'E-pasts: ' + formatEmailForDisplay(apt.email) + '\n' : ''}`, fontSize: 10, marginBottom: 20 },
+      {
+        text: [
+          { text: `Dzīvoklis Nr. ${apt.number}\n` },
+          { text: `${apt.owner_name || ''}\n` },
+          apt.registration_number ? { text: `Reģ. Nr.: ${apt.registration_number}\n` } : '',
+          apt.apartment_address ? { text: `Adrese: ${apt.apartment_address}\n` } : '',
+          apt.email ? { text: `E-pasts: ${formatEmailForDisplay(apt.email)}\n` } : ''
+        ],
+        fontSize: 10,
+        marginBottom: 20
+      },
       { table: { headerRows: 1, widths: ['*', 90, 80, 80], body: tableRows }, layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => '#cccccc', vLineColor: () => '#cccccc' }, marginBottom: 15 },
       {
         alignment: 'right',
