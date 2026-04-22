@@ -95,6 +95,8 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  const totalDebt = userInvoices.filter(i => !i.paid).reduce((sum, inv) => sum + inv.amount, 0);
+
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
@@ -121,8 +123,11 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '12px', color: '#ccc', marginBottom: '4px' }}>Parāds:</div>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
-              €{userInvoices.filter(i => !i.paid).reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: totalDebt > 0 ? '#ef4444' : '#10b981' }}>{
+              totalDebt === 0
+                ? 'Viss apmaksāts'
+                : `€${totalDebt.toFixed(2)}`
+            }
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
