@@ -120,13 +120,9 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '12px', color: '#ccc', marginBottom: '4px' }}>Kopā apmaksāt:</div>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4ade80' }}>€{userInvoices.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}</div>
-            <div style={{ fontSize: '11px', color: '#ccc', marginTop: '4px' }}>
-              Parāds: €{(() => {
-                const unpaid = userInvoices.filter(i => !i.paid);
-                return unpaid.length > 0 ? unpaid.reduce((prev, curr) => prev.period > curr.period ? prev : curr).amount.toFixed(2) : "0.00";
-              })()}
+            <div style={{ fontSize: '12px', color: '#ccc', marginBottom: '4px' }}>Parāds:</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
+              €{userInvoices.filter(i => !i.paid).reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
