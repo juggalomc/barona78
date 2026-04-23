@@ -56,6 +56,9 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
       } else if (detail.type === 'waste') {
         quantity = (detail.declared_persons || 0) + ' pers.';
         unitPrice = '€' + (detail.price_per_person || ((detail.amount_without_vat || 0) / (detail.declared_persons || 1))).toFixed(4);
+      } else if (detail.is_equal_split) {
+        quantity = '1 dz.';
+        unitPrice = '€' + (detail.price_per_unit || (detail.amount_without_vat || 0)).toFixed(4);
       } else {
         quantity = (apt.area || 0) + ' m²';
         unitPrice = '€' + (detail.price_per_sqm || ((detail.amount_without_vat || 0) / (apt.area || 1))).toFixed(4);
@@ -157,6 +160,9 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
     } else if (d.type === 'waste') {
       qtyLabel = `${d.declared_persons || 0} pers.`;
       unitPrice = d.price_per_person || ((parseFloat(d.amount_without_vat) || 0) / (d.declared_persons || 1));
+    } else if (d.is_equal_split) {
+      qtyLabel = '1 dz.';
+      unitPrice = parseFloat(d.price_per_unit) || parseFloat(d.amount_without_vat) || 0;
     } else {
       qtyLabel = `${apt.area || 0} m²`;
       unitPrice = d.price_per_sqm || ((parseFloat(d.amount_without_vat) || 0) / (apt.area || 1));

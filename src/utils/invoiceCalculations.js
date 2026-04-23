@@ -31,24 +31,50 @@ export const calculateInvoiceAmounts = ({
   let missingTariffs = [];
   const normPeriod = normalizePeriod(period);
 
-  // Aprēķinām grupu kopējās platības precīzai sadalei
-  const areaTotals = {
-    all: apartments.reduce((sum, a) => sum + (parseFloat(a.area) || 0), 0),
-    residential: apartments.filter(a => a.is_residential !== false).reduce((sum, a) => sum + (parseFloat(a.area) || 0), 0),
-    non_residential: apartments.filter(a => a.is_residential === false).reduce((sum, a) => sum + (parseFloat(a.area) || 0), 0)
-  };
-
   // 1. Vispārīgie tarifi (pēc platības)
   for (const tariff of periodTariffs) {
+    // Apstrādājam izslēgtos dzīvokļus
+    const excludedIds = Array.isArray(tariff.excluded_apartments) 
+      ? tariff.excluded_apartments 
+      : JSON.parse(tariff.excluded_apartments || '[]');
+    
+    // Ja šis konkrētais dzīvoklis ir izslēgto sarakstā, izlaižam šo tarifu
+    if (excludedIds.includes(apt.id)) continue;
+
     const isResidential = apt.is_residential !== false;
     if (tariff.target_type === 'residential' && !isResidential) continue;
     if (tariff.target_type === 'non_residential' && isResidential) continue;
     
-    // Izmantojam specifiskās grupas platību kā dalītāju
-    const divisor = areaTotals[tariff.target_type || 'all']; // No fallback to TOTAL_AREA here
-    const pricePerSqm = divisor > 0 ? (parseFloat(tariff.total_amount) / divisor) : 0;
+    let amountWithoutVat = 0;
+    let pricePerUnit = 0;
 
-    const amountWithoutVat = Math.round(pricePerSqm * parseFloat(apt.area) * 100) / 100;
+    if (tariff.is_per_m2) {
+      // A: Fiksēta cena par m2
+      pricePerUnit = parseFloat(tariff.price_per_m2) || 0;
+      amountWithoutVat = pricePerUnit * parseFloat(apt.area);
+    } else if (tariff.is_equal_split) {
+      // B: Kopējā summa sadalīta vienādi starp iesaistītajiem dzīvokļiem
+      const participatingCount = apartments.filter(a => {
+        const matchesTarget = !tariff.target_type || tariff.target_type === 'all' || 
+          (tariff.target_type === 'residential' && a.is_residential !== false) ||
+          (tariff.target_type === 'non_residential' && a.is_residential === false);
+        return matchesTarget && !excludedIds.includes(a.id);
+      }).length;
+      pricePerUnit = participatingCount > 0 ? (parseFloat(tariff.total_amount) / participatingCount) : 0;
+      amountWithoutVat = pricePerUnit;
+    } else {
+      // C: Kopējā summa sadalīta proporcionāli platībai starp iesaistītajiem
+      const totalArea = apartments.reduce((sum, a) => {
+        const matchesTarget = !tariff.target_type || tariff.target_type === 'all' || 
+          (tariff.target_type === 'residential' && a.is_residential !== false) ||
+          (tariff.target_type === 'non_residential' && a.is_residential === false);
+        return (matchesTarget && !excludedIds.includes(a.id)) ? sum + (parseFloat(a.area) || 0) : sum;
+      }, 0);
+      pricePerUnit = totalArea > 0 ? (parseFloat(tariff.total_amount) / totalArea) : 0;
+      amountWithoutVat = pricePerUnit * parseFloat(apt.area);
+    }
+
+    amountWithoutVat = Math.round(amountWithoutVat * 100) / 100;
     const vatRate = parseFloat(tariff.vat_rate) || 0;
     const vatAmount = Math.round(amountWithoutVat * vatRate / 100 * 100) / 100;
     
@@ -60,7 +86,9 @@ export const calculateInvoiceAmounts = ({
       amount_without_vat: amountWithoutVat, 
       vat_rate: vatRate, 
       vat_amount: vatAmount, 
-      price_per_sqm: pricePerSqm,
+      price_per_sqm: tariff.is_equal_split ? null : pricePerUnit,
+      price_per_unit: tariff.is_equal_split ? pricePerUnit : null,
+      is_equal_split: !!tariff.is_equal_split,
       type: 'tariff' 
     });
   }
