@@ -23,7 +23,8 @@ export function WaterTab({
   saveHotWaterTariff,
   saveWaterMeterReading,
   saveHotWaterMeterReading,
-  getLastReading,
+  getLastReading, // Šī funkcija tiek padota no `useWaterHandlers`
+  waterConsumption, // Pievienots `waterConsumption` props
   settings,
   updateSetting,
   syncWaterConsumption
@@ -186,7 +187,48 @@ export function WaterTab({
         </form>
       </div>
 
-      {/* 3. SADAĻA: TABULA AR RĀDĪJUMIEM */}
+      {/* 3. SADAĻA: KOPĒJAIS ŪDENS Kopsavilkums */}
+      {/* Pieņemts, ka `waterConsumption` tiek padots kā props uz WaterTab.jsx */}
+      {/* Ja `waterConsumption` nav pieejams, šis bloks rādīs 0 m³ un summas. */}
+      {(() => {
+        const currentWaterTariff = waterTariffs.find(t => normalizePeriod(t.period) === normalizePeriod(tariffPeriod));
+        const currentHotWaterTariff = hotWaterTariffs.find(t => normalizePeriod(t.period) === normalizePeriod(tariffPeriod));
+        const waterGlobalSummary = calculateWaterGlobalSummary(tariffPeriod, waterConsumption, currentWaterTariff, currentHotWaterTariff);
+
+        return (
+          <div style={{ ...styles.card, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+            <h2 style={styles.cardTitle}>📊 Kopējais ūdens patēriņš un aprēķins ({tariffPeriod})</h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              {/* Aukstā ūdens kopsavilkums */}
+              <div style={{ background: '#f0f9ff', padding: '15px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0369a1', marginBottom: '10px', marginTop: 0 }}>❄️ Aukstais ūdens</h3>
+                <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                  <div>Kopā nodots: <strong>{waterGlobalSummary.cold.m3.toFixed(2)} m³</strong></div>
+                  <div>Summa (bez PVN): <strong>€{waterGlobalSummary.cold.amountWithoutVat.toFixed(2)}</strong></div>
+                  <div style={{ color: '#0369a1', fontWeight: 'bold' }}>
+                    Kopā ar PVN: €{waterGlobalSummary.cold.amountWithVat.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Siltā ūdens kopsavilkums */}
+              <div style={{ background: '#fff7ed', padding: '15px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#c2410c', marginBottom: '10px', marginTop: 0 }}>🔥 Siltais ūdens</h3>
+                <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                  <div>Kopā nodots: <strong>{waterGlobalSummary.hot.m3.toFixed(2)} m³</strong></div>
+                  <div>Summa (bez PVN): <strong>€{waterGlobalSummary.hot.amountWithoutVat.toFixed(2)}</strong></div>
+                  <div style={{ color: '#c2410c', fontWeight: 'bold' }}>
+                    Kopā ar PVN: €{waterGlobalSummary.hot.amountWithVat.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 4. SADAĻA: TABULA AR RĀDĪJUMIEM */}
       <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
