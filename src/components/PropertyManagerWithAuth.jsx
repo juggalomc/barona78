@@ -13,6 +13,8 @@ import { WaterTab } from './tabs/WaterTab';
 import { WasteTab } from './tabs/WasteTab';
 import { InvoicesTab } from './tabs/InvoicesTab';
 import { SettingsTab } from './tabs/SettingsTab';
+import { PaymentSummaryTab } from './tabs/PaymentSummaryTab';
+import { ApartmentFinancialsTab } from './tabs/ApartmentFinancialsTab';
 
 // Konstantes un stili
 import { styles } from './shared/styles';
@@ -34,6 +36,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // Definējam tabus lokāli, lai pievienotu Atkritumu sadaļu
 const TABS = [
   { id: 'overview', label: 'Pārskats' },
+  { id: 'payments', label: 'Maksājumi' },
+  { id: 'financials', label: 'Finanses' },
   { id: 'apartments', label: 'Dzīvokļi' },
   { id: 'users', label: 'Lietotāji' },
   { id: 'tariffs', label: 'Tarifi' },
@@ -274,6 +278,16 @@ export default function PropertyManager() {
                 hotWaterTariffs={hotWaterTariffs}
                 wasteTariffs={wasteTariffs}
                 waterConsumption={waterConsumption}
+              />
+            ) : activeTab === 'payments' ? (
+              <PaymentSummaryTab 
+                invoices={invoices} 
+                uniqueTariffPeriods={uniqueTariffPeriods} 
+              />
+            ) : activeTab === 'financials' ? (
+              <ApartmentFinancialsTab 
+                invoices={invoices} 
+                apartments={apartments} 
               />
             ) : activeTab === 'apartments' ? (
               <ApartmentsTab
