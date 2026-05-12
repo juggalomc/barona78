@@ -82,3 +82,72 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
 
   return { rows, total };
 };
+
+/**
+ * Aprēķina maksājumu sadalījumu pa pozīcijām mēneša ietvaros (Apmaksāts vs Izrakstīts)
+ */
+export const calculatePositionPayments = (period, invoices) => {
+  const periodInvoices = invoices.filter(inv => inv.period === period);
+  const items = {};
+
+  periodInvoices.forEach(inv => {
+    try {
+      const details = JSON.parse(inv.invoice_details || '[]');
+      details.forEach(item => {
+        const name = item.tariff_name || 'Cits';
+        const amount = parseFloat(item.amount_without_vat || 0);
+        const vat = parseFloat(item.vat_amount || 0);
+        const total = amount + vat;
+
+        if (!items[name]) {
+          items[name] = { name, invoiced: 0, paid: 0 };
+        }
+
+        items[name].invoiced += total;
+        if (inv.paid) {
+          items[name].paid += total;
+        }
+      });
+    } catch (e) {
+      console.error("Kļūda apstrādājot rēķinu kopsavilkumam", e);
+    }
+  });
+
+  return Object.values(items).sort((a, b) => b.invoiced - a.invoiced);
+};
+
+/**
+ * Aprēķina dzīvokļa vēsturisko finanšu stāvokli pa pozīcijām
+ */
+export const calculateApartmentFinancials = (apartmentId, invoices) => {
+  const aptInvoices = invoices.filter(inv => inv.apartment_id === apartmentId);
+  const items = {};
+
+  aptInvoices.forEach(inv => {
+    try {
+      const details = JSON.parse(inv.invoice_details || '[]');
+      details.forEach(item => {
+        if (item.type === 'debt' || item.type === 'overpayment') return;
+
+        const name = item.tariff_name || 'Cits';
+        const amount = parseFloat(item.amount_without_vat || 0);
+        const vat = parseFloat(item.vat_amount || 0);
+        const total = amount + vat;
+
+        if (!items[name]) {
+          items[name] = { name, totalCharged: 0, totalPaid: 0 };
+        }
+
+        items[name].totalCharged += total;
+        if (inv.paid) items[name].totalPaid += total;
+      });
+    } catch (e) {
+      console.error("Kļūda rēķina apstrādē", e);
+    }
+  });
+
+  return Object.values(items).map(i => ({
+    ...i,
+    currentDebt: Math.max(0, i.totalCharged - i.totalPaid)
+  })).sort((a, b) => b.totalCharged - a.totalCharged);
+};

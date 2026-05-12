@@ -7,7 +7,7 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
     total_amount: '',
     price_per_m2: '',
     is_per_m2: false,
-    vat_rate: 0,
+    vat_rate: 21,
     include_in_invoice: true,
     target_type: 'all',
     excluded_apartments: []
@@ -57,7 +57,7 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
       const { error } = await supabase.from('tariffs').insert([dataToInsert]);
       if (error) throw error;
       
-      setTariffForm({ name: '', total_amount: '', price_per_m2: '', is_per_m2: false, vat_rate: 0, include_in_invoice: true, target_type: 'all', excluded_apartments: [] });
+      setTariffForm({ name: '', total_amount: '', price_per_m2: '', is_per_m2: false, vat_rate: 21, include_in_invoice: true, target_type: 'all', excluded_apartments: [] });
       fetchData();
       showToast('✓ Tarifs pievienots');
     } catch (error) {

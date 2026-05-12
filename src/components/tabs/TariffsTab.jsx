@@ -99,19 +99,28 @@ export function TariffsTab({
         <h2 style={styles.cardTitle}>{editingTariff ? '✏️ Labot tarifu' : '💰 Pievienot jaunu tarifu'}</h2>
         <form onSubmit={editingTariff ? (e) => { e.preventDefault(); saveEditTariff(editingTariff); } : addTariff} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <input type="text" placeholder="Tarifa nosaukums" value={currentForm.name} onChange={(e) => editingTariff ? setEditForm({...editForm, name: e.target.value}) : setTariffForm({...tariffForm, name: e.target.value})} style={styles.input} />
-            <input type="number" placeholder="PVN likme %" value={currentForm.vat_rate} onChange={(e) => editingTariff ? setEditForm({...editForm, vat_rate: e.target.value}) : setTariffForm({...tariffForm, vat_rate: e.target.value})} style={styles.input} />
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>Tarifa nosaukums</label>
+              <input type="text" placeholder="Piem. Apsaimniekošana" value={currentForm.name} onChange={(e) => editingTariff ? setEditForm({...editForm, name: e.target.value}) : setTariffForm({...tariffForm, name: e.target.value})} style={styles.input} />
+            </div>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>PVN likme %</label>
+              <input type="number" placeholder="21" value={currentForm.vat_rate} onChange={(e) => editingTariff ? setEditForm({...editForm, vat_rate: e.target.value}) : setTariffForm({...tariffForm, vat_rate: e.target.value})} style={styles.input} />
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', alignItems: 'center' }}>
-            <input 
-              type="number" 
-              step="0.0001" 
-              placeholder={currentForm.is_per_m2 ? "Cena par m²" : "Kopējā summa"} 
-              value={currentForm.is_per_m2 ? currentForm.price_per_m2 : currentForm.total_amount} 
-              onChange={(e) => editingTariff ? (editForm.is_per_m2 ? setEditForm({...editForm, price_per_m2: e.target.value}) : setEditForm({...editForm, total_amount: e.target.value})) : (tariffForm.is_per_m2 ? setTariffForm({...tariffForm, price_per_m2: e.target.value}) : setTariffForm({...tariffForm, total_amount: e.target.value}))} 
-              style={styles.input} 
-            />
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>{currentForm.is_per_m2 ? "Cena par m²" : "Kopējā summa"}</label>
+              <input 
+                type="number" 
+                step="0.0001" 
+                placeholder={currentForm.is_per_m2 ? "0.0000" : "0.00"} 
+                value={currentForm.is_per_m2 ? currentForm.price_per_m2 : currentForm.total_amount} 
+                onChange={(e) => editingTariff ? (editForm.is_per_m2 ? setEditForm({...editForm, price_per_m2: e.target.value}) : setEditForm({...editForm, total_amount: e.target.value})) : (tariffForm.is_per_m2 ? setTariffForm({...tariffForm, price_per_m2: e.target.value}) : setTariffForm({...tariffForm, total_amount: e.target.value}))} 
+                style={styles.input} 
+              />
+            </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', cursor: 'pointer' }}>
               <input type="checkbox" checked={currentForm.is_per_m2} onChange={(e) => editingTariff ? setEditForm({...editForm, is_per_m2: e.target.checked}) : setTariffForm({...tariffForm, is_per_m2: e.target.checked})} />
               Aprēķināt pēc m²
