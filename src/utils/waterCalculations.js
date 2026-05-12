@@ -184,3 +184,38 @@ export const calculateWaterDetails = ({
 
   return { details, waterAmountWithoutVat: totalAmountWithoutVat, waterVatAmount: totalVatAmount };
 };
+
+/**
+ * Aprēķina kopējo ūdens kopsavilkumu par visu māju konkrētam periodam
+ */
+export const calculateWaterGlobalSummary = (period, waterConsumption, waterTariff, hotWaterTariff) => {
+  const normPeriod = normalizePeriod(period);
+  
+  const getMetrics = (type, tariff) => {
+    if (!tariff) return { m3: 0, amountWithoutVat: 0, amountWithVat: 0 };
+    
+    const totalM3 = waterConsumption
+      .filter(wc => normalizePeriod(wc.period) === normPeriod && wc.meter_type === type)
+      .reduce((sum, wc) => sum + (parseFloat(wc.consumption_m3) || 0), 0);
+    
+    const price = parseFloat(tariff.price_per_m3) || 0;
+    const diffM3 = parseFloat(tariff.diff_m3) || 0;
+    const diffPrice = parseFloat(tariff.diff_price) || 0;
+    const vatRate = parseFloat(tariff.vat_rate) || (type === 'water' ? 21 : 12);
+    
+    const amountWithoutVat = Math.round(((totalM3 * price) + (diffM3 * diffPrice)) * 100) / 100;
+    const vatAmount = Math.round((amountWithoutVat * vatRate / 100) * 100) / 100;
+    const amountWithVat = Math.round((amountWithoutVat + vatAmount) * 100) / 100;
+    
+    return { 
+      m3: totalM3, 
+      amountWithoutVat, 
+      amountWithVat 
+    };
+  };
+
+  return {
+    cold: getMetrics('water', waterTariff),
+    hot: getMetrics('hot_water', hotWaterTariff)
+  };
+};

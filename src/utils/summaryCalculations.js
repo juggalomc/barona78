@@ -38,18 +38,46 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
     const totalConsumption = waterConsumption
       .filter(wc => wc.period === period && wc.meter_type === 'water')
       .reduce((sum, wc) => sum + (parseFloat(wc.consumption_m3) || 0), 0);
-    const calc = (totalConsumption * (parseFloat(periodWaterTariff.price_per_m3) || 0)) + 
-                 ((parseFloat(periodWaterTariff.diff_m3) || 0) * (parseFloat(periodWaterTariff.diff_price) || 0));
-    items[waterLabel] = { label: waterLabel, calculated: calc, invoiced: 0, color: '#0ea5e9' };
+    const price = parseFloat(periodWaterTariff.price_per_m3) || 0;
+    const diffM3 = parseFloat(periodWaterTariff.diff_m3) || 0;
+    const diffPrice = parseFloat(periodWaterTariff.diff_price) || 0;
+    const vatRate = parseFloat(periodWaterTariff.vat_rate) || 21;
+
+    const amountWithoutVat = Math.round(((totalConsumption * price) + (diffM3 * diffPrice)) * 100) / 100;
+    const vatAmount = Math.round((amountWithoutVat * vatRate / 100) * 100) / 100;
+    const amountWithVat = Math.round((amountWithoutVat + vatAmount) * 100) / 100;
+
+    items[waterLabel] = { 
+      label: waterLabel, 
+      calculated: amountWithoutVat, 
+      invoiced: 0, 
+      color: '#0ea5e9',
+      m3: totalConsumption,
+      amountWithVat: amountWithVat
+    };
   }
 
   if (periodHotWaterTariff) {
     const totalHotConsumption = waterConsumption
       .filter(wc => wc.period === period && wc.meter_type === 'hot_water')
       .reduce((sum, wc) => sum + (parseFloat(wc.consumption_m3) || 0), 0);
-    const calc = (totalHotConsumption * (parseFloat(periodHotWaterTariff.price_per_m3) || 0)) + 
-                 ((parseFloat(periodHotWaterTariff.diff_m3) || 0) * (parseFloat(periodHotWaterTariff.diff_price) || 0));
-    items[hotWaterLabel] = { label: hotWaterLabel, calculated: calc, invoiced: 0, color: '#f59e0b' };
+    const price = parseFloat(periodHotWaterTariff.price_per_m3) || 0;
+    const diffM3 = parseFloat(periodHotWaterTariff.diff_m3) || 0;
+    const diffPrice = parseFloat(periodHotWaterTariff.diff_price) || 0;
+    const vatRate = parseFloat(periodHotWaterTariff.vat_rate) || 12;
+
+    const amountWithoutVat = Math.round(((totalHotConsumption * price) + (diffM3 * diffPrice)) * 100) / 100;
+    const vatAmount = Math.round((amountWithoutVat * vatRate / 100) * 100) / 100;
+    const amountWithVat = Math.round((amountWithoutVat + vatAmount) * 100) / 100;
+
+    items[hotWaterLabel] = { 
+      label: hotWaterLabel, 
+      calculated: amountWithoutVat, 
+      invoiced: 0, 
+      color: '#f59e0b',
+      m3: totalHotConsumption,
+      amountWithVat: amountWithVat
+    };
   }
 
   // 4. Saskaitām faktiski izrakstītos datus no rēķiniem
@@ -80,7 +108,12 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
     invoiced: rows.reduce((sum, r) => sum + r.invoiced, 0)
   };
 
-  return { rows, total };
+  const waterSummary = {
+    cold: items[waterLabel] || null,
+    hot: items[hotWaterLabel] || null
+  };
+
+  return { rows, total, waterSummary };
 };
 
 /**
