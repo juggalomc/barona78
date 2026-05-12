@@ -1,11 +1,6 @@
 import React from 'react';
-
-const normalizePeriod = (p) => {
-  if (!p || typeof p !== 'string') return p;
-  const parts = p.split('-');
-  if (parts.length !== 2) return p;
-  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
-};
+import { styles } from '../shared/styles';
+import { calculateWaterGlobalSummary, normalizePeriod } from '../../utils/waterCalculations';
 
 export function WaterTab({
   apartments,
