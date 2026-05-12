@@ -94,7 +94,15 @@ export const calculatePositionPayments = (period, invoices) => {
     try {
       const details = JSON.parse(inv.invoice_details || '[]');
       details.forEach(item => {
-        const name = item.tariff_name || 'Cits';
+        if (item.type === 'debt' || item.type === 'overpayment') return;
+
+        let name = item.tariff_name || 'Cits';
+        if (item.type === 'waste') {
+          name = '♻️ Atkritumu izvešana';
+        } else if (item.type?.includes('water')) {
+          name = '💧 Ūdens pakalpojumi';
+        }
+
         const amount = parseFloat(item.amount_without_vat || 0);
         const vat = parseFloat(item.vat_amount || 0);
         const total = amount + vat;
@@ -129,7 +137,13 @@ export const calculateApartmentFinancials = (apartmentId, invoices) => {
       details.forEach(item => {
         if (item.type === 'debt' || item.type === 'overpayment') return;
 
-        const name = item.tariff_name || 'Cits';
+        let name = item.tariff_name || 'Cits';
+        if (item.type === 'waste') {
+          name = '♻️ Atkritumu izvešana';
+        } else if (item.type?.includes('water')) {
+          name = '💧 Ūdens pakalpojumi';
+        }
+
         const amount = parseFloat(item.amount_without_vat || 0);
         const vat = parseFloat(item.vat_amount || 0);
         const total = amount + vat;
