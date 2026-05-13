@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { styles } from '../shared/styles';
 import { calculateWaterGlobalSummary, normalizePeriod } from '../../utils/waterCalculations';
 
@@ -24,6 +24,9 @@ export function WaterTab({
   updateSetting,
   syncWaterConsumption
 }) {
+  const [buildingColdWaterTotal, setBuildingColdWaterTotal] = useState('');
+  const [buildingHotWaterTotal, setBuildingHotWaterTotal] = useState('');
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
@@ -205,6 +208,9 @@ export function WaterTab({
         const coldAmountWithVat = coldAmountNoVat * (1 + (parseFloat(currentWaterTariff?.vat_rate) || 0) / 100);
         const hotAmountWithVat = hotAmountNoVat * (1 + (parseFloat(currentHotWaterTariff?.vat_rate) || 0) / 100);
 
+        const coldDifference = parseFloat(buildingColdWaterTotal || 0) - coldM3;
+        const hotDifference = parseFloat(buildingHotWaterTotal || 0) - hotM3;
+
         return (
           <div style={{ ...styles.card, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h2 style={styles.cardTitle}>📊 Kopējais ūdens patēriņš un aprēķins ({tariffPeriod})</h2>
@@ -232,6 +238,61 @@ export function WaterTab({
                     Kopā ar PVN: €{hotAmountWithVat.toFixed(2)}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Ēkas kopējais skaitītājs un salīdzinājums */}
+            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
+              <h2 style={styles.cardTitle}>🏢 Ēkas kopējais skaitītājs un salīdzinājums ({tariffPeriod})</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                {/* Aukstais ūdens - Ēkas skaitītājs */}
+                <div style={{ background: '#e0f2fe', padding: '15px', borderRadius: '8px', border: '1px solid #90cdf4' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0369a1', marginBottom: '10px', marginTop: 0 }}>❄️ Aukstais ūdens (Ēkas skaitītājs)</h3>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Ēkas kopā m³"
+                      value={buildingColdWaterTotal}
+                      onChange={(e) => setBuildingColdWaterTotal(e.target.value)}
+                      style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #7dd3fc' }}
+                    />
+                    {/* Papildus poga saglabāšanai, ja nepieciešama datu persistēšana */}
+                  </div>
+                  <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                    <div>Dzīvokļu summa: <strong>{coldM3.toFixed(2)} m³</strong></div>
+                    <div>Ēkas skaitītājs: <strong>{parseFloat(buildingColdWaterTotal || 0).toFixed(2)} m³</strong></div>
+                    <div style={{ color: Math.abs(coldDifference) < 0.01 ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                      Starpība: {coldDifference.toFixed(2)} m³
+                    </div>
+                  </div>
+                </div>
+
+                {/* Siltais ūdens - Ēkas skaitītājs */}
+                <div style={{ background: '#ffedd5', padding: '15px', borderRadius: '8px', border: '1px solid #fbd38d' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#c2410c', marginBottom: '10px', marginTop: 0 }}>🔥 Siltais ūdens (Ēkas skaitītājs)</h3>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Ēkas kopā m³"
+                      value={buildingHotWaterTotal}
+                      onChange={(e) => setBuildingHotWaterTotal(e.target.value)}
+                      style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #fdba74' }}
+                    />
+                    {/* Papildus poga saglabāšanai, ja nepieciešama datu persistēšana */}
+                  </div>
+                  <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                    <div>Dzīvokļu summa: <strong>{hotM3.toFixed(2)} m³</strong></div>
+                    <div>Ēkas skaitītājs: <strong>{parseFloat(buildingHotWaterTotal || 0).toFixed(2)} m³</strong></div>
+                    <div style={{ color: Math.abs(hotDifference) < 0.01 ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                      Starpība: {hotDifference.toFixed(2)} m³
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '15px', textAlign: 'center' }}>
+                ℹ️ Šie ēkas skaitītāju rādījumi pašlaik netiek saglabāti datu bāzē.
               </div>
             </div>
           </div>
