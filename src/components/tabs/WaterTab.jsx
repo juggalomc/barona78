@@ -186,9 +186,24 @@ export function WaterTab({
       {/* Pieņemts, ka `waterConsumption` tiek padots kā props uz WaterTab.jsx */}
       {/* Ja `waterConsumption` nav pieejams, šis bloks rādīs 0 m³ un summas. */}
       {(() => {
-        const currentWaterTariff = waterTariffs.find(t => normalizePeriod(t.period) === normalizePeriod(tariffPeriod));
-        const currentHotWaterTariff = hotWaterTariffs.find(t => normalizePeriod(t.period) === normalizePeriod(tariffPeriod));
-        const waterGlobalSummary = calculateWaterGlobalSummary(tariffPeriod, waterConsumption || [], currentWaterTariff, currentHotWaterTariff);
+        const normPeriod = normalizePeriod(tariffPeriod);
+        const currentWaterTariff = waterTariffs.find(t => normalizePeriod(t.period) === normPeriod);
+        const currentHotWaterTariff = hotWaterTariffs.find(t => normalizePeriod(t.period) === normPeriod);
+
+        // Aprēķinām kopsavilkumu lokāli, lai nodrošinātu datu precizitāti un pareizu filtrēšanu pēc perioda
+        const coldM3 = (waterConsumption || [])
+          .filter(wc => normalizePeriod(wc.period) === normPeriod && wc.meter_type === 'water')
+          .reduce((sum, wc) => sum + (parseFloat(wc.consumption_m3) || 0), 0);
+
+        const hotM3 = (waterConsumption || [])
+          .filter(wc => normalizePeriod(wc.period) === normPeriod && wc.meter_type === 'hot_water')
+          .reduce((sum, wc) => sum + (parseFloat(wc.consumption_m3) || 0), 0);
+
+        const coldAmountNoVat = coldM3 * (parseFloat(currentWaterTariff?.price_per_m3) || 0);
+        const hotAmountNoVat = hotM3 * (parseFloat(currentHotWaterTariff?.price_per_m3) || 0);
+
+        const coldAmountWithVat = coldAmountNoVat * (1 + (parseFloat(currentWaterTariff?.vat_rate) || 0) / 100);
+        const hotAmountWithVat = hotAmountNoVat * (1 + (parseFloat(currentHotWaterTariff?.vat_rate) || 0) / 100);
 
         return (
           <div style={{ ...styles.card, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
@@ -199,10 +214,10 @@ export function WaterTab({
               <div style={{ background: '#f0f9ff', padding: '15px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0369a1', marginBottom: '10px', marginTop: 0 }}>❄️ Aukstais ūdens</h3>
                 <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
-                  <div>Kopā nodots: <strong>{waterGlobalSummary.cold.m3.toFixed(2)} m³</strong></div>
-                  <div>Summa (bez PVN): <strong>€{waterGlobalSummary.cold.amountWithoutVat.toFixed(2)}</strong></div>
+                  <div>Kopā nodots: <strong>{coldM3.toFixed(2)} m³</strong></div>
+                  <div>Summa (bez PVN): <strong>€{coldAmountNoVat.toFixed(2)}</strong></div>
                   <div style={{ color: '#0369a1', fontWeight: 'bold' }}>
-                    Kopā ar PVN: €{waterGlobalSummary.cold.amountWithVat.toFixed(2)}
+                    Kopā ar PVN: €{coldAmountWithVat.toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -211,10 +226,10 @@ export function WaterTab({
               <div style={{ background: '#fff7ed', padding: '15px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#c2410c', marginBottom: '10px', marginTop: 0 }}>🔥 Siltais ūdens</h3>
                 <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
-                  <div>Kopā nodots: <strong>{waterGlobalSummary.hot.m3.toFixed(2)} m³</strong></div>
-                  <div>Summa (bez PVN): <strong>€{waterGlobalSummary.hot.amountWithoutVat.toFixed(2)}</strong></div>
+                  <div>Kopā nodots: <strong>{hotM3.toFixed(2)} m³</strong></div>
+                  <div>Summa (bez PVN): <strong>€{hotAmountNoVat.toFixed(2)}</strong></div>
                   <div style={{ color: '#c2410c', fontWeight: 'bold' }}>
-                    Kopā ar PVN: €{waterGlobalSummary.hot.amountWithVat.toFixed(2)}
+                    Kopā ar PVN: €{hotAmountWithVat.toFixed(2)}
                   </div>
                 </div>
               </div>
