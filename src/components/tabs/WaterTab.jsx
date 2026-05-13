@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { styles } from '../shared/styles';
-import { calculateWaterGlobalSummary, normalizePeriod } from '../../utils/waterCalculations';
+import { normalizePeriod } from '../../utils/waterCalculations';
 
 export function WaterTab({
   apartments,
