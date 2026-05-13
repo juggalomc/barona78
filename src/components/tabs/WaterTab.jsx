@@ -188,7 +188,7 @@ export function WaterTab({
       {(() => {
         const currentWaterTariff = waterTariffs.find(t => normalizePeriod(t.period) === normalizePeriod(tariffPeriod));
         const currentHotWaterTariff = hotWaterTariffs.find(t => normalizePeriod(t.period) === normalizePeriod(tariffPeriod));
-        const waterGlobalSummary = calculateWaterGlobalSummary(tariffPeriod, waterConsumption, currentWaterTariff, currentHotWaterTariff);
+        const waterGlobalSummary = calculateWaterGlobalSummary(tariffPeriod, waterConsumption || [], currentWaterTariff, currentHotWaterTariff);
 
         return (
           <div style={{ ...styles.card, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
