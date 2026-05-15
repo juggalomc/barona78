@@ -101,37 +101,36 @@ export const calculateWaterDetails = ({
       vat_amount: vat,
       type: 'water'
     });
-  } else if (coldM3 === 0 && waterTariff && waterTariff.include_in_invoice !== false && parseFloat(waterTariff.diff_m3 || 0) > 0) {
+    
     // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums un ir starpības summa)
-    const count = nonReportingColdCount ?? safeApts.filter(a => {
-      const hasWc = (waterConsumption || []).some(wc => 
-        String(wc.apartment_id) === String(a.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod && wc.consumption_m3 !== null);
-      const hasMr = (meterReadings || []).some(mr => 
-        String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod && mr.reading_value !== null);
-      return !hasWc && !hasMr;
-    }).length;
+    if (coldM3 === 0 && parseFloat(waterTariff.diff_m3 || 0) > 0) {
+      const count = nonReportingColdCount ?? safeApts.filter(a => {
+        const hasWc = (waterConsumption || []).some(wc => 
+          String(wc.apartment_id) === String(a.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod && wc.consumption_m3 !== null);
+        const hasMr = (meterReadings || []).some(mr => 
+          String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod && mr.reading_value !== null);
+        return !hasWc && !hasMr;
+      }).length;
 
-    if (count > 0) {
-      const shareM3 = parseFloat(waterTariff.diff_m3) / count;
-      const diffPrice = parseFloat(waterTariff.diff_price) || 0;
-      const amount = Math.round(shareM3 * diffPrice * 100) / 100;
-      const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null)
-        ? parseFloat(waterTariff.vat_rate)
-        : 21;
-      const vat = Math.round(amount * vatRate / 100 * 100) / 100;
+      if (count > 0) {
+        const shareM3 = parseFloat(waterTariff.diff_m3) / count;
+        const diffPrice = parseFloat(waterTariff.diff_price) || 0;
+        const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
+        const diffVat = Math.round(diffAmount * vatRate / 100 * 100) / 100;
 
-      totalAmountWithoutVat += amount;
-      totalVatAmount += vat;
-      details.push({
-        tariff_id: waterTariff?.id || null,
-        tariff_name: `❄️ Aukstā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
-        consumption_m3: shareM3,
-        price_per_m3: diffPrice,
-        amount_without_vat: amount,
-        vat_rate: vatRate,
-        vat_amount: vat,
-        type: 'water_diff'
-      });
+        totalAmountWithoutVat += diffAmount;
+        totalVatAmount += diffVat;
+        details.push({
+          tariff_id: waterTariff?.id || null,
+          tariff_name: `❄️ Aukstā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
+          consumption_m3: shareM3,
+          price_per_m3: diffPrice,
+          amount_without_vat: diffAmount,
+          vat_rate: vatRate,
+          vat_amount: diffVat,
+          type: 'water_diff'
+        });
+      }
     }
   }
 
@@ -157,37 +156,36 @@ export const calculateWaterDetails = ({
       vat_amount: vat,
       type: 'hot_water'
     });
-  } else if (hotM3 === 0 && hotWaterTariff && hotWaterTariff.include_in_invoice !== false && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
+    
     // SILTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums un ir starpības summa)
-    const count = nonReportingHotCount ?? safeApts.filter(a => {
-      const hasWc = (waterConsumption || []).some(wc => 
-        String(wc.apartment_id) === String(a.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod && wc.consumption_m3 !== null);
-      const hasMr = (meterReadings || []).some(mr => 
-        String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod && mr.reading_value !== null);
-      return !hasWc && !hasMr;
-    }).length;
+    if (hotM3 === 0 && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
+      const count = nonReportingHotCount ?? safeApts.filter(a => {
+        const hasWc = (waterConsumption || []).some(wc => 
+          String(wc.apartment_id) === String(a.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod && wc.consumption_m3 !== null);
+        const hasMr = (meterReadings || []).some(mr => 
+          String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod && mr.reading_value !== null);
+        return !hasWc && !hasMr;
+      }).length;
 
-    if (count > 0) {
-      const shareM3 = parseFloat(hotWaterTariff.diff_m3) / count;
-      const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
-      const amount = Math.round(shareM3 * diffPrice * 100) / 100;
-      const vatRate = (hotWaterTariff && hotWaterTariff.vat_rate !== undefined && hotWaterTariff.vat_rate !== null) 
-        ? parseFloat(hotWaterTariff.vat_rate) 
-        : 12;
-      const vat = Math.round(amount * vatRate / 100 * 100) / 100;
+      if (count > 0) {
+        const shareM3 = parseFloat(hotWaterTariff.diff_m3) / count;
+        const diffPrice = parseFloat(hotWaterTariff.diff_price) || 0;
+        const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
+        const diffVat = Math.round(diffAmount * vatRate / 100 * 100) / 100;
 
-      totalAmountWithoutVat += amount;
-      totalVatAmount += vat;
-      details.push({
-        tariff_id: hotWaterTariff?.id || null,
-        tariff_name: `🔥 Siltā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
-        consumption_m3: shareM3,
-        price_per_m3: diffPrice,
-        amount_without_vat: amount,
-        vat_rate: vatRate,
-        vat_amount: vat,
-        type: 'hot_water_diff'
-      });
+        totalAmountWithoutVat += diffAmount;
+        totalVatAmount += diffVat;
+        details.push({
+          tariff_id: hotWaterTariff?.id || null,
+          tariff_name: `🔥 Siltā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
+          consumption_m3: shareM3,
+          price_per_m3: diffPrice,
+          amount_without_vat: diffAmount,
+          vat_rate: vatRate,
+          vat_amount: diffVat,
+          type: 'hot_water_diff'
+        });
+      }
     }
   }
 
