@@ -73,7 +73,7 @@ export const calculateWaterDetails = ({
         : 0;
       return Math.max(0, currentVal - prevVal);
     }
-    return 0;
+    return null;
   };
 
   const coldM3 = getConsumption('water');
@@ -81,7 +81,7 @@ export const calculateWaterDetails = ({
 
   // 2. AUKSTAIS ŪDENS
   if (waterTariff && waterTariff.include_in_invoice !== false) {
-    const m3 = coldM3;
+    const m3 = coldM3 !== null ? coldM3 : 0;
     const price = parseFloat(waterTariff.price_per_m3) || 0;
     const amount = Math.round(m3 * price * 100) / 100;
     const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null)
@@ -101,42 +101,45 @@ export const calculateWaterDetails = ({
       vat_amount: vat,
       type: 'water'
     });
-    
+  } else if (!waterTariff || waterTariff.include_in_invoice === false) {
+    // Ja nav tariifa vai tas ir izslēgts - nekāds aprēķins
+  } else if (coldM3 === 0 && waterTariff && waterTariff.include_in_invoice !== false && parseFloat(waterTariff.diff_m3 || 0) > 0) {
     // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums un ir starpības summa)
-    if (coldM3 === 0 && parseFloat(waterTariff.diff_m3 || 0) > 0) {
-      const count = nonReportingColdCount ?? safeApts.filter(a => {
-        const hasWc = (waterConsumption || []).some(wc => 
-          String(wc.apartment_id) === String(a.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod && wc.consumption_m3 !== null);
-        const hasMr = (meterReadings || []).some(mr => 
-          String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod && mr.reading_value !== null);
-        return !hasWc && !hasMr;
-      }).length;
+    const count = nonReportingColdCount ?? safeApts.filter(a => {
+      const hasWc = (waterConsumption || []).some(wc => 
+        String(wc.apartment_id) === String(a.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod && wc.consumption_m3 !== null);
+      const hasMr = (meterReadings || []).some(mr => 
+        String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod && mr.reading_value !== null);
+      return !hasWc && !hasMr;
+    }).length;
 
-      if (count > 0) {
-        const shareM3 = parseFloat(waterTariff.diff_m3) / count;
-        const diffPrice = parseFloat(waterTariff.diff_price) || 0;
-        const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
-        const diffVat = Math.round(diffAmount * vatRate / 100 * 100) / 100;
+    if (count > 0) {
+      const shareM3 = parseFloat(waterTariff.diff_m3) / count;
+      const diffPrice = parseFloat(waterTariff.diff_price) || 0;
+      const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
+      const vatRate = (waterTariff && waterTariff.vat_rate !== undefined && waterTariff.vat_rate !== null)
+        ? parseFloat(waterTariff.vat_rate)
+        : 21;
+      const diffVat = Math.round(diffAmount * vatRate / 100 * 100) / 100;
 
-        totalAmountWithoutVat += diffAmount;
-        totalVatAmount += diffVat;
-        details.push({
-          tariff_id: waterTariff?.id || null,
-          tariff_name: `❄️ Aukstā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
-          consumption_m3: shareM3,
-          price_per_m3: diffPrice,
-          amount_without_vat: diffAmount,
-          vat_rate: vatRate,
-          vat_amount: diffVat,
-          type: 'water_diff'
-        });
-      }
+      totalAmountWithoutVat += diffAmount;
+      totalVatAmount += diffVat;
+      details.push({
+        tariff_id: waterTariff?.id || null,
+        tariff_name: `❄️ Aukstā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
+        consumption_m3: shareM3,
+        price_per_m3: diffPrice,
+        amount_without_vat: diffAmount,
+        vat_rate: vatRate,
+        vat_amount: diffVat,
+        type: 'water_diff'
+      });
     }
   }
 
   // 3. SILTAIS ŪDENS
   if (hotWaterTariff && hotWaterTariff.include_in_invoice !== false) {
-    const m3 = hotM3;
+    const m3 = hotM3 !== null ? hotM3 : 0;
     const price = parseFloat(hotWaterTariff.price_per_m3) || 0;
     const amount = Math.round(m3 * price * 100) / 100;
     const vatRate = (hotWaterTariff && hotWaterTariff.vat_rate !== undefined && hotWaterTariff.vat_rate !== null) 
