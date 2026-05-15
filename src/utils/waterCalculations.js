@@ -79,7 +79,7 @@ export const calculateWaterDetails = ({
   const hotM3 = getConsumption('hot_water');
 
   // 2. AUKSTAIS ŪDENS
-  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== true : coldM3 >= 0)) {
+  if (coldM3 !== null && (waterTariff ? waterTariff.include_in_invoice !== false : coldM3 >= 0)) {
     const m3 = coldM3;
     const price = waterTariff ? (parseFloat(waterTariff.price_per_m3) || 0) : 0;
     const amount = Math.round(m3 * price * 100) / 100;
@@ -100,11 +100,15 @@ export const calculateWaterDetails = ({
       vat_amount: vat,
       type: 'water'
     });
-  } else if (coldM3 === null && waterTariff && parseFloat(waterTariff.diff_m3 || 0) > 0) {
+  } else if (coldM3 === null && waterTariff && waterTariff.include_in_invoice !== false && parseFloat(waterTariff.diff_m3 || 0) > 0) {
     // AUKSTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
-    const count = nonReportingColdCount ?? apartments.filter(a => 
-      !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
-    ).length;
+    const count = nonReportingColdCount ?? apartments.filter(a => {
+      const hasWc = waterConsumption.some(wc => 
+        String(wc.apartment_id) === String(a.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod && wc.consumption_m3 !== null);
+      const hasMr = meterReadings.some(mr => 
+        String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod && mr.reading_value !== null);
+      return !hasWc && !hasMr;
+    }).length;
 
     if (count > 0) {
       const shareM3 = parseFloat(waterTariff.diff_m3) / count;
@@ -152,11 +156,15 @@ export const calculateWaterDetails = ({
       vat_amount: vat,
       type: 'hot_water'
     });
-  } else if (hotM3 === null && hotWaterTariff && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
+  } else if (hotM3 === null && hotWaterTariff && hotWaterTariff.include_in_invoice !== false && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
     // SILTĀ ŪDENS STARPĪBA (tikai ja nav nodots rādījums)
-    const count = nonReportingHotCount ?? apartments.filter(a => 
-      !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
-    ).length;
+    const count = nonReportingHotCount ?? apartments.filter(a => {
+      const hasWc = waterConsumption.some(wc => 
+        String(wc.apartment_id) === String(a.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod && wc.consumption_m3 !== null);
+      const hasMr = meterReadings.some(mr => 
+        String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod && mr.reading_value !== null);
+      return !hasWc && !hasMr;
+    }).length;
 
     if (count > 0) {
       const shareM3 = parseFloat(hotWaterTariff.diff_m3) / count;
