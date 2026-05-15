@@ -2,12 +2,21 @@
  * Aprēķina kopsavilkumu par konkrētu periodu, salīdzinot 
  * aprēķinātās summas (teorētiskās) pret faktiski izrakstītajām summām rēķinos.
  */
+
+const normalizePeriod = (p) => {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('-');
+  if (parts.length < 2) return p;
+  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
 export const calculateMonthlySummary = (period, invoices, apartments, tariffs, wasteTariffs, waterTariffs = [], hotWaterTariffs = [], waterConsumption = []) => {
-  const periodInvoices = invoices.filter(inv => inv.period === period);
-  const periodTariffs = tariffs.filter(t => t.period === period);
-  const periodWasteTariff = wasteTariffs.find(t => t.period === period);
-  const periodWaterTariff = waterTariffs.find(t => t.period === period);
-  const periodHotWaterTariff = hotWaterTariffs.find(t => t.period === period);
+  const normPeriod = normalizePeriod(period);
+  const periodInvoices = invoices.filter(inv => normalizePeriod(inv.period) === normPeriod);
+  const periodTariffs = tariffs.filter(t => normalizePeriod(t.period) === normPeriod);
+  const periodWasteTariff = wasteTariffs.find(t => normalizePeriod(t.period) === normPeriod);
+  const periodWaterTariff = waterTariffs.find(t => normalizePeriod(t.period) === normPeriod);
+  const periodHotWaterTariff = hotWaterTariffs.find(t => normalizePeriod(t.period) === normPeriod);
 
   const items = {};
 
@@ -36,7 +45,7 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
 
   if (periodWaterTariff) {
     const totalConsumption = waterConsumption
-      .filter(wc => wc.period === period && wc.meter_type === 'water')
+      .filter(wc => normalizePeriod(wc.period) === normPeriod && wc.meter_type === 'water')
       .reduce((sum, wc) => sum + (parseFloat(wc.consumption_m3) || 0), 0);
     const price = parseFloat(periodWaterTariff.price_per_m3) || 0;
     const diffM3 = parseFloat(periodWaterTariff.diff_m3) || 0;
@@ -59,7 +68,7 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
 
   if (periodHotWaterTariff) {
     const totalHotConsumption = waterConsumption
-      .filter(wc => wc.period === period && wc.meter_type === 'hot_water')
+      .filter(wc => normalizePeriod(wc.period) === normPeriod && wc.meter_type === 'hot_water')
       .reduce((sum, wc) => sum + (parseFloat(wc.consumption_m3) || 0), 0);
     const price = parseFloat(periodHotWaterTariff.price_per_m3) || 0;
     const diffM3 = parseFloat(periodHotWaterTariff.diff_m3) || 0;
@@ -120,7 +129,8 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
  * Aprēķina maksājumu sadalījumu pa pozīcijām mēneša ietvaros (Apmaksāts vs Izrakstīts)
  */
 export const calculatePositionPayments = (period, invoices) => {
-  const periodInvoices = invoices.filter(inv => inv.period === period);
+  const normPeriod = normalizePeriod(period);
+  const periodInvoices = invoices.filter(inv => normalizePeriod(inv.period) === normPeriod);
   const items = {};
 
   periodInvoices.forEach(inv => {
