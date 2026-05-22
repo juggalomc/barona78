@@ -51,7 +51,7 @@ export default function PropertyManager() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const storedUser = localStorage.getItem('currentUser');
-      return storedUser ? JSON.parse(storedUser) : null;
+      return storedUser ? JSON.parse(storedUser) : null; // No change here, just context
     } catch (e) {
       return null;
     }
@@ -59,8 +59,7 @@ export default function PropertyManager() {
   const [userApartment, setUserApartment] = useState(null);
   const [userInvoices, setUserInvoices] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
-  const [toast, setToast] = useState(null);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [toast, setToast] = useState(null); // No change here, just context
 
   // Data hooks
   const {
@@ -85,7 +84,6 @@ export default function PropertyManager() {
   useEffect(() => {
     // Ja lietotājs ir ielādēts no localStorage, ielādējam viņa datus
     const initialFetch = async () => {
-      setInitialLoading(true);
       try {
         if (currentUser) {
           // 1. Svarīgi: Atjaunojam lietotāja info no DB, lai redzētu jaunāko apartment_id
@@ -110,8 +108,6 @@ export default function PropertyManager() {
         }
       } catch (err) {
         console.error("Kļūda ielādējot datus:", err);
-      } finally {
-        setInitialLoading(false);
       }
     };
     initialFetch();
