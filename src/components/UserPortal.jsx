@@ -115,8 +115,14 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
   };
 
   // Ja dati vēl nav ielādēti, rādām gaidīšanas ekrānu
-  if (!userApartment && userInvoices.length === 0) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'Arial' }}>⏳ Ielādējam datus...</div>;
+  const isLoading = !userApartment && userInvoices.length === 0;
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'Arial', gap: '15px' }}>
+        <div style={{ fontSize: '24px' }}>⏳ Ielādējam datus...</div>
+        <div style={{ fontSize: '14px', color: '#666' }}>Ja ielāde aizņem ilgu laiku, pārliecinieties, ka Jūsu lietotājam ir piesaistīts dzīvoklis.</div>
+      </div>
+    );
   }
 
   return (

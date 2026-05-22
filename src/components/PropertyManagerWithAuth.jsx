@@ -67,6 +67,10 @@ export default function PropertyManager() {
     fetchData, fetchUserData, fetchMeterReadingsOnly
   } = useDataFetching(supabase);
 
+  // Svarīgi: Nodrošinām, ka handleri redz dzīvokli arī parastam lietotājam.
+  // Ja ir admin, izmantojam visus dzīvokļus, ja user - tikai viņa piesaistīto dzīvokli.
+  const displayApartments = currentUser?.role === 'admin' ? apartments : (userApartment ? [userApartment] : []);
+
   const { settings, editForm, setEditForm, updateSetting } = useSettings(supabase);
 
   const showToast = (message, type = 'success') => {
@@ -76,10 +80,10 @@ export default function PropertyManager() {
   // Handler hooks
   const apartmentHandlers = useApartmentHandlers(supabase, fetchData, showToast);
   const userHandlers = useUserHandlers(supabase, fetchData, showToast);
-  const tariffHandlers = useTariffHandlers(supabase, apartments, fetchData, showToast);
-  const waterHandlers = useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly, meterReadings);
-  const wasteHandlers = useWasteHandlers(supabase, apartments, wasteTariffs, fetchData, showToast);
-  const invoiceHandlers = useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings, waterHandlers.enabledMeters, waterConsumption);
+  const tariffHandlers = useTariffHandlers(supabase, displayApartments, fetchData, showToast);
+  const waterHandlers = useWaterHandlers(supabase, displayApartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly, meterReadings);
+  const wasteHandlers = useWasteHandlers(supabase, displayApartments, wasteTariffs, fetchData, showToast);
+  const invoiceHandlers = useInvoiceHandlers(supabase, displayApartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings, waterHandlers.enabledMeters, waterConsumption);
 
   useEffect(() => {
     // Ja lietotājs ir ielādēts no localStorage, ielādējam viņa datus
