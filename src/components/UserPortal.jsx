@@ -94,7 +94,6 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [viewingInvoice, setViewingInvoice] = useState(null);
 
   const totalDebt = userInvoices.filter(i => !i.paid).reduce((sum, inv) => sum + inv.amount, 0);
 
@@ -116,12 +115,6 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '15px', fontFamily: 'Arial, sans-serif', minHeight: '100vh', background: '#f8fafc' }}>
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          .print-only { display: block !important; }
-        }
-      `}</style>
       <div style={{ background: '#003399', color: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>🏠 Dzīvoklis {userApartment?.number}</h1>
@@ -166,7 +159,7 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontWeight: 'bold', color: inv.paid ? '#10b981' : '#ef4444' }}>€{inv.amount.toFixed(2)}</div>
                       <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                        <button onClick={() => setViewingInvoice(inv)} style={{ fontSize: '12px', padding: '4px 8px', background: '#64748b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>👁️ Skatīt</button>
+                        <button onClick={() => onViewAsHTML(inv)} style={{ fontSize: '12px', padding: '4px 8px', background: '#64748b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>👁️ Skatīt</button>
                         <button onClick={() => onDownloadPDF(inv)} style={{ fontSize: '12px', padding: '4px 8px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>📥 PDF</button>
                       </div>
                     </div>
@@ -306,84 +299,6 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
                 <button type="submit" style={{ padding: '8px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Saglabāt</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* RĒĶINA APSKATES MODĀLAIS LOGS */}
-      {viewingInvoice && (
-        <div className="no-print" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, padding: '20px' }}>
-          <div style={{ background: 'white', borderRadius: '12px', width: '100%', maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }}>
-            
-            {/* Modālā loga galvene */}
-            <div style={{ padding: '15px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>Rēķina apskate: {viewingInvoice.invoice_number}</h3>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => window.print()} style={{ padding: '6px 12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>🖨️ Drukāt</button>
-                <button onClick={() => setViewingInvoice(null)} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>✕ Aizvērt</button>
-              </div>
-            </div>
-
-            {/* Rēķina saturs */}
-            <div style={{ padding: '40px', overflowY: 'auto', flex: 1, color: '#333', lineHeight: '1.5' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
-                <div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#003399' }}>{settings?.building_name || 'BARONA 78'}</div>
-                  <div style={{ fontSize: '13px' }}>{settings?.building_address}</div>
-                  <div style={{ fontSize: '13px' }}>Reģ. Nr. {settings?.building_code}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold' }}>RĒĶINS Nr. {viewingInvoice.invoice_number}</div>
-                  <div style={{ fontSize: '13px' }}>Datums: {new Date(viewingInvoice.created_at || Date.now()).toLocaleDateString('lv-LV')}</div>
-                  <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#ef4444' }}>Apmaksas termiņš: {new Date(viewingInvoice.due_date).toLocaleDateString('lv-LV')}</div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '30px', padding: '15px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '5px' }}>Maksātājs:</div>
-                <div style={{ fontWeight: 'bold' }}>Dzīvoklis Nr. {userApartment?.number}</div>
-                <div>{userApartment?.owner_name}</div>
-                <div style={{ fontSize: '13px' }}>Periods: {viewingInvoice.period}</div>
-              </div>
-
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #003399' }}>
-                    <th style={{ textAlign: 'left', padding: '10px 5px', fontSize: '13px' }}>Pakalpojums</th>
-                    <th style={{ textAlign: 'right', padding: '10px 5px', fontSize: '13px' }}>Summa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Šeit parasti nāk rēķina pozīcijas. Ja nav atsevišķu pozīciju, rādam kopsummu */}
-                  <tr style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '12px 5px', fontSize: '14px' }}>Kopējais rēķins par periodu {viewingInvoice.period}</td>
-                    <td style={{ padding: '12px 5px', textAlign: 'right', fontWeight: 'bold' }}>€{viewingInvoice.amount.toFixed(2)}</td>
-                  </tr>
-                  {viewingInvoice.previous_debt_amount > 0 && (
-                    <tr style={{ color: '#ef4444' }}>
-                      <td style={{ padding: '8px 5px', fontSize: '13px' }}>Iepriekšējais parāds</td>
-                      <td style={{ padding: '8px 5px', textAlign: 'right' }}>€{viewingInvoice.previous_debt_amount.toFixed(2)}</td>
-                    </tr>
-                  )}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td style={{ textAlign: 'right', padding: '20px 5px', fontWeight: 'bold', fontSize: '16px' }}>KOPĀ APMAKSAI:</td>
-                    <td style={{ textAlign: 'right', padding: '20px 5px', fontWeight: 'bold', fontSize: '20px', color: '#003399' }}>€{viewingInvoice.amount.toFixed(2)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-
-              <div style={{ fontSize: '12px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>MAKSĀJUMA REKVIZĪTI:</div>
-                <div>Saņēmējs: {settings?.building_name}</div>
-                <div>Banka: {settings?.payment_bank}</div>
-                <div>IBAN: <span style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: 'bold' }}>{settings?.payment_iban}</span></div>
-                <div style={{ marginTop: '10px', color: '#92400e', fontStyle: 'italic' }}>
-                  Mērķī obligāti norādīt: Rēķins Nr. {viewingInvoice.invoice_number}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
