@@ -60,6 +60,7 @@ export default function PropertyManager() {
   const [userInvoices, setUserInvoices] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Data hooks
   const {
@@ -84,14 +85,33 @@ export default function PropertyManager() {
   useEffect(() => {
     // Ja lietotājs ir ielādēts no localStorage, ielādējam viņa datus
     const initialFetch = async () => {
-      if (currentUser) {
-        if (currentUser.role === 'admin') {
-          await fetchData();
-        } else if (currentUser.apartment_id) {
-          const userData = await fetchUserData(currentUser.apartment_id);
-          setUserApartment(userData.apartment);
-          setUserInvoices(userData.invoices);
+      setInitialLoading(true);
+      try {
+        if (currentUser) {
+          // 1. Svarīgi: Atjaunojam lietotāja info no DB, lai redzētu jaunāko apartment_id
+          const { data: latestUser, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+
+          if (!error && latestUser) {
+            setCurrentUser(latestUser);
+            localStorage.setItem('currentUser', JSON.stringify(latestUser));
+            
+            if (latestUser.role === 'admin') {
+              await fetchData();
+            } else if (latestUser.apartment_id) {
+              const userData = await fetchUserData(latestUser.apartment_id);
+              setUserApartment(userData.apartment);
+              setUserInvoices(userData.invoices);
+            }
+          }
         }
+      } catch (err) {
+        console.error("Kļūda ielādējot datus:", err);
+      } finally {
+        setInitialLoading(false);
       }
     };
     initialFetch();
