@@ -480,7 +480,7 @@ export function InvoicesTab({
                       </td>
                       <td style={{padding: '12px', textAlign: 'center'}}>
                         <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>
-                          <button onClick={() => toggleInvoicePaid(invoice.id, invoice.paid)} style={{...styles.btnSmall, padding: '4px 6px', background: invoice.paid ? '#10b981' : '#f59e0b', borderRadius: '3px', color: 'white', fontWeight: '600'}} title={invoice.paid ? 'Neapmaksāts' : 'Apmaksāts'}>
+                          <button onClick={() => typeof toggleInvoicePaid === 'function' && toggleInvoicePaid(invoice.id, invoice.paid)} style={{...styles.btnSmall, padding: '4px 6px', background: invoice.paid ? '#10b981' : '#f59e0b', borderRadius: '3px', color: 'white', fontWeight: '600'}} title={invoice.paid ? 'Neapmaksāts' : 'Apmaksāts'}>
                             {invoice.paid ? '✓' : '○'}
                           </button>
                           <button onClick={(e) => sendInvoicesByEmail(e, invoice.id)} style={{...styles.btnSmall, padding: '4px 6px', background: '#3b82f6', color: 'white'}} title="Nosūtīt e-pastā (PDF)">
