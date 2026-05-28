@@ -895,6 +895,49 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     setSendingProgress({ current: 0, total: 0, active: false });
   };
 
+  const updatePaidAmount = async (invoiceId, paidAmount) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ paid_amount: parseFloat(paidAmount) || 0 })
+        .eq('id', invoiceId);
+      if (error) throw error;
+      fetchData();
+      showToast('✓ Samaksāta summa atjaunināta');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const updateOverpayment = async (invoiceId, overpaymentAmount) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ overpayment_amount: parseFloat(overpaymentAmount) || 0 })
+        .eq('id', invoiceId);
+      if (error) throw error;
+      fetchData();
+      showToast('✓ Pārmaksa atjaunināta');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const deleteOverpayment = async (invoiceId) => {
+    if (!window.confirm('Dzēst pārmaksu?')) return;
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ overpayment_amount: 0 })
+        .eq('id', invoiceId);
+      if (error) throw error;
+      fetchData();
+      showToast('✓ Pārmaksa dzēsta');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
   return {
     invoiceMonth, setInvoiceMonth,
     invoiceFromDate, setInvoiceFromDate,
@@ -924,6 +967,9 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     reminderModal,
     setReminderModal,
     sendAllReminders,
-    sendingProgress
+    sendingProgress,
+    updatePaidAmount,
+    updateOverpayment,
+    deleteOverpayment
   };
 }
