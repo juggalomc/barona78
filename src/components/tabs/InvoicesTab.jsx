@@ -397,14 +397,14 @@ export function InvoicesTab({
                             />
                             <button onClick={() => {
                               const newVal = parseFloat(editingPaidAmountValue) || 0;
-                              updatePaidAmount(invoice.id, newVal);
+                              if (typeof updatePaidAmount === 'function') updatePaidAmount(invoice.id, newVal);
                               
                               // Automātiski atzīmē kā apmaksātu, ja summa sasniegta un vēl nav apmaksāts
-                              if (newVal >= invoice.amount && !invoice.paid) {
+                              if (newVal >= invoice.amount && !invoice.paid && typeof toggleInvoicePaid === 'function') {
                                 toggleInvoicePaid(invoice.id, false);
                               } 
                               // Ja samaksa tiek samazināta zem rēķina summas, bet tas bija atzīmēts kā apmaksāts
-                              else if (newVal < invoice.amount && invoice.paid) {
+                              else if (newVal < invoice.amount && invoice.paid && typeof toggleInvoicePaid === 'function') {
                                 toggleInvoicePaid(invoice.id, true);
                               }
                               setEditingPaidAmountId(null);
@@ -446,7 +446,7 @@ export function InvoicesTab({
                               autoFocus
                             />
                             <button onClick={() => {
-                              updateOverpayment(invoice.id, parseFloat(editingOverpaymentAmount) || 0);
+                              if (typeof updateOverpayment === 'function') updateOverpayment(invoice.id, parseFloat(editingOverpaymentAmount) || 0);
                               setEditingOverpaymentId(null);
                             }} style={{...styles.btnSmall, background: '#10b981', color: 'white'}}>✓</button>
                             <button onClick={() => setEditingOverpaymentId(null)} style={{...styles.btnSmall, background: '#6b7280', color: 'white'}}>✕</button>
