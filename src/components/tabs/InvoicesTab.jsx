@@ -396,7 +396,17 @@ export function InvoicesTab({
                               autoFocus
                             />
                             <button onClick={() => {
-                              updatePaidAmount(invoice.id, parseFloat(editingPaidAmountValue) || 0);
+                              const newVal = parseFloat(editingPaidAmountValue) || 0;
+                              updatePaidAmount(invoice.id, newVal);
+                              
+                              // Automātiski atzīmē kā apmaksātu, ja summa sasniegta un vēl nav apmaksāts
+                              if (newVal >= invoice.amount && !invoice.paid) {
+                                toggleInvoicePaid(invoice.id, false);
+                              } 
+                              // Ja samaksa tiek samazināta zem rēķina summas, bet tas bija atzīmēts kā apmaksāts
+                              else if (newVal < invoice.amount && invoice.paid) {
+                                toggleInvoicePaid(invoice.id, true);
+                              }
                               setEditingPaidAmountId(null);
                             }} style={{...styles.btnSmall, background: '#10b981', color: 'white'}}>✓</button>
                             <button onClick={() => setEditingPaidAmountId(null)} style={{...styles.btnSmall, background: '#6b7280', color: 'white'}}>✕</button>
