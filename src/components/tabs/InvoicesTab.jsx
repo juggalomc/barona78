@@ -95,6 +95,7 @@ export function InvoicesTab({
   deleteInvoices,
   regenerateInvoices,
   updateOverpayment,
+  updatePaidAmount,
   deleteOverpayment,
   downloadMonthAsZip,
   viewAsHTML,
@@ -111,6 +112,8 @@ export function InvoicesTab({
   const [batchMonth, setBatchMonth] = React.useState('');
   const [editingOverpaymentId, setEditingOverpaymentId] = React.useState(null);
   const [editingOverpaymentAmount, setEditingOverpaymentAmount] = React.useState('');
+  const [editingPaidAmountId, setEditingPaidAmountId] = React.useState(null);
+  const [editingPaidAmountValue, setEditingPaidAmountValue] = React.useState('');
   const [filterMonth, setFilterMonth] = React.useState('');
   const [filterApartment, setFilterApartment] = React.useState('');
   const [filterStatus, setFilterStatus] = React.useState('all');
@@ -342,6 +345,8 @@ export function InvoicesTab({
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Dzīvoklis</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Periods</th>
                   <th style={{padding: '12px', textAlign: 'right', fontWeight: '600'}}>Summa</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Samaksāts</th>
+                  <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Parāds</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Pārmaksa</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Termiņš</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Statuss</th>
@@ -353,6 +358,7 @@ export function InvoicesTab({
                   const apt = apartments.find(a => a.id === invoice.apartment_id);
                   const status = getInvoiceStatus(invoice);
                   const isEditingThis = editingOverpaymentId === invoice.id;
+                  const isEditingPaid = editingPaidAmountId === invoice.id;
 
                   return (
                     <tr key={invoice.id} style={{borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#fafbfc' : '#fff'}}>
@@ -378,6 +384,46 @@ export function InvoicesTab({
                       <td style={{padding: '12px', textAlign: 'center'}}>{invoice.period}</td>
                       <td style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#003399'}}>€{invoice.amount.toFixed(2)}</td>
                       
+                      <td style={{padding: '12px', textAlign: 'center'}}>
+                        {isEditingPaid ? (
+                          <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>
+                            <input 
+                              type="number" 
+                              step="0.01" 
+                              value={editingPaidAmountValue} 
+                              onChange={(e) => setEditingPaidAmountValue(e.target.value)} 
+                              style={{width: '60px', padding: '4px', border: '1px solid #0369a1', borderRadius: '3px', fontSize: '11px'}} 
+                              autoFocus
+                            />
+                            <button onClick={() => {
+                              updatePaidAmount(invoice.id, parseFloat(editingPaidAmountValue) || 0);
+                              setEditingPaidAmountId(null);
+                            }} style={{...styles.btnSmall, background: '#10b981', color: 'white'}}>✓</button>
+                            <button onClick={() => setEditingPaidAmountId(null)} style={{...styles.btnSmall, background: '#6b7280', color: 'white'}}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'}}>
+                            <span style={{color: invoice.paid_amount > 0 ? '#10b981' : '#94a3b8', fontWeight: invoice.paid_amount > 0 ? '600' : '400'}}>
+                              €{invoice.paid_amount?.toFixed(2) || '0.00'}
+                            </span>
+                            <button 
+                              onClick={() => {
+                                setEditingPaidAmountId(invoice.id);
+                                setEditingPaidAmountValue(invoice.paid_amount || 0);
+                              }} 
+                              style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', padding: '0', opacity: '0.6'}}
+                              title="Labot samaksu"
+                            >
+                              ✎
+                            </button>
+                          </div>
+                        )}
+                      </td>
+
+                      <td style={{padding: '12px', textAlign: 'center', color: (invoice.amount - (invoice.paid_amount || 0)) > 0.01 ? '#ef4444' : '#94a3b8', fontWeight: '600'}}>
+                        €{(invoice.amount - (invoice.paid_amount || 0)).toFixed(2)}
+                      </td>
+
                       <td style={{padding: '12px', textAlign: 'center'}}>
                         {isEditingThis ? (
                           <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>

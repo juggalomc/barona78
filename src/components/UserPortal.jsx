@@ -10,6 +10,9 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
     if (invoice.paid) {
       return { status: 'Apmaksāts', color: '#10b981', emoji: '✓' };
     }
+    if (invoice.paid_amount > 0) {
+      return { status: 'Daļēji apmaksāts', color: '#3b82f6', emoji: '🕒' };
+    }
     const dueDate = new Date(invoice.due_date);
     const todayDate = new Date();
     if (todayDate > dueDate) {
@@ -96,7 +99,7 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
   const [confirmPassword, setConfirmPassword] = useState('');
   const [viewingInvoice, setViewingInvoice] = useState(null);
 
-  const totalDebt = userInvoices.filter(i => !i.paid).reduce((sum, inv) => sum + inv.amount, 0);
+  const totalDebt = userInvoices.filter(i => !i.paid).reduce((sum, inv) => sum + (inv.amount - (inv.paid_amount || 0)), 0);
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
@@ -175,7 +178,10 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
                       <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{inv.period} • Termiņš: {new Date(inv.due_date).toLocaleDateString('lv-LV')}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 'bold', color: inv.paid ? '#10b981' : '#ef4444' }}>€{inv.amount.toFixed(2)}</div>
+                      <div style={{ fontWeight: 'bold', color: inv.paid ? '#10b981' : '#ef4444' }}>
+                        {inv.paid ? `€${inv.amount.toFixed(2)}` : 
+                         `€${(inv.amount - (inv.paid_amount || 0)).toFixed(2)}${inv.paid_amount > 0 ? ` (no €${inv.amount.toFixed(2)})` : ''}`}
+                      </div>
                       <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                         <button onClick={() => setViewingInvoice(inv)} style={{ fontSize: '12px', padding: '4px 8px', background: '#64748b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>👁️ Skatīt</button>
                         <button onClick={() => onDownloadPDF(inv)} style={{ fontSize: '12px', padding: '4px 8px', background: '#003399', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>📥 PDF</button>
@@ -367,11 +373,17 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
                 <tbody>
                   {/* Šeit parasti nāk rēķina pozīcijas. Ja nav atsevišķu pozīciju, rādam kopsummu */}
                   <tr style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '12px 5px', fontSize: '14px' }}>Kopējais rēķins par periodu {viewingInvoice.period}</td>
+                    <td style={{ padding: '12px 5px', fontSize: '14px' }}>Rēķina summa par periodu {viewingInvoice.period}</td>
                     <td style={{ padding: '12px 5px', textAlign: 'right', fontWeight: 'bold' }}>€{viewingInvoice.amount.toFixed(2)}</td>
                   </tr>
+                  {viewingInvoice.paid_amount > 0 && (
+                    <tr style={{ color: '#059669', borderBottom: '1px solid #eee' }}>
+                      <td style={{ padding: '8px 5px', fontSize: '13px' }}>Veiktā samaksa</td>
+                      <td style={{ padding: '8px 5px', textAlign: 'right' }}>-€{viewingInvoice.paid_amount.toFixed(2)}</td>
+                    </tr>
+                  )}
                   {viewingInvoice.previous_debt_amount > 0 && (
-                    <tr style={{ color: '#ef4444' }}>
+                    <tr style={{ color: '#ef4444', borderBottom: '1px solid #eee' }}>
                       <td style={{ padding: '8px 5px', fontSize: '13px' }}>Iepriekšējais parāds</td>
                       <td style={{ padding: '8px 5px', textAlign: 'right' }}>€{viewingInvoice.previous_debt_amount.toFixed(2)}</td>
                     </tr>
@@ -379,8 +391,8 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td style={{ textAlign: 'right', padding: '20px 5px', fontWeight: 'bold', fontSize: '16px' }}>KOPĀ APMAKSAI:</td>
-                    <td style={{ textAlign: 'right', padding: '20px 5px', fontWeight: 'bold', fontSize: '20px', color: '#003399' }}>€{viewingInvoice.amount.toFixed(2)}</td>
+                    <td style={{ textAlign: 'right', padding: '20px 5px', fontWeight: 'bold', fontSize: '16px' }}>{viewingInvoice.paid ? 'APMAKSĀTS:' : 'ATLIKUMS APMAKSAI:'}</td>
+                    <td style={{ textAlign: 'right', padding: '20px 5px', fontWeight: 'bold', fontSize: '20px', color: '#003399' }}>€{(viewingInvoice.amount - (viewingInvoice.paid_amount || 0)).toFixed(2)}</td>
                   </tr>
                 </tfoot>
               </table>
