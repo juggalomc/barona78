@@ -75,6 +75,7 @@ export function TariffsTab({
   getTargetArea
 }) {
   const currentTariffs = tariffs.filter(t => t.period === tariffPeriod);
+  const sourceTariffs = copySourceMonth ? tariffs.filter(t => t.period === copySourceMonth) : [];
 
   const handleExclusionChange = (aptId, isEdit = false) => {
     const form = isEdit ? editForm : tariffForm;
@@ -158,7 +159,6 @@ export function TariffsTab({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
-                <th style={{ padding: '10px', width: '40px' }}>Atlasīt</th>
                 <th style={{ padding: '10px' }}>Nosaukums</th>
                 <th style={{ padding: '10px' }}>Summa</th>
                 <th style={{ padding: '10px' }}>Cena par m²</th>
@@ -180,13 +180,6 @@ export function TariffsTab({
 
                 return (
                 <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px' }}>
-                    <input
-                      type="checkbox"
-                      checked={!!selectedTariffsToCopy[t.id]}
-                      onChange={() => setSelectedTariffsToCopy(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
-                    />
-                  </td>
                   <td style={{ padding: '10px', fontWeight: '600' }}>{t.name}</td>
                   <td style={{ padding: '10px' }}>€{parseFloat(t.total_amount).toFixed(2)}</td>
                   <td style={{ padding: '10px', color: '#64748b' }}>€{pricePerM2.toFixed(4)}</td>
@@ -222,9 +215,30 @@ export function TariffsTab({
             Kopēt uz šo mēnesi
           </button>
         </div>
-        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
-          Atlasiet tarifu rindas ar atzīmes un pēc tam izvēlieties avota mēnesi.
-        </div>
+
+        {copySourceMonth ? (
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '8px' }}>
+              Atlasiet tarifus no mēneša {copySourceMonth}:
+            </div>
+            <div style={styles.grid}>
+              {sourceTariffs.length > 0 ? sourceTariffs.map(t => (
+                <label key={t.id} style={styles.checkboxItem}>
+                  <input
+                    type="checkbox"
+                    checked={!!selectedTariffsToCopy[String(t.id)]}
+                    onChange={() => setSelectedTariffsToCopy(prev => ({ ...prev, [String(t.id)]: !prev[String(t.id)] }))}
+                  />
+                  {t.name}
+                </label>
+              )) : <div style={{ color: '#64748b', fontSize: '12px' }}>Šajā mēnesī nav tarifu, ko kopēt.</div>}
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '10px' }}>
+            Izvēlieties avota mēnesi, lai redzētu tarifus, ko pārkopēt.
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,12 @@
 import { useState } from 'react';
 
+const normalizePeriod = (p) => {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('-');
+  if (parts.length !== 2) return p;
+  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
 export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
   const [tariffPeriod, setTariffPeriod] = useState('2026-01');
   const [tariffForm, setTariffForm] = useState({
@@ -132,16 +139,28 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
     }
 
     try {
-      const tariffsToCopy = tariffs.filter(t => t.period === fromPeriod && selectedIds.includes(String(t.id)));
-      const newTariffs = tariffsToCopy.map(t => ({
-        name: t.name,
-        total_amount: t.total_amount,
-        vat_rate: t.vat_rate,
-        period: toPeriod,
-        include_in_invoice: t.include_in_invoice !== false,
-        target_type: t.target_type || 'all',
-        excluded_apartments: t.excluded_apartments || []
-      }));
+      const normalizedFromPeriod = normalizePeriod(fromPeriod);
+      const tariffsToCopy = tariffs.filter(t => normalizePeriod(t.period) === normalizedFromPeriod && selectedIds.includes(String(t.id)));
+      if (tariffsToCopy.length === 0) {
+        showToast('Neviena tarifa nav atlasīta kopēšanai', 'error');
+        return;
+      }
+
+      const newTariffs = tariffsToCopy.map(t => {
+        const excludedApartments = Array.isArray(t.excluded_apartments)
+          ? t.excluded_apartments
+          : JSON.parse(t.excluded_apartments || '[]');
+
+        return {
+          name: t.name,
+          total_amount: Number(t.total_amount) || 0,
+          vat_rate: Number(t.vat_rate) || 0,
+          period: normalizePeriod(toPeriod),
+          include_in_invoice: t.include_in_invoice !== false,
+          target_type: t.target_type || 'all',
+          excluded_apartments: excludedApartments
+        };
+      });
 
       const { error } = await supabase.from('tariffs').insert(newTariffs);
       if (error) throw error;
