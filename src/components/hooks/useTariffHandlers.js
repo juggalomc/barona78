@@ -122,14 +122,17 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
   };
 
   const copySelectedTariffs = async (tariffs, fromPeriod, toPeriod) => {
-    const selectedIds = Object.keys(selectedTariffsToCopy).filter(id => selectedTariffsToCopy[id]);
+    const selectedIds = Object.entries(selectedTariffsToCopy)
+      .filter(([, isSelected]) => isSelected)
+      .map(([id]) => String(id));
+
     if (selectedIds.length === 0) {
       showToast('Atlasiet vismaz vienu tarifu', 'error');
       return;
     }
 
     try {
-      const tariffsToCopy = tariffs.filter(t => t.period === fromPeriod && selectedIds.includes(t.id));
+      const tariffsToCopy = tariffs.filter(t => t.period === fromPeriod && selectedIds.includes(String(t.id)));
       const newTariffs = tariffsToCopy.map(t => ({
         name: t.name,
         total_amount: t.total_amount,
