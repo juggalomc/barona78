@@ -135,6 +135,7 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
         total_amount: t.total_amount,
         vat_rate: t.vat_rate,
         period: toPeriod,
+        include_in_invoice: t.include_in_invoice !== false,
         target_type: t.target_type || 'all',
         excluded_apartments: t.excluded_apartments || []
       }));
