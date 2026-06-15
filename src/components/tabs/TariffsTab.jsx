@@ -168,7 +168,6 @@ export function TariffsTab({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
-                <th style={{ padding: '10px', width: '40px' }}>Atlasīt</th>
                 <th style={{ padding: '10px' }}>Nosaukums</th>
                 <th style={{ padding: '10px' }}>Summa</th>
                 <th style={{ padding: '10px' }}>Cena par m²</th>
@@ -190,13 +189,6 @@ export function TariffsTab({
 
                 return (
                 <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px' }}>
-                    <input
-                      type="checkbox"
-                      checked={!!selectedTariffsToCopy[String(t.id)]}
-                      onChange={() => setSelectedTariffsToCopy(prev => ({ ...prev, [String(t.id)]: !prev[String(t.id)] }))}
-                    />
-                  </td>
                   <td style={{ padding: '10px', fontWeight: '600' }}>{t.name}</td>
                   <td style={{ padding: '10px' }}>€{parseFloat(t.total_amount).toFixed(2)}</td>
                   <td style={{ padding: '10px', color: '#64748b' }}>€{pricePerM2.toFixed(4)}</td>
@@ -223,7 +215,15 @@ export function TariffsTab({
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>Kopēt tarifus</h2>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <input type="month" value={copySourceMonth || ''} onChange={(e) => setCopySourceMonth(e.target.value)} style={{ ...styles.input, flex: 1, minWidth: '220px' }} />
+          <input
+            type="month"
+            value={copySourceMonth || ''}
+            onChange={(e) => {
+              setCopySourceMonth(e.target.value);
+              setSelectedTariffsToCopy({});
+            }}
+            style={{ ...styles.input, flex: 1, minWidth: '220px' }}
+          />
           <button
             onClick={() => copySelectedTariffs(tariffs, copySourceMonth, tariffPeriod)}
             style={{ ...styles.btn, background: '#10b981' }}
@@ -239,16 +239,22 @@ export function TariffsTab({
               Atlasiet tarifus no mēneša {copySourceMonth}:
             </div>
             <div style={styles.grid}>
-              {sourceTariffs.length > 0 ? sourceTariffs.map(t => (
-                <label key={t.id} style={styles.checkboxItem}>
-                  <input
-                    type="checkbox"
-                    checked={!!selectedTariffsToCopy[String(t.id)]}
-                    onChange={() => setSelectedTariffsToCopy(prev => ({ ...prev, [String(t.id)]: !prev[String(t.id)] }))}
-                  />
-                  {t.name}
-                </label>
-              )) : <div style={{ color: '#64748b', fontSize: '12px' }}>Šajā mēnesī nav tarifu, ko kopēt.</div>}
+              {sourceTariffs.length > 0 ? sourceTariffs.map(t => {
+                const idKey = String(t.id);
+                return (
+                  <label key={idKey} style={styles.checkboxItem}>
+                    <input
+                      type="checkbox"
+                      checked={!!selectedTariffsToCopy[idKey]}
+                      onChange={() => setSelectedTariffsToCopy(prev => ({
+                        ...prev,
+                        [idKey]: !prev[idKey]
+                      }))}
+                    />
+                    {t.name}
+                  </label>
+                );
+              }) : <div style={{ color: '#64748b', fontSize: '12px' }}>Šajā mēnesī nav tarifu, ko kopēt.</div>}
             </div>
           </div>
         ) : (
