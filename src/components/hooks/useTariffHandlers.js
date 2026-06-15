@@ -129,19 +129,30 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
   };
 
   const copySelectedTariffs = async (tariffs, fromPeriod, toPeriod) => {
+    if (!fromPeriod || !toPeriod) {
+      showToast('Izvēlieties mēnešu', 'error');
+      return;
+    }
+
     const selectedIds = Object.keys(selectedTariffsToCopy)
       .filter(id => selectedTariffsToCopy[id] === true)
       .map(id => String(id));
+
+    if (selectedIds.length === 0) {
+      showToast('Atzīmējiet vismaz vienu tarifu kopēšanai', 'error');
+      return;
+    }
 
     try {
       const normalizedFromPeriod = normalizePeriod(fromPeriod);
       const tariffsToCopy = tariffs.filter(t => {
         const periodMatches = normalizePeriod(t.period) === normalizedFromPeriod;
-        const idMatches = selectedIds.length === 0 || selectedIds.includes(String(t.id));
+        const idMatches = selectedIds.includes(String(t.id));
         return periodMatches && idMatches;
       });
+
       if (tariffsToCopy.length === 0) {
-        showToast('Šajā mēnesī nav tarifu, ko kopēt', 'error');
+        showToast('Šajā mēnesī nav atlasīto tarifu', 'error');
         return;
       }
 
