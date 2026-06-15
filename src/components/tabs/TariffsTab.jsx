@@ -82,9 +82,6 @@ export function TariffsTab({
   getTargetArea
 }) {
   const currentTariffs = tariffs.filter(t => t.period === tariffPeriod);
-  const sourceTariffs = copySourceMonth
-    ? tariffs.filter(t => normalizePeriod(t.period) === normalizePeriod(copySourceMonth))
-    : [];
 
   const handleExclusionChange = (aptId, isEdit = false) => {
     const form = isEdit ? editForm : tariffForm;
