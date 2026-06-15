@@ -168,6 +168,7 @@ export function TariffsTab({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
+                <th style={{ padding: '10px', width: '40px' }}>Atlasīt</th>
                 <th style={{ padding: '10px' }}>Nosaukums</th>
                 <th style={{ padding: '10px' }}>Summa</th>
                 <th style={{ padding: '10px' }}>Cena par m²</th>
@@ -189,6 +190,13 @@ export function TariffsTab({
 
                 return (
                 <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '10px' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!selectedTariffsToCopy[String(t.id)]}
+                      onChange={() => setSelectedTariffsToCopy(prev => ({ ...prev, [String(t.id)]: !prev[String(t.id)] }))}
+                    />
+                  </td>
                   <td style={{ padding: '10px', fontWeight: '600' }}>{t.name}</td>
                   <td style={{ padding: '10px' }}>€{parseFloat(t.total_amount).toFixed(2)}</td>
                   <td style={{ padding: '10px', color: '#64748b' }}>€{pricePerM2.toFixed(4)}</td>
