@@ -140,7 +140,9 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
 
     try {
       const normalizedFromPeriod = normalizePeriod(fromPeriod);
-      const tariffsToCopy = tariffs.filter(t => normalizePeriod(t.period) === normalizedFromPeriod && selectedIds.includes(String(t.id)));
+      const tariffsToCopy = selectedIds.length > 0
+        ? tariffs.filter(t => normalizePeriod(t.period) === normalizedFromPeriod && selectedIds.includes(String(t.id)))
+        : tariffs.filter(t => normalizePeriod(t.period) === normalizedFromPeriod);
       if (tariffsToCopy.length === 0) {
         showToast('Neviena tarifa nav atlasīta kopēšanai', 'error');
         return;

@@ -57,6 +57,13 @@ const styles = {
   }
 };
 
+const normalizePeriod = (p) => {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('-');
+  if (parts.length !== 2) return p;
+  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
 export function TariffsTab({
   tariffs,
   uniqueTariffPeriods,
@@ -75,7 +82,9 @@ export function TariffsTab({
   getTargetArea
 }) {
   const currentTariffs = tariffs.filter(t => t.period === tariffPeriod);
-  const sourceTariffs = copySourceMonth ? tariffs.filter(t => t.period === copySourceMonth) : [];
+  const sourceTariffs = copySourceMonth
+    ? tariffs.filter(t => normalizePeriod(t.period) === normalizePeriod(copySourceMonth))
+    : [];
 
   const handleExclusionChange = (aptId, isEdit = false) => {
     const form = isEdit ? editForm : tariffForm;
@@ -210,7 +219,7 @@ export function TariffsTab({
           <button
             onClick={() => copySelectedTariffs(tariffs, copySourceMonth, tariffPeriod)}
             style={{ ...styles.btn, background: '#10b981' }}
-            disabled={!copySourceMonth || !Object.values(selectedTariffsToCopy).some(Boolean)}
+            disabled={!copySourceMonth}
           >
             Kopēt uz šo mēnesi
           </button>
