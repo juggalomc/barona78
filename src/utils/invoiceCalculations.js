@@ -310,6 +310,7 @@ export const calculateInvoiceAmounts = ({
       type: 'debt',
       debt_reason: 'Neapmaksāts parāds no iepriekšējiem periodiem'
     });
+    totalAmountWithoutVat += Math.round(previousDebt * 100) / 100;
   }
 
   if (overpayment > 0) {
@@ -323,13 +324,13 @@ export const calculateInvoiceAmounts = ({
       type: 'overpayment',
       overpayment_reason: 'Pārmaksa, ko var attiecināt uz šo mēnesi'
     });
+    totalAmountWithoutVat -= Math.round(overpayment * 100) / 100;
   }
 
-  // Gala summa = (Pakalpojumi bez PVN + PVN) + Parāds - Pārmaksa.
-  // Parāds un pārmaksa ir Bruto summas (ar PVN), tāpēc tās pieskaitām/atņemam pie gala summas,
-  // lai nemaitātu tekošā mēneša neto summas (totalAmountWithoutVat).
-  const serviceTotalWithVat = totalAmountWithoutVat + totalVatAmount;
-  const totalAmountWithVat = Math.round((serviceTotalWithVat + previousDebt - overpayment) * 100) / 100;
+  // Gala summa = Visu rindu summa (ieskaitot parādu/pārmaksu) + Aprēķinātais PVN no pakalpojumiem.
+  // Tā kā parādam un pārmaksai PVN likme ir 0, tie neietekmē totalVatAmount, 
+  // bet to iekļaušana totalAmountWithoutVat nodrošina datu integritāti.
+  const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
 
   return {
     invoiceDetails,
