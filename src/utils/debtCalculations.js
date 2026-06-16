@@ -16,15 +16,15 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
 
   if (previousDebts.length === 0) return 0;
 
-  // Atrodam jaunāko rēķinu pirms tekošā perioda
-  const latestInvoice = previousDebts.reduce((prev, current) => {
-    if (prev.period > current.period) return prev;
-    if (current.period > prev.period) return current;
-    return (prev.id > current.id) ? prev : current;
-  });
+  // Aprēķinām kopējo parādu kā visu iepriekšējo periodu pakalpojumu bilanci.
+  // (Rēķina summa - Iepriekšējais parāds + Pārmaksa) dod tekošā mēneša jauno pakalpojumu daļu.
+  const totalBalance = previousDebts.reduce((sum, inv) => {
+    const serviceAmount = (parseFloat(inv.amount_with_vat ?? inv.amount) || 0) - (parseFloat(inv.previous_debt_amount) || 0) + (parseFloat(inv.overpayment_amount) || 0);
+    const paid = parseFloat(inv.paid_amount) || 0;
+    return sum + (serviceAmount - paid);
+  }, 0);
 
-  const balance = (parseFloat(latestInvoice.amount_with_vat ?? latestInvoice.amount) || 0) - (parseFloat(latestInvoice.paid_amount) || 0);
-  return balance > 0 ? Math.round(balance * 100) / 100 : 0;
+  return totalBalance > 0 ? Math.round(totalBalance * 100) / 100 : 0;
 };
 
 /**
@@ -44,13 +44,12 @@ export const calculateOverpayment = (apartmentId, invoices, currentPeriod, exclu
 
   if (previousInvoices.length === 0) return 0;
 
-  // Atrodam jaunāko rēķinu pirms tekošā perioda
-  const latestInvoice = previousInvoices.reduce((prev, current) => {
-    if (prev.period > current.period) return prev;
-    if (current.period > prev.period) return current;
-    return (prev.id > current.id) ? prev : current;
-  });
+  // Aprēķinām pārmaksu kā kopējo bilanci (ja tā ir negatīva)
+  const totalBalance = previousInvoices.reduce((sum, inv) => {
+    const serviceAmount = (parseFloat(inv.amount_with_vat ?? inv.amount) || 0) - (parseFloat(inv.previous_debt_amount) || 0) + (parseFloat(inv.overpayment_amount) || 0);
+    const paid = parseFloat(inv.paid_amount) || 0;
+    return sum + (serviceAmount - paid);
+  }, 0);
 
-  const balance = (parseFloat(latestInvoice.amount_with_vat ?? latestInvoice.amount) || 0) - (parseFloat(latestInvoice.paid_amount) || 0);
-  return balance < 0 ? Math.round(Math.abs(balance) * 100) / 100 : 0;
+  return totalBalance < 0 ? Math.round(Math.abs(totalBalance) * 100) / 100 : 0;
 };
