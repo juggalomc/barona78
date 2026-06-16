@@ -1,3 +1,7 @@
+/**
+ * Palīgfunkcija, kas perioda virkni (YYYY-MM) pārveido par skaitlisku vērtību,
+ * lai varētu viegli salīdzināt periodus.
+ */
 const getPeriodValue = (period) => {
   if (!period) return 0;
   const [y, m] = period.split('-').map(Number);
@@ -6,21 +10,25 @@ const getPeriodValue = (period) => {
 
 /**
  * Palīgfunkcija, kas aprēķina vēsturisko bilanci līdz pašreizējam periodam.
- * Atrod pašu pēdējo izdoto rēķinu un pārbauda, vai tas ir apmaksāts vai pārmaksāts.
+ * Atrod pašu pēdējo izdoto rēķinu pirms tekošā perioda un pārbauda tā apmaksas stāvokli.
  */
 const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoiceId = null) => {
   const currentVal = getPeriodValue(currentPeriod);
   
-  // 1. Atlasām visus iepriekšējos rēķinus pirms tekošā perioda
+  // 1. Atlasām visus rēķinus pirms tekošā perioda
   const previousInvoices = (invoices || []).filter(inv => {
     if (String(inv.apartment_id) !== String(apartmentId)) return false;
-    if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
+    
+    // Svarīgi: izslēdzam pašreizējo rēķinu (reģenerēšanas laikā), lai tā summa
+    // neietekmētu "iepriekšējā parāda" aprēķinu.
+    if (excludeInvoiceId && String(inv.id) === String(excludeInvoiceId)) return false;
+    
     return getPeriodValue(inv.period) < currentVal;
   });
 
   if (previousInvoices.length === 0) return 0;
 
-  // 2. Sakārtojam hronoloģiski: no vecākā uz jaunāko.
+  // 2. Sakārtojam vēsturi hronoloģiski: no vecākā uz jaunāko.
   previousInvoices.sort((a, b) => {
     const pA = getPeriodValue(a.period);
     const pB = getPeriodValue(b.period);
@@ -28,32 +36,22 @@ const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoi
     return Number(a.id) - Number(b.id);
   });
 
-  // 3. Izskrienam cauri visiem rēķiniem un uzkrājam kopējo bilanci
-  let runningBalance = 0;
+  // 3. Ņemam pašu pēdējo rēķinu pirms tekošā mēneša.
+  // Tā kā katrā jaunā rēķinā jau hronoloģiski ir iestrādāts iepriekšējais parāds/pārmaksa,
+  // pašreizējā bilance ir vienkārši pēdējā rēķina izpildes stāvoklis.
+  const latestInvoice = previousInvoices[previousInvoices.length - 1];
+  
+  const totalDue = Number(latestInvoice.amount_with_vat ?? latestInvoice.amount ?? 0);
+  const totalPaid = Number(latestInvoice.paid_amount ?? 0);
 
-  for (const inv of previousInvoices) {
-    // totalInvoiceAmountDue represents the full amount of this specific invoice, including any debt/overpayment carried into it.
-    const totalInvoiceAmountDue = Number(inv.amount_with_vat ?? inv.amount ?? 0);
-    // prevDebtCarriedIn and overpayCarriedIn are the amounts carried into this specific invoice from even earlier periods.
-    const prevDebtCarriedIn = Number(inv.previous_debt_amount ?? 0);
-    const overpayCarriedIn = Number(inv.overpayment_amount ?? 0);
-    const paidForThisInvoice = Number(inv.paid_amount ?? 0);
-    
-    // Aprēķinām tikai šī mēneša rēķinā iekļauto "jauno" pakalpojumu summu ar PVN.
-    // This is the portion of the invoice that is purely for services rendered in that month,
-    // excluding any debt or overpayment that was brought into this invoice from prior periods.
-    const monthlyServiceCharge = totalInvoiceAmountDue - prevDebtCarriedIn + overpayCarriedIn;
-    
-    // Pieskaitām mēneša pakalpojumus un atņemam to, ko klients faktiski samaksājis
-    // The running balance accumulates the net effect of each month's new charges minus payments.
-    runningBalance += (monthlyServiceCharge - paidForThisInvoice);
-  }
-
-  return runningBalance;
+  // Atgriežam starpību. 
+  // Ja rezultāts > 0, tas ir parāds (klients palika parādā par pēdējo mēnesi).
+  // Ja rezultāts < 0, tā ir pārmaksa (klients samaksāja vairāk nekā prasīts).
+  return totalDue - totalPaid;
 };
 
 /**
- * Aprēķina kopējo iepriekšējo parādu (ņemot vērā visu vēsturi un pārmaksas)
+ * Aprēķina kopējo iepriekšējo parādu (ņemot vērā pēdējā rēķina neapmaksāto daļu)
  */
 export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excludeInvoiceId = null) => {
   const netBalance = getHistoricalBalance(apartmentId, invoices, currentPeriod, excludeInvoiceId);
