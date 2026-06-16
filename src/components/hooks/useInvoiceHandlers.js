@@ -13,6 +13,10 @@ const normalizePeriod = (p) => {
 };
 
 export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}, waterConsumption = []) {
+export function useInvoiceHandlers(
+  supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, 
+  meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}, waterConsumption = [],
+  syncWaterConsumption = null) {
   const [invoiceMonth, setInvoiceMonth] = useState('');
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
   const [invoiceToDate, setInvoiceToDate] = useState('');
@@ -36,6 +40,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     try {
+      // ✅ Automātiska ūdens patēriņa sinhronizācija pirms ģenerēšanas
+      if (syncWaterConsumption) {
+        await syncWaterConsumption(meterReadings);
+      }
+
       const apt = apartments.find(a => a.id === apartmentId);
       const normPeriod = normalizePeriod(currentInvoiceMonth);
       const [year, month] = normPeriod.split('-');
@@ -300,6 +309,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     }
 
     try {
+      // ✅ Automātiska ūdens patēriņa sinhronizācija pirms masveida ģenerēšanas
+      if (syncWaterConsumption) {
+        await syncWaterConsumption(meterReadings);
+      }
+
       const invoicesToAdd = [];
       const normPeriod = normalizePeriod(currentInvoiceMonth);
       const [year, month] = normPeriod.split('-');
@@ -385,6 +399,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
     if (!window.confirm(`Reģenerēt rēķinu ${invoice.invoice_number}?`)) return;
 
     try {
+      // ✅ Sinhronizējam datus pirms reģenerācijas
+      if (syncWaterConsumption) {
+        await syncWaterConsumption(meterReadings);
+      }
+
       const apt = apartments.find(a => a.id === invoice.apartment_id);
       const periodTariffs = tariffs.filter(t => t.period === invoice.period && t.include_in_invoice !== false);
 
@@ -493,6 +512,11 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
   const regenerateInvoices = async (ids) => {
     if (!window.confirm(`Reģenerēt ${ids.length} rēķinus?`)) return;
     try {
+      // ✅ Sinhronizējam datus pirms masveida reģenerācijas
+      if (syncWaterConsumption) {
+        await syncWaterConsumption(meterReadings);
+      }
+
       let regeneratedCount = 0;
       for (const id of ids) {
         const invoice = invoices.find(i => i.id === id);
