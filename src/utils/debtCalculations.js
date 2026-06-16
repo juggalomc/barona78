@@ -31,8 +31,8 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
     return (prev.id > current.id) ? prev : current;
   });
 
-  // ✅ Aprēķinām REĀLO parādu: rēķina summa (ar PVN) - samaksāts
-  const invoiceAmount = parseFloat(latestInvoice.amount_with_vat || latestInvoice.amount || 0);
+  // ✅ Aprēķinām REĀLO parādu: summa (ar PVN) - samaksātais
+  const invoiceAmount = parseFloat(latestInvoice.amount_with_vat) || parseFloat(latestInvoice.amount) || 0;
   const paidAmount = parseFloat(latestInvoice.paid_amount) || 0;
   const realDebt = Math.max(0, invoiceAmount - paidAmount);
 
@@ -53,13 +53,17 @@ export const calculateOverpayment = (apartmentId, invoices, currentPeriod) => {
   
   if (!previousInvoice) return 0;
 
-  // ✅ Aprēķinām reālo pārmaksu: samaksāts - rēķina summa (ja > 0)
-  const invoiceAmount = parseFloat(previousInvoice.amount_with_vat || previousInvoice.amount) || 0;
+  const invoiceAmount = parseFloat(previousInvoice.amount_with_vat) || parseFloat(previousInvoice.amount) || 0;
   const paidAmount = parseFloat(previousInvoice.paid_amount) || 0;
   
-  // Pārmaksa ir tikai tad, kad samaksāts ir vairāk kā rēķinā
+  // 1. Gadījums: Samaksāts vairāk nekā rēķina summa
   if (paidAmount > invoiceAmount) {
     return Math.round((paidAmount - invoiceAmount) * 100) / 100;
+  }
+
+  // 2. Gadījums: Pats rēķins bija negatīvs
+  if (invoiceAmount < 0) {
+    return Math.abs(invoiceAmount);
   }
 
   return 0;
