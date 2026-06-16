@@ -261,8 +261,39 @@ export const calculateInvoiceAmounts = ({
       type: 'hot_water'
     });
 
-    // SILTĀ ŪDENS STARPĪBA (šī daļa paliek nemainīga, jo tā jau pareizi izmanto nonReportingHotCount)
-    // ... (pārējā siltā ūdens starpības loģika)
+    // SILTĀ ŪDENS STARPĪBA
+    if (hotM3 === null && parseFloat(hotWaterT.diff_m3 || 0) > 0) {
+      const safeApts = Array.isArray(apartments) ? apartments : [];
+      const count = nonReportingHotCount ?? safeApts.filter(a => {
+        const hasWc = (waterConsumption || []).some(wc =>
+          String(wc.apartment_id) === String(a.id) &&
+          String(wc.meter_type) === 'hot_water' &&
+          normalizePeriod(wc.period) === normPeriod &&
+          wc.consumption_m3 !== null);
+        // Ja patēriņa nav, uzskatām, ka dzīvoklis nav nodevis/nav aprēķināts
+        return !hasWc;
+      }).length;
+
+      if (count > 0) {
+        const shareM3 = parseFloat(hotWaterT.diff_m3) / count;
+        const diffPrice = parseFloat(hotWaterT.diff_price) || 0;
+        const diffAmount = Math.round(shareM3 * diffPrice * 100) / 100;
+        const diffVat = Math.round(diffAmount * vatRate / 100 * 100) / 100;
+
+        waterAmountWithoutVat += diffAmount;
+        waterVatAmount += diffVat;
+        waterDetails.push({
+          tariff_id: hotWaterT?.id || null,
+          tariff_name: `🔥 Siltā ūdens starpība (${Number(shareM3).toFixed(2)} m³)`,
+          consumption_m3: shareM3,
+          price_per_m3: diffPrice,
+          amount_without_vat: diffAmount,
+          vat_rate: vatRate,
+          vat_amount: diffVat,
+          type: 'hot_water_diff'
+        });
+      }
+    }
   }
 
   invoiceDetails.push(...waterDetails);
