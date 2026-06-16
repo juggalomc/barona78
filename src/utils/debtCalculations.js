@@ -32,7 +32,7 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
   });
 
   // ✅ Aprēķinām REĀLO parādu: rēķina summa (ar PVN) - samaksāts
-  const invoiceAmount = parseFloat(latestInvoice.amount_with_vat || latestInvoice.amount) || 0;
+  const invoiceAmount = parseFloat(latestInvoice.amount_with_vat || latestInvoice.amount || 0);
   const paidAmount = parseFloat(latestInvoice.paid_amount) || 0;
   const realDebt = Math.max(0, invoiceAmount - paidAmount);
 

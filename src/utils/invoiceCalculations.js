@@ -298,31 +298,32 @@ export const calculateInvoiceAmounts = ({
   totalAmountWithoutVat += waterAmountWithoutVat;
   totalVatAmount += waterVatAmount;
 
-  // 4. Parādi un Pārmaksas
+  // 4. Parādi un Pārmaksas (Pievienojam rēķina sarakstam un gala summai)
+  // Svarīgi: Šīs summas tiek pieskaitītas tikai vienu reizi un neietekmē PVN aprēķinu
   if (previousDebt > 0) {
-    totalAmountWithoutVat += previousDebt;
     invoiceDetails.push({ 
       tariff_id: null, 
       tariff_name: '⚠️ Parāds no iepriekšējiem mēnešiem', 
-      amount_without_vat: previousDebt, 
+      amount_without_vat: Math.round(previousDebt * 100) / 100, 
       vat_rate: 0, 
       vat_amount: 0, 
       type: 'debt',
       debt_reason: 'Neapmaksāts parāds no iepriekšējiem periodiem'
     });
+    totalAmountWithoutVat += previousDebt;
   }
 
   if (overpayment > 0) {
-    totalAmountWithoutVat -= overpayment;
     invoiceDetails.push({ 
       tariff_id: null, 
       tariff_name: '💰 Pārmaksa no iepriekšējā mēneša', 
-      amount_without_vat: -overpayment, 
+      amount_without_vat: -Math.round(overpayment * 100) / 100, 
       vat_rate: 0, 
       vat_amount: 0, 
       type: 'overpayment',
       overpayment_reason: 'Pārmaksa, ko var attiecināt uz šo mēnesi'
     });
+    totalAmountWithoutVat -= overpayment;
   }
 
   const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
