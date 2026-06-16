@@ -3,13 +3,28 @@ import { styles } from '../shared/styles';
 import { calculateMonthlySummary } from '../../utils/summaryCalculations';
 
 export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, waterConsumption }) {
-  // Aprēķinām kopējo parādu, saskaitot katra dzīvokļa jaunāko neapmaksāto rēķinu
-  const totalDebt = apartments.reduce((sum, apt) => {
-    const aptInvoices = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid);
-    if (aptInvoices.length === 0) return sum;
-    const latest = aptInvoices.reduce((prev, curr) => prev.period > curr.period ? prev : curr);
-    return sum + latest.amount;
-  }, 0);
+  // Aprēķinām reālo kopējo parādu, ņemot vērā jau samaksātās summas
+  const { totalDebt, apartmentsWithDebt } = useMemo(() => {
+    let debt = 0;
+    const apts = new Set();
+    
+    apartments.forEach(apt => {
+      const aptInvoices = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid);
+      if (aptInvoices.length === 0) return;
+      
+      // Ņemam jaunāko rēķinu katram dzīvokļu
+      const latest = aptInvoices.reduce((prev, curr) => prev.period > curr.period ? prev : curr);
+      
+      // Aprēķinām reālo parādu: summa - samaksāts
+      const realDebt = (parseFloat(latest.amount) || 0) - (parseFloat(latest.paid_amount) || 0);
+      if (realDebt > 0.01) {
+        debt += realDebt;
+        apts.add(apt.id);
+      }
+    });
+    
+    return { totalDebt: debt, apartmentsWithDebt: apts.size };
+  }, [apartments, invoices]);
 
   // Iegūstam visus unikālos periodus no rēķiniem sakārtotā secībā
   const periods = useMemo(() => {
@@ -41,11 +56,38 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
           <div style={styles.statValue}>{invoices.length}</div>
           <div style={styles.statLabel}>Rēķini</div>
         </div>
-        <div style={{...styles.stat, background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)'}}>
-          <div style={styles.statValue}>€{totalDebt.toFixed(2)}</div>
-          <div style={styles.statLabel}>Parāds</div>
+        <div style={{...styles.stat, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
+          <div style={styles.statValue}>{invoices.filter(i => i.paid).length}</div>
+          <div style={styles.statLabel}>Apmaksāti</div>
         </div>
       </div>
+
+      {totalDebt > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fee2e2 0%, #fed7d7 100%)',
+          border: '2px solid #ef4444',
+          borderRadius: '12px',
+          padding: '24px',
+          marginBottom: '30px',
+          color: '#7f1d1d',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)'
+        }}>
+          <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px'}}>
+            <div style={{fontSize: '28px'}}>⚠️</div>
+            <div style={{fontWeight: 'bold', fontSize: '18px', color: '#991b1b'}}>SVARĪGI - Ir parāds!</div>
+          </div>
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '14px'}}>
+            <div style={{background: 'rgba(255,255,255,0.6)', padding: '12px 16px', borderRadius: '8px', border: '1px solid #fca5a5'}}>
+              <div style={{color: '#991b1b', fontSize: '12px', marginBottom: '4px', fontWeight: '500'}}>Kopā parāds:</div>
+              <div style={{fontSize: '20px', fontWeight: 'bold', color: '#991b1b'}}>{formatCurrency(totalDebt)}</div>
+            </div>
+            <div style={{background: 'rgba(255,255,255,0.6)', padding: '12px 16px', borderRadius: '8px', border: '1px solid #fca5a5'}}>
+              <div style={{color: '#991b1b', fontSize: '12px', marginBottom: '4px', fontWeight: '500'}}>Dzīvokļi ar parādu:</div>
+              <div style={{fontSize: '20px', fontWeight: 'bold', color: '#991b1b'}}>{apartmentsWithDebt}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={styles.card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
@@ -110,16 +152,6 @@ export function OverviewTab({ apartments, tariffs, invoices, waterTariffs, hotWa
             </div>
           </div>
         </div>
-
-        {totalDebt > 0 && (
-          <div style={{background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '15px', marginTop: '20px', color: '#991b1b'}}>
-            <div style={{fontWeight: 'bold', marginBottom: '8px'}}>⚠️ SVARĪGI - Ir parāds!</div>
-            <div style={{fontSize: '13px'}}>
-              Kopā parāds: <strong>€{totalDebt.toFixed(2)}</strong><br/>
-              Dzīvokļu skaits ar parādu: <strong>{invoices.filter(i => !i.paid && new Date(i.due_date) <= new Date()).map(i => i.apartment_id).filter((v, i, a) => a.indexOf(v) === i).length}</strong>
-            </div>
-          </div>
-        )}
       </div>
 
       <div style={styles.card}>
