@@ -19,7 +19,8 @@ export function WaterTab({
   saveWaterMeterReading,
   saveHotWaterMeterReading,
   getLastReading, // Šī funkcija tiek padota no `useWaterHandlers`
-  waterConsumption, // Pievienots `waterConsumption` props
+  waterConsumption, // Pievienots `waterConsumption` props,
+  fetchMeterReadingsOnly, // Pievienots `fetchMeterReadingsOnly` props
   settings,
   updateSetting,
   syncWaterConsumption
