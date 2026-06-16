@@ -88,6 +88,50 @@ export function TariffsTab({
 
   const currentForm = editingTariff ? editForm : tariffForm;
 
+  const getCalcType = (form) => {
+    if (form.is_per_m2) return 'per_m2';
+    if (form.is_fixed_amount) return 'fixed_amount';
+    return 'area';
+  };
+
+  const handleCalcTypeChange = (value) => {
+    const form = editingTariff ? editForm : tariffForm;
+    const setForm = editingTariff ? setEditForm : setTariffForm;
+    setForm({
+      ...form,
+      is_per_m2: value === 'per_m2',
+      is_fixed_amount: value === 'fixed_amount'
+    });
+  };
+
+  const calcType = getCalcType(currentForm);
+
+  const amountLabel = calcType === 'per_m2'
+    ? 'Cena par m²'
+    : calcType === 'fixed_amount'
+      ? 'Summa katram dzīvoklim'
+      : 'Kopējā summa';
+
+  const amountValue = calcType === 'per_m2'
+    ? currentForm.price_per_m2
+    : calcType === 'fixed_amount'
+      ? currentForm.price_per_unit
+      : currentForm.total_amount;
+
+  const amountField = calcType === 'per_m2'
+    ? 'price_per_m2'
+    : calcType === 'fixed_amount'
+      ? 'price_per_unit'
+      : 'total_amount';
+
+  const handleAmountChange = (value) => {
+    if (editingTariff) {
+      setEditForm({ ...editForm, [amountField]: value });
+    } else {
+      setTariffForm({ ...tariffForm, [amountField]: value });
+    }
+  };
+
   return (
     <div style={{ padding: '20px' }}>
       <div style={styles.card}>
@@ -109,22 +153,30 @@ export function TariffsTab({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', alignItems: 'flex-end' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>{currentForm.is_per_m2 ? "Cena par m²" : "Kopējā summa"}</label>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>Aprēķina tips</label>
+              <select
+                value={calcType}
+                onChange={(e) => handleCalcTypeChange(e.target.value)}
+                style={styles.input}
+              >
+                <option value="area">Kopējā summa (sadalīta pēc platības)</option>
+                <option value="per_m2">Cena par m²</option>
+                <option value="fixed_amount">Fiksēta summa katram dzīvoklim</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>{amountLabel}</label>
               <input 
                 type="number" 
                 step="0.0001" 
-                placeholder={currentForm.is_per_m2 ? "0.0000" : "0.00"} 
-                value={currentForm.is_per_m2 ? currentForm.price_per_m2 : currentForm.total_amount} 
-                onChange={(e) => editingTariff ? (editForm.is_per_m2 ? setEditForm({...editForm, price_per_m2: e.target.value}) : setEditForm({...editForm, total_amount: e.target.value})) : (tariffForm.is_per_m2 ? setTariffForm({...tariffForm, price_per_m2: e.target.value}) : setTariffForm({...tariffForm, total_amount: e.target.value}))} 
+                placeholder={calcType === 'area' ? "0.00" : "0.0000"} 
+                value={amountValue || ''} 
+                onChange={(e) => handleAmountChange(e.target.value)} 
                 style={styles.input} 
               />
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', cursor: 'pointer' }}>
-              <input type="checkbox" checked={currentForm.is_per_m2} onChange={(e) => editingTariff ? setEditForm({...editForm, is_per_m2: e.target.checked}) : setTariffForm({...tariffForm, is_per_m2: e.target.checked})} />
-              Aprēķināt pēc m²
-            </label>
           </div>
 
           <div>
@@ -160,6 +212,7 @@ export function TariffsTab({
               <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>
                 <th style={{ padding: '10px', width: '40px' }}>☑️</th>
                 <th style={{ padding: '10px' }}>Nosaukums</th>
+                <th style={{ padding: '10px' }}>Tips</th>
                 <th style={{ padding: '10px' }}>Summa</th>
                 <th style={{ padding: '10px' }}>Cena par m²</th>
                 <th style={{ padding: '10px' }}>Platība</th>
@@ -177,6 +230,11 @@ export function TariffsTab({
                 const area = getTargetArea(t.target_type || 'all', excludedIds);
                 const pricePerM2 = area > 0 ? (parseFloat(t.total_amount) / area) : 0;
                 const totalWithVat = parseFloat(t.total_amount) * (1 + (parseFloat(t.vat_rate) || 0) / 100);
+                const typeLabel = t.is_per_m2
+                  ? 'Cena par m²'
+                  : t.is_fixed_amount
+                    ? `Fiksēta (€${(parseFloat(t.price_per_unit) || 0).toFixed(2)}/dz.)`
+                    : 'Pēc platības';
 
                 return (
                 <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -188,6 +246,7 @@ export function TariffsTab({
                     />
                   </td>
                   <td style={{ padding: '10px', fontWeight: '600' }}>{t.name}</td>
+                  <td style={{ padding: '10px', color: '#64748b', fontSize: '12px' }}>{typeLabel}</td>
                   <td style={{ padding: '10px' }}>€{parseFloat(t.total_amount).toFixed(2)}</td>
                   <td style={{ padding: '10px', color: '#64748b' }}>€{pricePerM2.toFixed(4)}</td>
                   <td style={{ padding: '10px', color: '#64748b' }}>{area.toFixed(2)} m²</td>
