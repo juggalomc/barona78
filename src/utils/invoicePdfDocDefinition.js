@@ -7,8 +7,8 @@ export const buildInvoicePdfDefinition = (invoice, apt, settings, tableRows) => 
   const invoiceDetails = invoice.invoice_details ? JSON.parse(invoice.invoice_details) : [];
   const amountWithoutVat = parseFloat(invoice.amount_without_vat) || 0;
   const amountWithVat = parseFloat(invoice.amount_with_vat) || 0;
-  const vat21 = invoiceDetails.filter(d => d.vat_rate === 21).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
-  const vat12 = invoiceDetails.filter(d => d.vat_rate === 12).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0);
+  const vat21 = Math.round(invoiceDetails.filter(d => Number(d.vat_rate) === 21).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0) * 100) / 100;
+  const vat12 = Math.round(invoiceDetails.filter(d => Number(d.vat_rate) === 12).reduce((sum, d) => sum + (parseFloat(d.vat_amount) || 0), 0) * 100) / 100;
 
   return {
     pageSize: 'A4',

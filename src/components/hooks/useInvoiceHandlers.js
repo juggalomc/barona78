@@ -247,7 +247,7 @@ export function useInvoiceHandlers(
 
       await supabase.from('invoices').delete().eq('id', invoice.id);
 
-      const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period)) || 0;
+      const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period, invoice.id)) || 0;
       const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
 
       const nonReportingColdCount = apartments.filter(aptItem => {
