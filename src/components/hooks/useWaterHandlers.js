@@ -1,12 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getLastReading } from '../../utils/waterCalculations';
-
-const normalizePeriod = (p) => {
-  if (!p || typeof p !== 'string') return p;
-  const parts = p.split('-');
-  if (parts.length !== 2) return p;
-  return `${parts[0]}-${parts[1].padStart(2, '0')}`;
-};
+import { getLastReading, normalizePeriod } from '../../utils/waterCalculations';
 
 const getNextPeriod = (normPeriod) => {
   const [year, month] = normPeriod.split('-').map(Number);
@@ -201,7 +194,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       const freshReadings = await fetchFreshReadings(apartmentId, 'water');
       const lastReading = getLastReading(apartmentId, 'water', normPeriod, freshReadings);
 
-      if (lastReading && value < parseFloat(lastReading.reading_value)) {
+      const prevValue = lastReading ? parseFloat(lastReading.reading_value) : null;
+      if (prevValue !== null && value < prevValue) {
         showToast(`Kļūda: Jaunais rādījums (${value}) nevar būt mazāks par iepriekšējo (${lastReading.reading_value})`, 'error');
         return;
       }
@@ -219,8 +213,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       // ✅ Patēriņš = starpība no svaigiem datiem
       let consumption = 0;
-      if (lastReading && lastReading.reading_value !== null) {
-        consumption = Math.max(0, value - parseFloat(lastReading.reading_value));
+      if (prevValue !== null) {
+        consumption = Math.max(0, value - prevValue);
       }
 
       await supabase.from('water_consumption').upsert({
@@ -275,8 +269,9 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       // ✅ Svaigie rādījumi no DB, nevis no React state
       const freshReadings = await fetchFreshReadings(apartmentId, 'hot_water');
       const lastReading = getLastReading(apartmentId, 'hot_water', normPeriod, freshReadings);
-
-      if (lastReading && value < parseFloat(lastReading.reading_value)) {
+      
+      const prevValue = lastReading ? parseFloat(lastReading.reading_value) : null;
+      if (prevValue !== null && value < prevValue) {
         showToast(`Kļūda: Jaunais rādījums (${value}) nevar būt mazāks par iepriekšējo (${lastReading.reading_value})`, 'error');
         return;
       }
@@ -294,8 +289,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       // ✅ Patēriņš = starpība no svaigiem datiem
       let consumption = 0;
-      if (lastReading && lastReading.reading_value !== null) {
-        consumption = Math.max(0, value - parseFloat(lastReading.reading_value));
+      if (prevValue !== null) {
+        consumption = Math.max(0, value - prevValue);
       }
 
       await supabase.from('water_consumption').upsert({
@@ -330,7 +325,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       const freshReadings = await fetchFreshReadings(reading.apartment_id, reading.meter_type);
       const lastReading = getLastReading(reading.apartment_id, reading.meter_type, normPeriod, freshReadings);
 
-      if (lastReading && value < parseFloat(lastReading.reading_value)) {
+      const prevValue = lastReading ? parseFloat(lastReading.reading_value) : null;
+      if (prevValue !== null && value < prevValue) {
         showToast(`Kļūda: Rādījums nevar būt mazāks par iepriekšējo (${lastReading.reading_value})`, 'error');
         return;
       }
@@ -343,8 +339,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       if (error) throw error;
 
       let consumption = 0;
-      if (lastReading && lastReading.reading_value !== null) {
-        consumption = Math.max(0, value - parseFloat(lastReading.reading_value));
+      if (prevValue !== null) {
+        consumption = Math.max(0, value - prevValue);
       }
 
       await supabase.from('water_consumption').upsert({

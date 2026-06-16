@@ -176,7 +176,9 @@ export const calculateInvoiceAmounts = ({
   let waterAmountWithoutVat = 0;
   let waterVatAmount = 0;
 
+ // ==========================================
   // AUKSTAIS ŪDENS
+  // ==========================================
   if (waterT && waterT.include_in_invoice !== false) {
     const m3 = coldM3 !== null ? coldM3 : 0;
     const price = parseFloat(waterT.price_per_m3) || 0;
@@ -208,12 +210,7 @@ export const calculateInvoiceAmounts = ({
           String(wc.meter_type) === 'water' &&
           normalizePeriod(wc.period) === normPeriod &&
           wc.consumption_m3 !== null);
-        const hasMr = (meterReadings || []).some(mr =>
-          String(mr.apartment_id) === String(a.id) &&
-          String(mr.meter_type) === 'water' &&
-          normalizePeriod(mr.period) === normPeriod &&
-          mr.reading_value !== null);
-        return !hasWc && !hasMr;
+        return !hasWc;
       }).length;
 
       if (count > 0) {
@@ -238,7 +235,9 @@ export const calculateInvoiceAmounts = ({
     }
   }
 
+  // ==========================================
   // SILTAIS ŪDENS
+  // ==========================================
   if (hotWaterT && hotWaterT.include_in_invoice !== false) {
     const m3 = hotM3 !== null ? hotM3 : 0;
     const price = parseFloat(hotWaterT.price_per_m3) || 0;
@@ -261,7 +260,7 @@ export const calculateInvoiceAmounts = ({
       type: 'hot_water'
     });
 
-    // SILTĀ ŪDENS STARPĪBA
+    // SILTĀ ŪDENS STARPĪBA (Salabota un pabeigta loģika)
     if (hotM3 === null && parseFloat(hotWaterT.diff_m3 || 0) > 0) {
       const safeApts = Array.isArray(apartments) ? apartments : [];
       const count = nonReportingHotCount ?? safeApts.filter(a => {
@@ -270,7 +269,6 @@ export const calculateInvoiceAmounts = ({
           String(wc.meter_type) === 'hot_water' &&
           normalizePeriod(wc.period) === normPeriod &&
           wc.consumption_m3 !== null);
-        // Ja patēriņa nav, uzskatām, ka dzīvoklis nav nodevis/nav aprēķināts
         return !hasWc;
       }).length;
 
