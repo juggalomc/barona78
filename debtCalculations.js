@@ -1,24 +1,20 @@
 /**
  * Aprēķina iepriekšējo parādu balstoties uz neapmaksātiem rēķiniem
+ * Ņem vērā: Reālais parāds = Rēķina summa - Jau samaksāts
  */
 export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excludeInvoiceId = null) => {
-  const todayStr = new Date().toISOString().split('T')[0];
   const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
   
   const previousDebts = invoices.filter(inv => {
     if (inv.apartment_id !== apartmentId) return false;
-    if (inv.paid) return false;
     if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
 
     const [invYear, invMonth] = inv.period.split('-').map(Number);
     
-    // Nosacījums 1: Periods ir pirms pašreizējā rēķina perioda
+    // ✅ Parādam jāņem vērā TIKAI rēķini no IEPRIEKŠĒJIEM periodiem.
     const isEarlierPeriod = (invYear < currentYear) || (invYear === currentYear && invMonth < currentMonth);
-    
-    // Nosacījums 2: Termiņš ir beidzies uz ģenerēšanas brīdi
-    const isPastDue = todayStr > inv.due_date;
 
-    return isEarlierPeriod || isPastDue;
+    return isEarlierPeriod;
   });
 
   if (previousDebts.length === 0) return 0;
@@ -31,11 +27,17 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
     return (prev.id > current.id) ? prev : current;
   });
 
-  return parseFloat(latestInvoice.amount) || 0;
+  // ✅ Aprēķinām REĀLO parādu: summa (ar PVN) - samaksātais
+  const invoiceAmount = parseFloat(latestInvoice.amount_with_vat) || parseFloat(latestInvoice.amount) || 0;
+  const paidAmount = parseFloat(latestInvoice.paid_amount) || 0;
+  const realDebt = Math.max(0, invoiceAmount - paidAmount);
+
+  return Math.round(realDebt * 100) / 100;
 };
 
 /**
- * Aprēķina pārmaksu no iepriekšējā mēneša rēķina (ja summa bija negatīva)
+ * Aprēķina pārmaksu no iepriekšējā mēneša rēķina
+ * Pārmaksa rodas, ja samaksāts vairāk nekā rēķina summa vai ja rēķina summa ir negatīva
  */
 export const calculateOverpayment = (apartmentId, invoices, currentPeriod) => {
   const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
@@ -47,6 +49,14 @@ export const calculateOverpayment = (apartmentId, invoices, currentPeriod) => {
   
   if (!previousInvoice) return 0;
 
-  const finalAmount = parseFloat(previousInvoice.amount_with_vat) || 0;
-  return finalAmount < 0 ? Math.abs(finalAmount) : 0;
+  const invoiceAmount = parseFloat(previousInvoice.amount_with_vat) || parseFloat(previousInvoice.amount) || 0;
+  const paidAmount = parseFloat(previousInvoice.paid_amount) || 0;
+  
+  // 1. Gadījums: Samaksāts vairāk nekā rēķina summa
+  if (paidAmount > invoiceAmount) {
+    return Math.round((paidAmount - invoiceAmount) * 100) / 100;
+  }
+
+  // 2. Gadījums: Pats rēķins bija negatīvs
+  return invoiceAmount < 0 ? Math.abs(invoiceAmount) : 0;
 };
