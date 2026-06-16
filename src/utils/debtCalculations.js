@@ -23,6 +23,9 @@ const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoi
     // neietekmētu "iepriekšējā parāda" aprēķinu.
     if (excludeInvoiceId && String(inv.id) === String(excludeInvoiceId)) return false;
     
+    // ✅ JAUNS: Izslēdzam pilnībā apmaksātus rēķinus no parāda aprēķina
+    if (inv.paid === true) return false;
+    
     return getPeriodValue(inv.period) < currentVal;
   });
 
