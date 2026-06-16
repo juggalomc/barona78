@@ -120,7 +120,7 @@ export const calculateWaterDetails = ({
     });
 
     // AUKSTĀ ŪDENS STARPĪBA
-    if (coldM3 === 0 && parseFloat(waterTariff.diff_m3 || 0) > 0) {
+    if (coldM3 === null && parseFloat(waterTariff.diff_m3 || 0) > 0) {
       const count = nonReportingColdCount ?? safeApts.filter(a => {
         const hasWc = (waterConsumption || []).some(wc =>
           String(wc.apartment_id) === String(a.id) &&
@@ -181,7 +181,7 @@ export const calculateWaterDetails = ({
     });
 
     // SILTĀ ŪDENS STARPĪBA
-    if (hotM3 === 0 && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
+    if (hotM3 === null && parseFloat(hotWaterTariff.diff_m3 || 0) > 0) {
       const count = nonReportingHotCount ?? safeApts.filter(a => {
         const hasWc = (waterConsumption || []).some(wc =>
           String(wc.apartment_id) === String(a.id) &&

@@ -201,20 +201,14 @@ export function WaterTab({
         const currentWaterTariff = waterTariffs.find(t => normalizePeriod(t.period) === normPeriod);
         const currentHotWaterTariff = hotWaterTariffs.find(t => normalizePeriod(t.period) === normPeriod);
 
-        // Aprēķinām kopsavilkumu tieši no mērījumiem, lai tas būtu tūlītējs un precīzs
-        const coldM3 = (apartments || []).reduce((sum, apt) => {
-          const current = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)?.reading_value;
-          const prev = getLastReading(apt.id, 'water', normPeriod, meterReadings)?.reading_value;
-          const diff = (current != null && prev != null) ? (parseFloat(current) - parseFloat(prev)) : 0;
-          return sum + Math.max(0, diff);
-        }, 0);
+        // Aprēķinām kopsavilkumu no water_consumption tabulas
+        const coldM3 = (waterConsumption || [])
+          .filter(wc => normalizePeriod(wc.period) === normPeriod && wc.meter_type === 'water')
+          .reduce((sum, wc) => sum + (parseFloat(wc.consumption_m3) || 0), 0);
 
-        const hotM3 = (apartments || []).reduce((sum, apt) => {
-          const current = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)?.reading_value;
-          const prev = getLastReading(apt.id, 'hot_water', normPeriod, meterReadings)?.reading_value;
-          const diff = (current != null && prev != null) ? (parseFloat(current) - parseFloat(prev)) : 0;
-          return sum + Math.max(0, diff);
-        }, 0);
+        const hotM3 = (waterConsumption || [])
+          .filter(wc => normalizePeriod(wc.period) === normPeriod && wc.meter_type === 'hot_water')
+          .reduce((sum, wc) => sum + (parseFloat(wc.consumption_m3) || 0), 0);
 
         const coldAmountNoVat = coldM3 * (parseFloat(currentWaterTariff?.price_per_m3) || 0);
         const hotAmountNoVat = hotM3 * (parseFloat(currentHotWaterTariff?.price_per_m3) || 0);
@@ -357,7 +351,10 @@ export function WaterTab({
                 
                 const coldLastObj = getLastReading(apt.id, 'water', normPeriod, meterReadings);
                 const coldPrev = coldLastObj ? coldLastObj.reading_value : '';
-                const coldDiff = (coldCurrent !== '' && coldPrev !== '') ? (coldCurrent - coldPrev).toFixed(2) : '-';
+                const coldConsObj = (waterConsumption || []).find(wc => 
+                  String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod
+                );
+                const coldDiff = coldConsObj ? parseFloat(coldConsObj.consumption_m3).toFixed(2) : '-';
                 
                 // Pārbaudām vai ir ieraksts water_consumption tabulā
                 const coldSynced = (waterConsumption || []).some(wc => 
@@ -370,7 +367,10 @@ export function WaterTab({
 
                 const hotLastObj = getLastReading(apt.id, 'hot_water', normPeriod, meterReadings);
                 const hotPrev = hotLastObj ? hotLastObj.reading_value : '';
-                const hotDiff = (hotCurrent !== '' && hotPrev !== '') ? (hotCurrent - hotPrev).toFixed(2) : '-';
+                const hotConsObj = (waterConsumption || []).find(wc => 
+                  String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod
+                );
+                const hotDiff = hotConsObj ? parseFloat(hotConsObj.consumption_m3).toFixed(2) : '-';
                 
                 const hotSynced = (waterConsumption || []).some(wc => 
                   String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod
