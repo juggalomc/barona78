@@ -58,7 +58,6 @@ export const calculateWaterDetails = ({
     );
     const hasValidEntry = entry && entry.consumption_m3 !== null && entry.consumption_m3 !== undefined;
     if (hasValidEntry) return parseFloat(entry.consumption_m3);
-    console.log(`[getConsumption] Apt ${apt.id}, Type ${type}, Period ${normPeriod}: Using waterConsumption entry: ${entry?.consumption_m3}`);
 
     // 2. Sekundāri: Aprēķins no rādījumiem "on the fly"
     const currentReading = (meterReadings || []).find(mr => 
@@ -69,14 +68,12 @@ export const calculateWaterDetails = ({
     if (currentReading && currentReading.reading_value !== null && currentReading.reading_value !== undefined) {
       const prev = getLastReading(apt.id, type, normPeriod, meterReadings);
       const currentVal = parseFloat(currentReading.reading_value) || 0;
-      const prevVal = (prev && prev.reading_value !== null && prev.reading_value !== undefined) 
-        ? parseFloat(prev.reading_value) 
-        : 0;
-      const calculatedConsumption = Math.max(0, currentVal - prevVal);
-      console.log(`[getConsumption] Apt ${apt.id}, Type ${type}, Period ${normPeriod}: Calculated from meterReadings. Current: ${currentVal}, Previous: ${prevVal}, Consumption: ${calculatedConsumption}`);
-      return calculatedConsumption;
+      if (prev && prev.reading_value !== null && prev.reading_value !== undefined) {
+        const prevVal = parseFloat(prev.reading_value);
+        return Math.max(0, currentVal - prevVal);
+      }
+      return 0; // Ja nav iepriekšējā rādījuma, patēriņš ir 0, nevis aktuālais rādījums
     }
-    console.log(`[getConsumption] Apt ${apt.id}, Type ${type}, Period ${normPeriod}: No consumption found, returning null.`);
     return null;
   };
 
