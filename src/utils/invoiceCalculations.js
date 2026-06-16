@@ -88,6 +88,10 @@ export const calculateInvoiceAmounts = ({
       }).length;
       pricePerUnit = participatingCount > 0 ? (parseFloat(tariff.total_amount) / participatingCount) : 0;
       amountWithoutVat = pricePerUnit;
+    } else if (tariff.is_fixed_amount) {
+      // D: Fiksēta summa katram dzīvoklim (manuāli ievadīta)
+      pricePerUnit = parseFloat(tariff.price_per_unit) || 0;
+      amountWithoutVat = pricePerUnit;
     } else {
       // C: Kopējā summa sadalīta proporcionāli platībai starp iesaistītajiem
       const totalArea = apartments.reduce((sum, a) => {
@@ -112,9 +116,10 @@ export const calculateInvoiceAmounts = ({
       amount_without_vat: amountWithoutVat, 
       vat_rate: vatRate, 
       vat_amount: vatAmount, 
-      price_per_sqm: tariff.is_equal_split ? null : pricePerUnit,
-      price_per_unit: tariff.is_equal_split ? pricePerUnit : null,
+      price_per_sqm: (tariff.is_equal_split || tariff.is_fixed_amount) ? null : pricePerUnit,
+      price_per_unit: (tariff.is_equal_split || tariff.is_fixed_amount) ? pricePerUnit : null,
       is_equal_split: !!tariff.is_equal_split,
+      is_fixed_amount: !!tariff.is_fixed_amount,
       type: 'tariff' 
     });
   }
