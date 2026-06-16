@@ -76,13 +76,13 @@ export function useInvoiceHandlers(
         const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod);
         const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod);
         return !hasWc && !hasMr;
-      ).length;
+      }).length;
 
       const nonReportingHotCount = apartments.filter(aptItem => {
         const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod);
         const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod);
         return !hasWc && !hasMr;
-      ).length;
+      }).length;
 
       const apartmentTariffs = periodTariffs.filter(t => {
         const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
@@ -161,13 +161,13 @@ export function useInvoiceHandlers(
         const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod);
         const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod);
         return !hasWc && !hasMr;
-      ).length;
+      }).length;
 
       const nonReportingHotAptsCount = apartments.filter(aptItem => {
         const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod);
         const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod);
         return !hasWc && !hasMr;
-      ).length;
+      }).length;
 
       for (const apt of apartments) {
         const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, normPeriod)) || 0;
@@ -254,13 +254,13 @@ export function useInvoiceHandlers(
         const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod);
         const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod);
         return !hasWc && !hasMr;
-      ).length;
+      }).length;
 
       const nonReportingHotCount = apartments.filter(aptItem => {
         const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod);
         const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod);
         return !hasWc && !hasMr;
-      ).length;
+      }).length;
 
       const apartmentTariffs = periodTariffs.filter(t => {
         const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
@@ -306,10 +306,6 @@ export function useInvoiceHandlers(
     if (!window.confirm(`Reģenerēt ${ids.length} rēķinus?`)) return;
 
     try {
-      if (syncWaterConsumption) {
-        await syncWaterConsumption(meterReadings);
-      }
-
       let regeneratedCount = 0;
 
       for (const id of ids) {
@@ -335,13 +331,17 @@ export function useInvoiceHandlers(
         const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period, originalInvoiceId)) || 0;
         const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
 
-        const nonReportingColdCount = apartments.filter(a =>
-          !freshMR.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
-        ).length;
+        const nonReportingColdCount = apartments.filter(aptItem => {
+          const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod);
+          const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod);
+          return !hasWc && !hasMr;
+        }).length;
 
-        const nonReportingHotCount = apartments.filter(a =>
-          !freshMR.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
-        ).length;
+        const nonReportingHotCount = apartments.filter(aptItem => {
+          const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod);
+          const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod);
+          return !hasWc && !hasMr;
+        }).length;
 
         const apartmentTariffs = periodTariffs.filter(t => {
           const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');

@@ -205,7 +205,10 @@ export default function PropertyManager() {
     }
   };
 
-  const uniqueTariffPeriods = [...new Set(tariffs.map(t => t.period))].sort().reverse();
+  const uniqueTariffPeriods = [...new Set([
+    ...tariffs.map(t => t.period),
+    waterHandlers.tariffPeriod
+  ])].filter(Boolean).sort().reverse();
 
   // ===== LOGIN SCREEN =====
   if (!currentUser) {
@@ -341,6 +344,8 @@ export default function PropertyManager() {
                 {...waterHandlers}
                 settings={settings}
                 updateSetting={updateSetting}
+                waterConsumption={waterConsumption}
+                fetchMeterReadingsOnly={fetchMeterReadingsOnly}
               />
             ) : activeTab === 'waste' ? (
               <WasteTab
