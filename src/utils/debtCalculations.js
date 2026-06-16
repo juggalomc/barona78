@@ -5,13 +5,14 @@ const getPeriodValue = (period) => {
 };
 
 /**
- * Aprēķina iepriekšējo parādu balstoties uz neapmaksātiem rēķiniem
- * Ņem vērā: Reālais parāds = Rēķina summa - Jau samaksāts
+ * Palīgfunkcija, kas aprēķina vēsturisko bilanci līdz pašreizējam periodam.
+ * Sakārto rēķinus hronoloģiski un summē starpības starp pakalpojumiem un samaksu.
  */
-export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excludeInvoiceId = null) => {
+const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoiceId = null) => {
   const currentVal = getPeriodValue(currentPeriod);
   
-  const previousInvoices = invoices.filter(inv => {
+  // 1. Atlasām visus iepriekšējos rēķinus
+  const previousInvoices = (invoices || []).filter(inv => {
     if (String(inv.apartment_id) !== String(apartmentId)) return false;
     if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
     return getPeriodValue(inv.period) < currentVal;
@@ -19,52 +20,47 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
 
   if (previousInvoices.length === 0) return 0;
 
-  // Atrodam jaunāko rēķinu pirms tekošā perioda
-  const latest = previousInvoices.reduce((prev, curr) => {
-    const pVal = getPeriodValue(prev.period);
-    const cVal = getPeriodValue(curr.period);
-    if (cVal > pVal) return curr;
-    if (cVal < pVal) return prev;
-    return curr.id > prev.id ? curr : prev;
+  // 2. Sakārtojam hronoloģiski: no vecākā uz jaunāko.
+  previousInvoices.sort((a, b) => {
+    const pA = getPeriodValue(a.period);
+    const pB = getPeriodValue(b.period);
+    if (pA !== pB) return pA - pB;
+    return Number(a.id) - Number(b.id);
   });
 
-  // Parādu rēķinām balstoties tikai uz cipariem: Rēķina summa mīnus samaksātais.
-  // Pat ja rēķins atzīmēts kā "Apmaksāts", ja summa nav nosegta, parāds paliek.
-  const total = Number(latest.amount_with_vat ?? latest.amount ?? 0);
-  const paid = Number(latest.paid_amount ?? 0);
-  const balance = total - paid;
+  // 3. Izskrienam cauri visiem rēķiniem un uzkrājam kopējo bilanci
+  let runningBalance = 0;
 
-  return balance > 0 ? Math.round(balance * 100) / 100 : 0;
+  for (const inv of previousInvoices) {
+    const total = Number(inv.amount_with_vat ?? inv.amount ?? 0);
+    const prevDebt = Number(inv.previous_debt_amount ?? 0);
+    const overpay = Number(inv.overpayment_amount ?? 0);
+    const paid = Number(inv.paid_amount ?? 0);
+    
+    // Aprēķinām tikai šī mēneša rēķinā iekļauto "jauno" pakalpojumu summu ar PVN.
+    // ServicesTotal = (Kopējā summa) - (Pārnestais parāds) + (Pārnestā pārmaksa)
+    const monthlyServiceCharge = total - prevDebt + overpay;
+    
+    // Pieskaitām mēneša pakalpojumus un atņemam to, ko klients faktiski samaksājis
+    runningBalance += (monthlyServiceCharge - paid);
+  }
+
+  return runningBalance;
 };
 
 /**
- * Aprēķina pārmaksu no iepriekšējā mēneša rēķina
- * Pārmaksa = Samaksāts - Rēķina summa (ņemot vērā pēdējo rēķinu pirms šī perioda)
+ * Aprēķina kopējo iepriekšējo parādu (ņemot vērā visu vēsturi un pārmaksas)
+ */
+export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excludeInvoiceId = null) => {
+  const netBalance = getHistoricalBalance(apartmentId, invoices, currentPeriod, excludeInvoiceId);
+  return netBalance > 0 ? Math.round(netBalance * 100) / 100 : 0;
+};
+
+/**
+ * Aprēķina kopējo pārmaksu no iepriekšējiem mēnešiem
  */
 export const calculateOverpayment = (apartmentId, invoices, currentPeriod, excludeInvoiceId = null) => {
-  const currentVal = getPeriodValue(currentPeriod);
-  
-  const previousInvoices = invoices.filter(inv => {
-    if (String(inv.apartment_id) !== String(apartmentId)) return false;
-    if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
-    return getPeriodValue(inv.period) < currentVal;
-  });
-
-  if (previousInvoices.length === 0) return 0;
-
-  // Atrodam jaunāko rēķinu pirms tekošā perioda
-  const latest = previousInvoices.reduce((prev, curr) => {
-    const pVal = getPeriodValue(prev.period);
-    const cVal = getPeriodValue(curr.period);
-    if (cVal > pVal) return curr;
-    if (cVal < pVal) return prev;
-    return curr.id > prev.id ? curr : prev;
-  });
-
-  const total = Number(latest.amount_with_vat ?? latest.amount ?? 0);
-  const paid = Number(latest.paid_amount ?? 0);
-  const balance = total - paid;
-
-  // Ja bilance ir negatīva, tā ir pārmaksa
-  return balance < 0 ? Math.round(Math.abs(balance) * 100) / 100 : 0;
+  const netBalance = getHistoricalBalance(apartmentId, invoices, currentPeriod, excludeInvoiceId);
+  // Ja gala bilance ir negatīva, tā ir pārmaksa (tāpēc izmantojam Math.abs)
+  return netBalance < 0 ? Math.round(Math.abs(netBalance) * 100) / 100 : 0;
 };
