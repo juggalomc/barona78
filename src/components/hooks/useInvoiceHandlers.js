@@ -897,13 +897,39 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
   const updatePaidAmount = async (invoiceId, paidAmount) => {
     try {
+      const invoice = invoices.find(inv => inv.id === invoiceId);
+      const paidVal = parseFloat(paidAmount) || 0;
+      
+      // Atjauninām samaksāto summu
       const { error } = await supabase
         .from('invoices')
-        .update({ paid_amount: parseFloat(paidAmount) || 0 })
+        .update({ paid_amount: paidVal })
         .eq('id', invoiceId);
+      
       if (error) throw error;
+      
+      // Pēc update, pārbaudām vai rēķins ir pilnībā apmaksāts
+      if (paidVal >= invoice.amount && !invoice.paid) {
+        // Automātiski atzīmējam kā apmaksātu
+        const { error: updateError } = await supabase
+          .from('invoices')
+          .update({ paid: true })
+          .eq('id', invoiceId);
+        if (updateError) throw updateError;
+        showToast('✓ Samaksāta summa atjaunināta - rēķins atzīmēts kā apmaksāts');
+      } else if (paidVal < invoice.amount && invoice.paid) {
+        // Ja samaksa samazināta zem rēķina summas, noņemam apmaksu atzīmi
+        const { error: updateError } = await supabase
+          .from('invoices')
+          .update({ paid: false })
+          .eq('id', invoiceId);
+        if (updateError) throw updateError;
+        showToast('✓ Samaksāta summa atjaunināta - rēķins atzīmēts kā neapmaksāts');
+      } else {
+        showToast('✓ Samaksāta summa atjaunināta');
+      }
+      
       fetchData();
-      showToast('✓ Samaksāta summa atjaunināta');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }

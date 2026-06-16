@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Toast } from './shared/Toast';
+import { calculateBaseAmount } from '../utils/invoiceCalculations';
 
 export function UserPortal({ userApartment, userInvoices, meterReadings, onLogout, onDownloadPDF, onViewAsHTML, onSaveWaterMeterReading, onSaveHotWaterMeterReading, toast, onCloseToast, settings, showToast, onChangePassword }) {
   // Rādījumu ievadei vienmēr izmantojam esošo mēnesi (reālā laika)
@@ -375,6 +376,10 @@ export function UserPortal({ userApartment, userInvoices, meterReadings, onLogou
                   <tr style={{ borderBottom: '1px solid #eee' }}>
                     <td style={{ padding: '12px 5px', fontSize: '14px' }}>Rēķina summa par periodu {viewingInvoice.period}</td>
                     <td style={{ padding: '12px 5px', textAlign: 'right', fontWeight: 'bold' }}>€{viewingInvoice.amount.toFixed(2)}</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #eee', background: '#eff6ff' }}>
+                    <td style={{ padding: '8px 5px', fontSize: '13px', color: '#0369a1' }}>Summa bez parāda/pārmaksas</td>
+                    <td style={{ padding: '8px 5px', textAlign: 'right', fontWeight: '600', color: '#0369a1' }}>€{calculateBaseAmount(viewingInvoice).toFixed(2)}</td>
                   </tr>
                   {viewingInvoice.paid_amount > 0 && (
                     <tr style={{ color: '#059669', borderBottom: '1px solid #eee' }}>

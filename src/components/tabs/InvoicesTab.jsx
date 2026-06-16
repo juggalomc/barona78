@@ -1,4 +1,5 @@
 import React from 'react';
+import { calculateBaseAmount } from '../../utils/invoiceCalculations';
 
 // Lokāli definēti stili, lai novērstu importa kļūdas
 const styles = {
@@ -345,6 +346,7 @@ export function InvoicesTab({
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Dzīvoklis</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Periods</th>
                   <th style={{padding: '12px', textAlign: 'right', fontWeight: '600'}}>Summa</th>
+                  <th style={{padding: '12px', textAlign: 'right', fontWeight: '600'}}>Bez parāda/pārmaksas</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Samaksāts</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Parāds</th>
                   <th style={{padding: '12px', textAlign: 'center', fontWeight: '600'}}>Pārmaksa</th>
@@ -384,6 +386,10 @@ export function InvoicesTab({
                       <td style={{padding: '12px', textAlign: 'center'}}>{invoice.period}</td>
                       <td style={{padding: '12px', textAlign: 'right', fontWeight: '600', color: '#003399'}}>€{invoice.amount.toFixed(2)}</td>
                       
+                      <td style={{padding: '12px', textAlign: 'right', color: '#0369a1', fontWeight: '600'}}>
+                        €{calculateBaseAmount(invoice).toFixed(2)}
+                      </td>
+                      
                       <td style={{padding: '12px', textAlign: 'center'}}>
                         {isEditingPaid ? (
                           <div style={{display: 'flex', gap: '4px', justifyContent: 'center'}}>
@@ -398,15 +404,6 @@ export function InvoicesTab({
                             <button onClick={() => {
                               const newVal = parseFloat(editingPaidAmountValue) || 0;
                               if (typeof updatePaidAmount === 'function') updatePaidAmount(invoice.id, newVal);
-                              
-                              // Automātiski atzīmē kā apmaksātu, ja summa sasniegta un vēl nav apmaksāts
-                              if (newVal >= invoice.amount && !invoice.paid && typeof toggleInvoicePaid === 'function') {
-                                toggleInvoicePaid(invoice.id, false);
-                              } 
-                              // Ja samaksa tiek samazināta zem rēķina summas, bet tas bija atzīmēts kā apmaksāts
-                              else if (newVal < invoice.amount && invoice.paid && typeof toggleInvoicePaid === 'function') {
-                                toggleInvoicePaid(invoice.id, true);
-                              }
                               setEditingPaidAmountId(null);
                             }} style={{...styles.btnSmall, background: '#10b981', color: 'white'}}>✓</button>
                             <button onClick={() => setEditingPaidAmountId(null)} style={{...styles.btnSmall, background: '#6b7280', color: 'white'}}>✕</button>

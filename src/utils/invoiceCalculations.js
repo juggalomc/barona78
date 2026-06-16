@@ -8,6 +8,31 @@ export const normalizePeriod = (p) => {
 };
 
 /**
+ * Aprēķina rēķina summu BEZ parāda un pārmaksas
+ * (tikai pakalpojumi un ūdens bez iepriekšējo periodu koriģējumiem)
+ */
+export const calculateBaseAmount = (invoice) => {
+  if (!invoice || !invoice.invoice_details) return 0;
+  
+  let invoiceDetails = [];
+  try {
+    invoiceDetails = typeof invoice.invoice_details === 'string' 
+      ? JSON.parse(invoice.invoice_details) 
+      : invoice.invoice_details;
+  } catch (e) {
+    console.error("Kļūda apstrādājot rēķina detaļas:", e);
+    return parseFloat(invoice.amount_without_vat) || 0;
+  }
+
+  // Summējam tikai pakalpojumus, ūdeni un atkritumu rindas - ne parādu un pārmaksu
+  const baseAmount = invoiceDetails
+    .filter(d => !['debt', 'overpayment'].includes(d.type))
+    .reduce((sum, d) => sum + (parseFloat(d.amount_without_vat) || 0), 0);
+  
+  return Math.round(baseAmount * 100) / 100;
+};
+
+/**
  * Centralizēta funkcija rēķina rindu un summu aprēķināšanai
  */
 export const calculateInvoiceAmounts = ({
