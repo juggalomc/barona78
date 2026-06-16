@@ -12,7 +12,7 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
   const currentVal = getPeriodValue(currentPeriod);
   
   const previousInvoices = invoices.filter(inv => {
-    if (inv.apartment_id !== apartmentId) return false;
+    if (String(inv.apartment_id) !== String(apartmentId)) return false;
     if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
     return getPeriodValue(inv.period) < currentVal;
   });
@@ -28,8 +28,10 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
     return curr.id > prev.id ? curr : prev;
   });
 
-  const total = parseFloat(latest.amount_with_vat ?? latest.amount) || 0;
-  const paid = parseFloat(latest.paid_amount) || 0;
+  // Parādu rēķinām balstoties tikai uz cipariem: Rēķina summa mīnus samaksātais.
+  // Pat ja rēķins atzīmēts kā "Apmaksāts", ja summa nav nosegta, parāds paliek.
+  const total = Number(latest.amount_with_vat ?? latest.amount ?? 0);
+  const paid = Number(latest.paid_amount ?? 0);
   const balance = total - paid;
 
   return balance > 0 ? Math.round(balance * 100) / 100 : 0;
@@ -43,7 +45,7 @@ export const calculateOverpayment = (apartmentId, invoices, currentPeriod, exclu
   const currentVal = getPeriodValue(currentPeriod);
   
   const previousInvoices = invoices.filter(inv => {
-    if (inv.apartment_id !== apartmentId) return false;
+    if (String(inv.apartment_id) !== String(apartmentId)) return false;
     if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
     return getPeriodValue(inv.period) < currentVal;
   });
@@ -59,8 +61,8 @@ export const calculateOverpayment = (apartmentId, invoices, currentPeriod, exclu
     return curr.id > prev.id ? curr : prev;
   });
 
-  const total = parseFloat(latest.amount_with_vat ?? latest.amount) || 0;
-  const paid = parseFloat(latest.paid_amount) || 0;
+  const total = Number(latest.amount_with_vat ?? latest.amount ?? 0);
+  const paid = Number(latest.paid_amount ?? 0);
   const balance = total - paid;
 
   // Ja bilance ir negatīva, tā ir pārmaksa
