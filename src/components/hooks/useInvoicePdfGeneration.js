@@ -124,7 +124,8 @@ export function generateInvoicePdfHtml(invoice, apt, settings = {}) {
             <span>Summa bez PVN:</span>
             <span>€${amountWithoutVat.toFixed(2)}</span>
           </div>
-          ${vatAmount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 15px;"><span>PVN kopā:</span><span>€${vatAmount.toFixed(2)}</span></div>` : ''}
+          ${vat21 > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;"><span>PVN 21%:</span><span>€${vat21.toFixed(2)}</span></div>` : ''}
+          ${vat12 > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;"><span>PVN 12%:</span><span>€${vat12.toFixed(2)}</span></div>` : ''}
           <div style="font-size: 12px; margin-bottom: 15px;">KOPĀ APMAKSAI (EUR):</div>
           <div class="amount-total">€${amountWithVat.toFixed(2)}</div>
         </div>

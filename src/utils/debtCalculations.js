@@ -32,17 +32,21 @@ const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoi
   let runningBalance = 0;
 
   for (const inv of previousInvoices) {
-    const total = Number(inv.amount_with_vat ?? inv.amount ?? 0);
-    const prevDebt = Number(inv.previous_debt_amount ?? 0);
-    const overpay = Number(inv.overpayment_amount ?? 0);
-    const paid = Number(inv.paid_amount ?? 0);
+    // totalInvoiceAmountDue represents the full amount of this specific invoice, including any debt/overpayment carried into it.
+    const totalInvoiceAmountDue = Number(inv.amount_with_vat ?? inv.amount ?? 0);
+    // prevDebtCarriedIn and overpayCarriedIn are the amounts carried into this specific invoice from even earlier periods.
+    const prevDebtCarriedIn = Number(inv.previous_debt_amount ?? 0);
+    const overpayCarriedIn = Number(inv.overpayment_amount ?? 0);
+    const paidForThisInvoice = Number(inv.paid_amount ?? 0);
     
     // Aprēķinām tikai šī mēneša rēķinā iekļauto "jauno" pakalpojumu summu ar PVN.
-    // ServicesTotal = (Kopējā summa) - (Pārnestais parāds) + (Pārnestā pārmaksa)
-    const monthlyServiceCharge = total - prevDebt + overpay;
+    // This is the portion of the invoice that is purely for services rendered in that month,
+    // excluding any debt or overpayment that was brought into this invoice from prior periods.
+    const monthlyServiceCharge = totalInvoiceAmountDue - prevDebtCarriedIn + overpayCarriedIn;
     
     // Pieskaitām mēneša pakalpojumus un atņemam to, ko klients faktiski samaksājis
-    runningBalance += (monthlyServiceCharge - paid);
+    // The running balance accumulates the net effect of each month's new charges minus payments.
+    runningBalance += (monthlyServiceCharge - paidForThisInvoice);
   }
 
   return runningBalance;
