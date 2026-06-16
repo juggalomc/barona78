@@ -13,7 +13,9 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
     name: '',
     total_amount: '',
     price_per_m2: '',
+    price_per_unit: '',
     is_per_m2: false,
+    is_fixed_amount: false,
     vat_rate: 21,
     include_in_invoice: true,
     target_type: 'all',
@@ -37,9 +39,32 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
     return filtered.reduce((sum, a) => sum + (parseFloat(a.area) || 0), 0);
   };
 
+  const getTargetCount = (type, excludedIds = []) => {
+    if (!apartments || apartments.length === 0) return 0;
+    let filtered = apartments;
+    if (type === 'residential') filtered = apartments.filter(a => a.is_residential !== false);
+    else if (type === 'non_residential') filtered = apartments.filter(a => a.is_residential === false);
+
+    if (excludedIds && excludedIds.length > 0) {
+      filtered = filtered.filter(a => !excludedIds.includes(a.id));
+    }
+
+    return filtered.length;
+  };
+
+  const computeTotalAmount = (form, targetArea, targetCount) => {
+    if (form.is_per_m2) return (parseFloat(form.price_per_m2) || 0) * targetArea;
+    if (form.is_fixed_amount) return (parseFloat(form.price_per_unit) || 0) * targetCount;
+    return parseFloat(form.total_amount) || 0;
+  };
+
   const addTariff = async (e) => {
     e.preventDefault();
-    const hasAmount = tariffForm.is_per_m2 ? tariffForm.price_per_m2 : tariffForm.total_amount;
+    const hasAmount = tariffForm.is_per_m2
+      ? tariffForm.price_per_m2
+      : tariffForm.is_fixed_amount
+        ? tariffForm.price_per_unit
+        : tariffForm.total_amount;
 
     if (!tariffForm.name || !hasAmount) {
       showToast('Aizpildiet visus laukus', 'error');
@@ -48,12 +73,15 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
 
     try {
       const targetArea = getTargetArea(tariffForm.target_type, tariffForm.excluded_apartments);
-      
+      const targetCount = getTargetCount(tariffForm.target_type, tariffForm.excluded_apartments);
+
       const dataToInsert = {
         name: tariffForm.name.trim(),
-        total_amount: tariffForm.is_per_m2 
-          ? parseFloat(tariffForm.price_per_m2) * targetArea 
-          : parseFloat(tariffForm.total_amount),
+        total_amount: computeTotalAmount(tariffForm, targetArea, targetCount),
+        price_per_m2: tariffForm.is_per_m2 ? (parseFloat(tariffForm.price_per_m2) || 0) : null,
+        price_per_unit: tariffForm.is_fixed_amount ? (parseFloat(tariffForm.price_per_unit) || 0) : null,
+        is_per_m2: !!tariffForm.is_per_m2,
+        is_fixed_amount: !!tariffForm.is_fixed_amount,
         vat_rate: parseFloat(tariffForm.vat_rate) || 0,
         period: tariffPeriod,
         include_in_invoice: tariffForm.include_in_invoice,
@@ -64,7 +92,7 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
       const { error } = await supabase.from('tariffs').insert([dataToInsert]);
       if (error) throw error;
       
-      setTariffForm({ name: '', total_amount: '', price_per_m2: '', is_per_m2: false, vat_rate: 21, include_in_invoice: true, target_type: 'all', excluded_apartments: [] });
+      setTariffForm({ name: '', total_amount: '', price_per_m2: '', price_per_unit: '', is_per_m2: false, is_fixed_amount: false, vat_rate: 21, include_in_invoice: true, target_type: 'all', excluded_apartments: [] });
       fetchData();
       showToast('✓ Tarifs pievienots');
     } catch (error) {
@@ -78,8 +106,12 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
     setEditForm({
       name: tariff.name,
       total_amount: tariff.total_amount,
-      price_per_m2: targetArea > 0 ? (parseFloat(tariff.total_amount) / targetArea).toFixed(4) : "0.0000",
-      is_per_m2: false, // Pēc noklusējuma rediģējam kopējo summu, lietotājs var pārslēgt
+      price_per_m2: tariff.price_per_m2 != null
+        ? tariff.price_per_m2
+        : (targetArea > 0 ? (parseFloat(tariff.total_amount) / targetArea).toFixed(4) : "0.0000"),
+      price_per_unit: tariff.price_per_unit != null ? tariff.price_per_unit : '',
+      is_per_m2: !!tariff.is_per_m2,
+      is_fixed_amount: !!tariff.is_fixed_amount,
       vat_rate: tariff.vat_rate || 0,
       include_in_invoice: tariff.include_in_invoice !== false,
       target_type: tariff.target_type || 'all',
@@ -90,16 +122,19 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
   const saveEditTariff = async (id) => {
     try {
       const targetArea = getTargetArea(editForm.target_type, editForm.excluded_apartments);
-      
-      const totalAmount = editForm.is_per_m2 
-        ? parseFloat(editForm.price_per_m2) * targetArea 
-        : parseFloat(editForm.total_amount);
+      const targetCount = getTargetCount(editForm.target_type, editForm.excluded_apartments);
+
+      const totalAmount = computeTotalAmount(editForm, targetArea, targetCount);
 
       const { error } = await supabase
         .from('tariffs')
         .update({
           name: editForm.name,
           total_amount: totalAmount,
+          price_per_m2: editForm.is_per_m2 ? (parseFloat(editForm.price_per_m2) || 0) : null,
+          price_per_unit: editForm.is_fixed_amount ? (parseFloat(editForm.price_per_unit) || 0) : null,
+          is_per_m2: !!editForm.is_per_m2,
+          is_fixed_amount: !!editForm.is_fixed_amount,
           vat_rate: parseFloat(editForm.vat_rate) || 0,
           include_in_invoice: editForm.include_in_invoice,
           target_type: editForm.target_type || 'all',
@@ -164,6 +199,10 @@ export function useTariffHandlers(supabase, apartments, fetchData, showToast) {
         return {
           name: t.name,
           total_amount: Number(t.total_amount) || 0,
+          price_per_m2: t.price_per_m2 != null ? Number(t.price_per_m2) : null,
+          price_per_unit: t.price_per_unit != null ? Number(t.price_per_unit) : null,
+          is_per_m2: !!t.is_per_m2,
+          is_fixed_amount: !!t.is_fixed_amount,
           vat_rate: Number(t.vat_rate) || 0,
           period: normalizePeriod(toPeriod),
           include_in_invoice: t.include_in_invoice !== false,
