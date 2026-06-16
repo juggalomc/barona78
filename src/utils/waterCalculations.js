@@ -65,14 +65,14 @@ export const calculateWaterDetails = ({
       mr.meter_type === type && 
       normalizePeriod(mr.period) === normPeriod
     );
-    if (currentReading && currentReading.reading_value !== null && currentReading.reading_value !== undefined) {
+    if (currentReading && currentReading.reading_value !== null) {
       const prev = getLastReading(apt.id, type, normPeriod, meterReadings);
-      const currentVal = parseFloat(currentReading.reading_value) || 0;
-      if (prev && prev.reading_value !== null && prev.reading_value !== undefined) {
+      if (prev && prev.reading_value !== null) {
+        const currentVal = parseFloat(currentReading.reading_value);
         const prevVal = parseFloat(prev.reading_value);
         return Math.max(0, currentVal - prevVal);
       }
-      return 0; // Ja nav iepriekšējā rādījuma, patēriņš ir 0, nevis aktuālais rādījums
+      return 0; // Ja nav iepriekšējā mēneša rādījuma, starpība/patēriņš nav zināms un ir 0
     }
     return null;
   };

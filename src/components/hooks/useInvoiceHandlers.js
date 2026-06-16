@@ -53,6 +53,15 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
       const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth)) || 0;
       const overpayment = Number(calculateOverpayment(apt.id, invoices, currentInvoiceMonth)) || 0;
 
+      // Aprēķinām ziņojumu skaitu ūdens starpības sadalei
+      const nonReportingColdCount = apartments.filter(a => 
+        !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
+      ).length;
+
+      const nonReportingHotCount = apartments.filter(a => 
+        !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
+      ).length;
+
       const apartmentTariffs = periodTariffs.filter(t => {
         const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
         return !excluded.includes(apt.id);
@@ -60,7 +69,8 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
         apt, period: currentInvoiceMonth, periodTariffs: apartmentTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
-        meterReadings, waterConsumption, apartments, previousDebt, overpayment
+        meterReadings, waterConsumption, apartments, previousDebt, overpayment,
+        nonReportingColdCount, nonReportingHotCount
       });
 
       const timestamp = Math.floor(Date.now() / 1000);
