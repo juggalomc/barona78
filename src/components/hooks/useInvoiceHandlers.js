@@ -31,15 +31,17 @@ export function useInvoiceHandlers(
   });
   const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0, active: false });
 
-  // ✅ Palīgfunkcija: ielādē svaigus waterConsumption un meterReadings no DB
-  const fetchFreshWaterData = async (normPeriod) => {
-    const [wcRes, mrRes] = await Promise.all([
+  // ✅ Palīgfunkcija: ielādē visus nepieciešamos svaigos datus no DB pirms ģenerēšanas
+  const fetchFreshGenerationData = async (normPeriod) => {
+    const [wcRes, mrRes, invRes] = await Promise.all([
       supabase.from('water_consumption').select('*').eq('period', normPeriod),
-      supabase.from('meter_readings').select('*')
+      supabase.from('meter_readings').select('*'),
+      supabase.from('invoices').select('*').order('period', { ascending: false })
     ]);
     return {
       freshWC: wcRes.data || [],
-      freshMR: mrRes.data || []
+      freshMR: mrRes.data || [],
+      freshInvoices: invRes.data || []
     };
   };
 
@@ -56,7 +58,7 @@ export function useInvoiceHandlers(
       const [year, month] = normPeriod.split('-');
 
       // ✅ Svaigie dati no DB pēc sinhronizācijas
-      const { freshWC, freshMR } = await fetchFreshWaterData(normPeriod);
+      const { freshWC, freshMR, freshInvoices } = await fetchFreshGenerationData(normPeriod);
 
       let invoiceDateFrom = dateFrom;
       let invoiceDateTo = dateTo;
@@ -68,8 +70,8 @@ export function useInvoiceHandlers(
         invoiceDateTo = `${year}-${month}-${daysInMonth}`;
       }
 
-      const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth)) || 0;
-      const overpayment = Number(calculateOverpayment(apt.id, invoices, currentInvoiceMonth)) || 0;
+      const previousDebt = Number(calculatePreviousDebt(apt.id, freshInvoices, currentInvoiceMonth)) || 0;
+      const overpayment = Number(calculateOverpayment(apt.id, freshInvoices, currentInvoiceMonth)) || 0;
 
       // Pareiza neiesniegušo skaitīšana: pārbauda gan patēriņa tabulu, gan rādījumus
       const nonReportingColdCount = apartments.filter(aptItem => {
@@ -145,7 +147,7 @@ export function useInvoiceHandlers(
       const [year, month] = normPeriod.split('-');
 
       // ✅ Svaigie dati no DB pēc sinhronizācijas
-      const { freshWC, freshMR } = await fetchFreshWaterData(normPeriod);
+      const { freshWC, freshMR, freshInvoices } = await fetchFreshGenerationData(normPeriod);
 
       let dateFrom = invoiceFromDate;
       let dateTo = invoiceToDate;
@@ -170,8 +172,8 @@ export function useInvoiceHandlers(
       }).length;
 
       for (const apt of apartments) {
-        const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, normPeriod)) || 0;
-        const overpayment = Number(calculateOverpayment(apt.id, invoices, normPeriod)) || 0;
+        const previousDebt = Number(calculatePreviousDebt(apt.id, freshInvoices, normPeriod)) || 0;
+        const overpayment = Number(calculateOverpayment(apt.id, freshInvoices, normPeriod)) || 0;
 
         const apartmentTariffs = periodTariffs.filter(t => {
           const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
@@ -243,12 +245,14 @@ export function useInvoiceHandlers(
       }
 
       // ✅ Svaigie dati no DB pēc sinhronizācijas
-      const { freshWC, freshMR } = await fetchFreshWaterData(normPeriod);
+      const { freshWC, freshMR, freshInvoices } = await fetchFreshGenerationData(normPeriod);
 
       await supabase.from('invoices').delete().eq('id', invoice.id);
+      // Izslēdzam dzēsto rēķinu no saraksta aprēķinam
+      const filteredInvoices = (freshInvoices || []).filter(inv => inv.id !== invoice.id);
 
-      const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period, invoice.id)) || 0;
-      const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
+      const previousDebt = Number(calculatePreviousDebt(apt.id, filteredInvoices, invoice.period)) || 0;
+      const overpayment = Number(calculateOverpayment(apt.id, filteredInvoices, invoice.period)) || 0;
 
       const nonReportingColdCount = apartments.filter(aptItem => {
         const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod);
@@ -323,13 +327,15 @@ export function useInvoiceHandlers(
         const normPeriod = normalizePeriod(invoice.period);
 
         // ✅ Svaigie dati no DB pēc sinhronizācijas
-        const { freshWC, freshMR } = await fetchFreshWaterData(normPeriod);
+        const { freshWC, freshMR, freshInvoices } = await fetchFreshGenerationData(normPeriod);
 
         const originalInvoiceId = invoice.id;
         await supabase.from('invoices').delete().eq('id', originalInvoiceId);
+        // Izslēdzam dzēsto rēķinu no saraksta
+        const filteredInvoices = (freshInvoices || []).filter(inv => inv.id !== originalInvoiceId);
 
-        const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period, originalInvoiceId)) || 0;
-        const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
+        const previousDebt = Number(calculatePreviousDebt(apt.id, filteredInvoices, invoice.period)) || 0;
+        const overpayment = Number(calculateOverpayment(apt.id, filteredInvoices, invoice.period)) || 0;
 
         const nonReportingColdCount = apartments.filter(aptItem => {
           const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod);
