@@ -51,10 +51,6 @@ export function useInvoiceHandlers(
     }
 
     try {
-      if (syncWaterConsumption) {
-        await syncWaterConsumption(meterReadings);
-      }
-
       const apt = apartments.find(a => a.id === apartmentId);
       const normPeriod = normalizePeriod(currentInvoiceMonth);
       const [year, month] = normPeriod.split('-');
@@ -75,12 +71,17 @@ export function useInvoiceHandlers(
       const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, currentInvoiceMonth)) || 0;
       const overpayment = Number(calculateOverpayment(apt.id, invoices, currentInvoiceMonth)) || 0;
 
-      const nonReportingColdCount = apartments.filter(a =>
-        !freshMR.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
+      // Pareiza neiesniegušo skaitīšana: pārbauda gan patēriņa tabulu, gan rādījumus
+      const nonReportingColdCount = apartments.filter(aptItem => {
+        const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod);
+        const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod);
+        return !hasWc && !hasMr;
       ).length;
 
-      const nonReportingHotCount = apartments.filter(a =>
-        !freshMR.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
+      const nonReportingHotCount = apartments.filter(aptItem => {
+        const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod);
+        const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod);
+        return !hasWc && !hasMr;
       ).length;
 
       const apartmentTariffs = periodTariffs.filter(t => {
@@ -139,10 +140,6 @@ export function useInvoiceHandlers(
     }
 
     try {
-      if (syncWaterConsumption) {
-        await syncWaterConsumption(meterReadings);
-      }
-
       const invoicesToAdd = [];
       const normPeriod = normalizePeriod(currentInvoiceMonth);
       const [year, month] = normPeriod.split('-');
@@ -160,12 +157,16 @@ export function useInvoiceHandlers(
         dateTo = dateTo || `${year}-${month}-${daysInMonth}`;
       }
 
-      const nonReportingColdAptsCount = apartments.filter(aptItem =>
-        !freshMR.find(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
+      const nonReportingColdAptsCount = apartments.filter(aptItem => {
+        const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod);
+        const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod);
+        return !hasWc && !hasMr;
       ).length;
 
-      const nonReportingHotAptsCount = apartments.filter(aptItem =>
-        !freshMR.find(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
+      const nonReportingHotAptsCount = apartments.filter(aptItem => {
+        const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod);
+        const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod);
+        return !hasWc && !hasMr;
       ).length;
 
       for (const apt of apartments) {
@@ -232,10 +233,6 @@ export function useInvoiceHandlers(
     if (!window.confirm(`Reģenerēt rēķinu ${invoice.invoice_number}?`)) return;
 
     try {
-      if (syncWaterConsumption) {
-        await syncWaterConsumption(meterReadings);
-      }
-
       const apt = apartments.find(a => a.id === invoice.apartment_id);
       const normPeriod = normalizePeriod(invoice.period);
       const periodTariffs = tariffs.filter(t => t.period === invoice.period && t.include_in_invoice !== false);
@@ -253,12 +250,16 @@ export function useInvoiceHandlers(
       const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period)) || 0;
       const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
 
-      const nonReportingColdCount = apartments.filter(a =>
-        !freshMR.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
+      const nonReportingColdCount = apartments.filter(aptItem => {
+        const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod);
+        const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod);
+        return !hasWc && !hasMr;
       ).length;
 
-      const nonReportingHotCount = apartments.filter(a =>
-        !freshMR.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
+      const nonReportingHotCount = apartments.filter(aptItem => {
+        const hasWc = (freshWC || []).some(wc => String(wc.apartment_id) === String(aptItem.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod);
+        const hasMr = (freshMR || []).some(mr => String(mr.apartment_id) === String(aptItem.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod);
+        return !hasWc && !hasMr;
       ).length;
 
       const apartmentTariffs = periodTariffs.filter(t => {

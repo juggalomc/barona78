@@ -69,27 +69,8 @@ export const calculateWaterDetails = ({
       return parseFloat(entry.consumption_m3);
     }
 
-    // 2. Fallback: Aprēķins "on the fly" kā starpība starp rādījumiem
-    // (tikai ja nav ieraksta water_consumption tabulā)
-    const safeMR = meterReadings || [];
-    const currentReading = safeMR.find(mr => 
-      String(mr.apartment_id) === String(apt.id) && 
-      String(mr.meter_type) === String(type) && 
-      normalizePeriod(mr.period) === normPeriod
-    );
-
-    if (currentReading && currentReading.reading_value !== null) {
-      const prev = getLastReading(apt.id, type, normPeriod, safeMR);
-      if (prev && prev.reading_value !== null) {
-        const currentVal = parseFloat(currentReading.reading_value);
-        const prevVal = parseFloat(prev.reading_value);
-        return Math.max(0, currentVal - prevVal);
-      }
-      // Nav iepriekšējā rādījuma — patēriņš nezināms, atgriežam 0
-      return 0;
-    }
-
-    // Nav ne water_consumption ieraksta, ne rādījuma — nav datu
+    // Ja nav ieraksta water_consumption tabulā, atgriežam null,
+    // jo water_consumption ir vienīgais patēriņa datu avots.
     return null;
   };
 
