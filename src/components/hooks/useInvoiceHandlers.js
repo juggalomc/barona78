@@ -290,7 +290,8 @@ export function useInvoiceHandlers(
         due_date: invoice.due_date,
         date_from: invoice.date_from,
         date_to: invoice.date_to,
-        paid: false,
+        paid: invoice.paid, // Carry over paid status from original invoice
+        paid_amount: invoice.paid_amount, // Carry over paid amount from original invoice
         invoice_details: JSON.stringify(invoiceDetails),
         previous_debt_amount: previousDebt,
         previous_debt_note: invoice.previous_debt_note || '',
@@ -378,7 +379,8 @@ export function useInvoiceHandlers(
           due_date: dueDate,
           date_from: invoice.date_from,
           date_to: invoice.date_to,
-          paid: false,
+        paid: invoice.paid, // Carry over paid status from original invoice
+        paid_amount: invoice.paid_amount, // Carry over paid amount from original invoice
           invoice_details: JSON.stringify(invoiceDetails),
           previous_debt_amount: previousDebt,
           previous_debt_note: invoice.previous_debt_note || '',
