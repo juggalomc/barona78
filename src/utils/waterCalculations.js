@@ -50,29 +50,34 @@ export const calculateWaterDetails = ({
 
   // Helper funkcija patēriņa noteikšanai
   const getConsumption = (type) => {
-    // 1. Prioritāte: Sinhronizētais patēriņš no tabulas
+    // 1. Prioritāte: Sinhronizētais patēriņš (starpība) no water_consumption tabulas
     const entry = (waterConsumption || []).find(wc => 
       String(wc.apartment_id) === String(apt.id) && 
       wc.meter_type === type && 
       normalizePeriod(wc.period) === normPeriod
     );
-    const hasValidEntry = entry && entry.consumption_m3 !== null && entry.consumption_m3 !== undefined;
-    if (hasValidEntry) return parseFloat(entry.consumption_m3);
+    
+    if (entry && entry.consumption_m3 !== null && entry.consumption_m3 !== undefined) {
+      return parseFloat(entry.consumption_m3);
+    }
 
-    // 2. Sekundāri: Aprēķins no rādījumiem "on the fly"
+    // 2. Sekundāri: Aprēķins "on the fly" kā starpība starp rādījumiem
     const currentReading = (meterReadings || []).find(mr => 
       String(mr.apartment_id) === String(apt.id) && 
       mr.meter_type === type && 
       normalizePeriod(mr.period) === normPeriod
     );
+
     if (currentReading && currentReading.reading_value !== null) {
       const prev = getLastReading(apt.id, type, normPeriod, meterReadings);
       if (prev && prev.reading_value !== null) {
         const currentVal = parseFloat(currentReading.reading_value);
         const prevVal = parseFloat(prev.reading_value);
+        // Aprēķinām starpību. Ja rādījums ir mazāks par iepriekšējo (piem. mainīts skaitītājs), atgriežam 0 vai veicam korekciju.
         return Math.max(0, currentVal - prevVal);
       }
-      return 0; // Ja nav iepriekšējā mēneša rādījuma, starpība/patēriņš nav zināms un ir 0
+      // BŪTISKI: Ja nav iepriekšējā rādījuma, mēs NEVARAM pieņemt, ka patēriņš ir pašreizējais rādījums.
+      return 0; 
     }
     return null;
   };

@@ -412,7 +412,8 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
             const lastReading = getLastReading(apt.id, type, normTariffPeriod, activeReadings);
             const currentVal = parseFloat(currentReadingObj.reading_value);
             let consumption = 0;
-            if (lastReading && lastReading.reading_value !== null) {
+            // Tikai ja ir iepriekšējais rādījums, rēķinām starpību
+            if (lastReading && lastReading.reading_value !== null && lastReading.reading_value !== undefined) {
               consumption = Math.max(0, currentVal - parseFloat(lastReading.reading_value));
             }
 
