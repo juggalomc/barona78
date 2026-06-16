@@ -36,6 +36,11 @@ const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoi
   let runningBalance = 0;
 
   for (const inv of previousInvoices) {
+    // ✅ JAUNS: Ja rēķins ir pilnībā apmaksāts, izlaižam to no parāda aprēķina
+    if (inv.paid === true) {
+      continue;
+    }
+
     // totalInvoiceAmountDue represents the full amount of this specific invoice, including any debt/overpayment carried into it.
     const totalInvoiceAmountDue = Number(inv.amount_with_vat ?? inv.amount ?? 0);
     // prevDebtCarriedIn and overpayCarriedIn are the amounts carried into this specific invoice from even earlier periods.
