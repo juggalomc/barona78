@@ -11,14 +11,7 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
     if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
 
     const [invYear, invMonth] = inv.period.split('-').map(Number);
-    
-    // Nosacījums 1: Periods ir pirms pašreizējā rēķina perioda
-    const isEarlierPeriod = (invYear < currentYear) || (invYear === currentYear && invMonth < currentMonth);
-    
-    // Nosacījums 2: Termiņš ir beidzies uz ģenerēšanas brīdi
-    const isPastDue = todayStr > inv.due_date;
-
-    return isEarlierPeriod || isPastDue;
+    return (invYear < currentYear) || (invYear === currentYear && invMonth < currentMonth);
   });
 
   if (previousDebts.length === 0) return 0;
