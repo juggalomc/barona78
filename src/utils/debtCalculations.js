@@ -6,12 +6,12 @@ const getPeriodValue = (period) => {
 
 /**
  * Palīgfunkcija, kas aprēķina vēsturisko bilanci līdz pašreizējam periodam.
- * Sakārto rēķinus hronoloģiski un summē starpības starp pakalpojumiem un samaksu.
+ * Sakārto rēķinus hronoloģiski un salīdzina kopējo rēķina summu ar reāli samaksāto.
  */
 const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoiceId = null) => {
   const currentVal = getPeriodValue(currentPeriod);
   
-  // 1. Atlasām visus iepriekšējos rēķinus
+  // 1. Atlasām visus iepriekšējos rēķinus pirms tekošā perioda
   const previousInvoices = (invoices || []).filter(inv => {
     if (String(inv.apartment_id) !== String(apartmentId)) return false;
     if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
