@@ -204,8 +204,10 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       // ✅ Sinhronizējam ar water_consumption tabulu
       const currentVal = parseFloat(value) || 0;
-      const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
-      const consumption = Math.max(0, currentVal - prevVal);
+      let consumption = 0;
+      if (lastReading && lastReading.reading_value !== null) {
+        consumption = Math.max(0, currentVal - parseFloat(lastReading.reading_value));
+      }
       
       await supabase.from('water_consumption').upsert({
         apartment_id: String(apartmentId),
@@ -289,8 +291,10 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       // ✅ Sinhronizējam ar water_consumption tabulu
       const currentVal = parseFloat(value) || 0;
-      const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
-      const consumption = Math.max(0, currentVal - prevVal);
+      let consumption = 0;
+      if (lastReading && lastReading.reading_value !== null) {
+        consumption = Math.max(0, currentVal - parseFloat(lastReading.reading_value));
+      }
       
       await supabase.from('water_consumption').upsert({
         apartment_id: String(apartmentId),
@@ -340,8 +344,10 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       if (error) throw error;
 
       // ✅ Atjaunojam arī patēriņa tabulu pēc manuālas labošanas
-      const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
-      const consumption = Math.max(0, value - prevVal);
+      let consumption = 0;
+      if (lastReading && lastReading.reading_value !== null) {
+        consumption = Math.max(0, value - parseFloat(lastReading.reading_value));
+      }
 
       await supabase.from('water_consumption').upsert({
         apartment_id: String(reading.apartment_id),
@@ -405,8 +411,10 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
           if (currentReadingObj) {
             const lastReading = getLastReading(apt.id, type, normTariffPeriod, activeReadings);
             const currentVal = parseFloat(currentReadingObj.reading_value);
-            const prevVal = lastReading ? parseFloat(lastReading.reading_value) : 0;
-            const consumption = Math.max(0, currentVal - prevVal);
+            let consumption = 0;
+            if (lastReading && lastReading.reading_value !== null) {
+              consumption = Math.max(0, currentVal - parseFloat(lastReading.reading_value));
+            }
 
             consumptionData.push({
               apartment_id: String(apt.id),

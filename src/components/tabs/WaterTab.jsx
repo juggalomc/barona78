@@ -350,6 +350,11 @@ export function WaterTab({
                 const coldLastObj = getLastReading(apt.id, 'water', normPeriod, meterReadings);
                 const coldPrev = coldLastObj ? coldLastObj.reading_value : '';
                 const coldDiff = (coldCurrent !== '' && coldPrev !== '') ? (coldCurrent - coldPrev).toFixed(2) : '-';
+                
+                // Pārbaudām vai ir ieraksts water_consumption tabulā
+                const coldSynced = (waterConsumption || []).some(wc => 
+                  String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'water' && normalizePeriod(wc.period) === normPeriod
+                );
 
                 // SILTAIS ŪDENS DATI
                 const hotReadingObj = meterReadings.find(mr => String(mr.apartment_id) === String(apt.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod);
@@ -358,6 +363,10 @@ export function WaterTab({
                 const hotLastObj = getLastReading(apt.id, 'hot_water', normPeriod, meterReadings);
                 const hotPrev = hotLastObj ? hotLastObj.reading_value : '';
                 const hotDiff = (hotCurrent !== '' && hotPrev !== '') ? (hotCurrent - hotPrev).toFixed(2) : '-';
+                
+                const hotSynced = (waterConsumption || []).some(wc => 
+                  String(wc.apartment_id) === String(apt.id) && wc.meter_type === 'hot_water' && normalizePeriod(wc.period) === normPeriod
+                );
 
                 const rowBg = index % 2 === 0 ? 'white' : '#f8fafc';
 
@@ -388,7 +397,7 @@ export function WaterTab({
                       />
                     </td>
                     <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: coldDiff > 0 ? '#0284c7' : '#cbd5e1', background: '#f0f9ff' }}>
-                      {coldDiff}
+                      {coldDiff} {coldSynced && coldDiff !== '-' && <span title="Sinhronizēts" style={{fontSize: '10px', color: '#10b981'}}>✅</span>}
                     </td>
 
                     {/* SILTAIS ŪDENS IEVADE */}
@@ -413,7 +422,7 @@ export function WaterTab({
                       />
                     </td>
                     <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: hotDiff > 0 ? '#ea580c' : '#cbd5e1', background: '#fff7ed' }}>
-                      {hotDiff}
+                      {hotDiff} {hotSynced && hotDiff !== '-' && <span title="Sinhronizēts" style={{fontSize: '10px', color: '#10b981'}}>✅</span>}
                     </td>
                   </tr>
                 );
