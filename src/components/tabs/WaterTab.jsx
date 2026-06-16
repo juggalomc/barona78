@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { styles } from '../shared/styles';
 import { normalizePeriod } from '../../utils/waterCalculations';
 
@@ -26,6 +26,13 @@ export function WaterTab({
 }) {
   const [buildingColdWaterTotal, setBuildingColdWaterTotal] = useState('');
   const [buildingHotWaterTotal, setBuildingHotWaterTotal] = useState('');
+
+  // Ielādē rādījumus, kad komponents ielādējas vai mainās periods
+  useEffect(() => {
+    if (fetchMeterReadingsOnly) {
+      fetchMeterReadingsOnly();
+    }
+  }, [tariffPeriod, fetchMeterReadingsOnly]); // Atkarības: tariffPeriod un fetchMeterReadingsOnly
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
