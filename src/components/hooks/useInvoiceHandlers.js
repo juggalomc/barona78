@@ -12,7 +12,6 @@ const normalizePeriod = (p) => {
   return `${parts[0]}-${parts[1].padStart(2, '0')}`;
 };
 
-export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}, waterConsumption = []) {
 export function useInvoiceHandlers(
   supabase, apartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, 
   meterReadings, fetchData, showToast, settings = {}, enabledMeters = {}, waterConsumption = [],
