@@ -415,6 +415,15 @@ export function useInvoiceHandlers(
 
       const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period)) || 0;
       const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
+      const normPeriod = normalizePeriod(invoice.period);
+
+      const nonReportingColdCount = apartments.filter(a => 
+        !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
+      ).length;
+
+      const nonReportingHotCount = apartments.filter(a => 
+        !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
+      ).length;
 
       const apartmentTariffs = periodTariffs.filter(t => {
         const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
@@ -423,7 +432,8 @@ export function useInvoiceHandlers(
 
       const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
         apt, period: invoice.period, periodTariffs: apartmentTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
-        meterReadings, waterConsumption, apartments, previousDebt, overpayment
+        meterReadings, waterConsumption, apartments, previousDebt, overpayment,
+        nonReportingColdCount, nonReportingHotCount
       });
 
       const { error: insertError } = await supabase.from('invoices').insert([{
@@ -534,6 +544,15 @@ export function useInvoiceHandlers(
 
         const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, invoice.period, originalInvoiceId)) || 0;
         const overpayment = Number(calculateOverpayment(apt.id, invoices, invoice.period)) || 0;
+        const normPeriod = normalizePeriod(invoice.period);
+
+        const nonReportingColdCount = apartments.filter(a => 
+          !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'water' && normalizePeriod(mr.period) === normPeriod)
+        ).length;
+
+        const nonReportingHotCount = apartments.filter(a => 
+          !meterReadings.find(mr => String(mr.apartment_id) === String(a.id) && mr.meter_type === 'hot_water' && normalizePeriod(mr.period) === normPeriod)
+        ).length;
 
         const apartmentTariffs = periodTariffs.filter(t => {
           const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');
@@ -542,7 +561,8 @@ export function useInvoiceHandlers(
 
         const { invoiceDetails, totalAmountWithoutVat, totalVatAmount, totalAmountWithVat } = calculateInvoiceAmounts({
           apt, period: invoice.period, periodTariffs: apartmentTariffs, waterTariffs, hotWaterTariffs, wasteTariffs, 
-          meterReadings, waterConsumption, apartments, previousDebt, overpayment
+          meterReadings, waterConsumption, apartments, previousDebt, overpayment,
+          nonReportingColdCount, nonReportingHotCount
         });
 
         const [year, month] = invoice.period.split('-');

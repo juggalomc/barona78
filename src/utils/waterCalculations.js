@@ -78,7 +78,16 @@ export const calculateWaterDetails = ({
   };
 
   const coldM3 = getConsumption('water');
-  const hotM3 = getConsumption('hot_water');
+  
+  // Strictly retrieve hot water consumption from water_consumption table's consumption_m3 column
+  const hotWaterEntry = (waterConsumption || []).find(wc => 
+    String(wc.apartment_id) === String(apt.id) && 
+    wc.meter_type === 'hot_water' && 
+    normalizePeriod(wc.period) === normPeriod
+  );
+  const hotM3 = (hotWaterEntry && hotWaterEntry.consumption_m3 !== null && hotWaterEntry.consumption_m3 !== undefined)
+    ? parseFloat(hotWaterEntry.consumption_m3)
+    : 0;
 
   // 2. AUKSTAIS ŪDENS
  if (waterTariff && waterTariff.include_in_invoice !== false) {

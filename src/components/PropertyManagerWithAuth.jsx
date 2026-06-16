@@ -83,7 +83,7 @@ export default function PropertyManager() {
   const tariffHandlers = useTariffHandlers(supabase, displayApartments, fetchData, showToast);
   const waterHandlers = useWaterHandlers(supabase, displayApartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly, meterReadings);
   const wasteHandlers = useWasteHandlers(supabase, displayApartments, wasteTariffs, fetchData, showToast);
-  const invoiceHandlers = useInvoiceHandlers(supabase, displayApartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings, waterHandlers.enabledMeters, waterConsumption);
+  const invoiceHandlers = useInvoiceHandlers(supabase, displayApartments, tariffs, invoices, waterTariffs, hotWaterTariffs, wasteTariffs, meterReadings, fetchData, showToast, settings, waterHandlers.enabledMeters, waterConsumption, waterHandlers.syncWaterConsumption);
 
   useEffect(() => {
     // Ja lietotājs ir ielādēts no localStorage, ielādējam viņa datus
