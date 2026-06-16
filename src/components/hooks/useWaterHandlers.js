@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
-import { getLastReading } from '../../utils/waterCalculations'; // Import getLastReading
+import { getLastReading } from '../../utils/waterCalculations';
 
 const normalizePeriod = (p) => {
   if (!p || typeof p !== 'string') return p;
   const parts = p.split('-');
   if (parts.length !== 2) return p;
   return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+};
+
+const getNextPeriod = (normPeriod) => {
+  const [year, month] = normPeriod.split('-').map(Number);
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  return `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
 };
 
 export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTariffs, fetchData, showToast, fetchMeterReadingsOnly, meterReadings = []) {
@@ -30,7 +37,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     diff_price: ''
   });
 
-  // Ielādē tarifu datus formā, kad mainās periods vai ielādējas dati
   useEffect(() => {
     const normPeriod = normalizePeriod(tariffPeriod);
     const water = waterTariffs.find(t => normalizePeriod(t.period) === normPeriod);
@@ -49,7 +55,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       ...prev,
       period: normPeriod,
       price_per_m3: hot ? hot.price_per_m3 : '',
-      vat_rate: hot ? hot.vat_rate : 12, // Noklusējums siltajam ūdenim 12%
+      vat_rate: hot ? hot.vat_rate : 12,
       include_in_invoice: hot ? (hot.include_in_invoice !== false) : true,
       diff_m3: hot ? hot.diff_m3 : '',
       diff_price: hot ? hot.diff_price : ''
@@ -70,7 +76,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         showToast('Nepareiza cena par m³', 'error');
         return;
       }
-
       if (isNaN(vatValue) || vatValue < 0 || vatValue > 100) {
         showToast('PVN jābūt no 0 līdz 100%', 'error');
         return;
@@ -79,7 +84,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       const { error } = await supabase
         .from('water_tariffs')
         .upsert({
-          period: period,
+          period,
           price_per_m3: priceValue,
           vat_rate: vatValue,
           diff_m3: diffM3,
@@ -88,7 +93,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         }, { onConflict: 'period' });
 
       if (error) throw error;
-
       fetchData();
       showToast('✓ Aukstais ūdens tarifs saglabāts');
     } catch (error) {
@@ -110,7 +114,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         showToast('Nepareiza cena par m³', 'error');
         return;
       }
-
       if (isNaN(vatValue) || vatValue < 0 || vatValue > 100) {
         showToast('PVN jābūt no 0 līdz 100%', 'error');
         return;
@@ -119,7 +122,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       const { error } = await supabase
         .from('hot_water_tariffs')
         .upsert({
-          period: period,
+          period,
           price_per_m3: priceValue,
           vat_rate: vatValue,
           include_in_invoice: includeInvoice,
@@ -128,7 +131,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         }, { onConflict: 'period' });
 
       if (error) throw error;
-
       fetchData();
       showToast('✓ Siltais ūdens tarifs saglabāts');
     } catch (error) {
@@ -136,32 +138,53 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     }
   };
 
+  // ✅ Palīgfunkcija: ielādē svaigus rādījumus no DB pēc dzīvokļa un tipa
+  const fetchFreshReadings = async (apartmentId, meterType) => {
+    const { data } = await supabase
+      .from('meter_readings')
+      .select('*')
+      .eq('apartment_id', apartmentId)
+      .eq('meter_type', meterType);
+    return data || [];
+  };
+
+  // ✅ Palīgfunkcija: atjaunina patēriņu arī nākamajam periodam, ja tāds eksistē
+  const updateNextPeriodConsumption = async (apartmentId, meterType, normPeriod, newValue, freshReadings) => {
+    const nextPeriod = getNextPeriod(normPeriod);
+    const nextReading = freshReadings.find(mr =>
+      normalizePeriod(mr.period) === nextPeriod
+    );
+    if (nextReading && nextReading.reading_value !== null) {
+      const nextConsumption = Math.max(0, parseFloat(nextReading.reading_value) - newValue);
+      await supabase.from('water_consumption').upsert({
+        apartment_id: String(apartmentId),
+        period: nextPeriod,
+        meter_type: meterType,
+        consumption_m3: nextConsumption
+      }, { onConflict: 'apartment_id,period,meter_type' });
+    }
+  };
+
   const saveWaterMeterReading = async (apartmentId, readingValue, period) => {
     try {
-      // ✅ VALIDĒT apartment_id
       if (!apartmentId || apartmentId === '') {
         showToast('Dzīvoklis nav izvēlēts', 'error');
         return;
       }
 
       const normPeriod = normalizePeriod(period);
-      const value = parseFloat(readingValue);
-      
+      const fetchReadings = fetchMeterReadingsOnly || fetchData;
+
       if (readingValue === '' || readingValue === null) {
         const { data: existing } = await supabase
-          .from('meter_readings')
-          .select('*')
+          .from('meter_readings').select('*')
           .eq('apartment_id', apartmentId)
           .eq('meter_type', 'water')
           .eq('period', normPeriod);
-        
-        const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
         if (existing && existing.length > 0) {
           await supabase.from('meter_readings').delete().eq('id', existing[0].id);
-          // Dzēšam arī no water_consumption, ja rādījums tiek izdzēsts
-          await supabase.from('water_consumption')
-            .delete()
+          await supabase.from('water_consumption').delete()
             .eq('apartment_id', String(apartmentId))
             .eq('meter_type', 'water')
             .eq('period', normPeriod);
@@ -170,51 +193,45 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         return;
       }
 
-      if (isNaN(value) || value < 0) {
-        showToast('Nepareiza vērtība', 'error');
-        return;
-      }
+      const value = parseFloat(readingValue);
+      if (isNaN(value) || value < 0) { showToast('Nepareiza vērtība', 'error'); return; }
+      if (value > 9999.99) { showToast('Patēriņš nevar būt lielāks par 9999.99', 'error'); return; }
 
-      if (value > 9999.99) {
-        showToast('Patēriņš nevar būt lielāks par 9999.99', 'error');
-        return;
-      }
+      // ✅ Svaigie rādījumi no DB, nevis no React state
+      const freshReadings = await fetchFreshReadings(apartmentId, 'water');
+      const lastReading = getLastReading(apartmentId, 'water', normPeriod, freshReadings);
 
-      // ✅ Validācija pret iepriekšējo rādījumu
-      const lastReading = getLastReading(apartmentId, 'water', normPeriod, meterReadings);
       if (lastReading && value < parseFloat(lastReading.reading_value)) {
         showToast(`Kļūda: Jaunais rādījums (${value}) nevar būt mazāks par iepriekšējo (${lastReading.reading_value})`, 'error');
         return;
       }
 
-      const fetchReadings = fetchMeterReadingsOnly || fetchData;
-
-      const today = new Date().toISOString().split('T')[0];
-      const { error } = await supabase
-        .from('meter_readings')
-        .upsert({
-          apartment_id: apartmentId,
-          meter_type: 'water',
-          reading_date: today,
-          reading_value: value,
-          period: normPeriod
-        }, { onConflict: 'apartment_id,period,meter_type' });
+      const todayStr = new Date().toISOString().split('T')[0];
+      const { error } = await supabase.from('meter_readings').upsert({
+        apartment_id: apartmentId,
+        meter_type: 'water',
+        reading_date: todayStr,
+        reading_value: value,
+        period: normPeriod
+      }, { onConflict: 'apartment_id,period,meter_type' });
 
       if (error) throw error;
 
-      // ✅ Sinhronizējam ar water_consumption tabulu
-      const currentVal = parseFloat(value) || 0;
+      // ✅ Patēriņš = starpība no svaigiem datiem
       let consumption = 0;
       if (lastReading && lastReading.reading_value !== null) {
-        consumption = Math.max(0, currentVal - parseFloat(lastReading.reading_value));
+        consumption = Math.max(0, value - parseFloat(lastReading.reading_value));
       }
-      
+
       await supabase.from('water_consumption').upsert({
         apartment_id: String(apartmentId),
         period: normPeriod,
         meter_type: 'water',
         consumption_m3: consumption
       }, { onConflict: 'apartment_id,period,meter_type' });
+
+      // ✅ Atjaunojam arī nākamā perioda patēriņu
+      await updateNextPeriodConsumption(apartmentId, 'water', normPeriod, value, freshReadings);
 
       fetchReadings();
       showToast('✓ Aukstā ūdens rādījums saglabāts');
@@ -225,30 +242,24 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
   const saveHotWaterMeterReading = async (apartmentId, readingValue, period) => {
     try {
-      // ✅ VALIDĒT apartment_id
       if (!apartmentId || apartmentId === '') {
         showToast('Dzīvoklis nav izvēlēts', 'error');
         return;
       }
 
       const normPeriod = normalizePeriod(period);
-      const value = parseFloat(readingValue);
-      
+      const fetchReadings = fetchMeterReadingsOnly || fetchData;
+
       if (readingValue === '' || readingValue === null) {
         const { data: existing } = await supabase
-          .from('meter_readings')
-          .select('*')
+          .from('meter_readings').select('*')
           .eq('apartment_id', apartmentId)
           .eq('meter_type', 'hot_water')
           .eq('period', normPeriod);
-        
-        const fetchReadings = fetchMeterReadingsOnly || fetchData;
 
         if (existing && existing.length > 0) {
           await supabase.from('meter_readings').delete().eq('id', existing[0].id);
-          // Dzēšam arī no water_consumption, ja rādījums tiek izdzēsts
-          await supabase.from('water_consumption')
-            .delete()
+          await supabase.from('water_consumption').delete()
             .eq('apartment_id', String(apartmentId))
             .eq('meter_type', 'hot_water')
             .eq('period', normPeriod);
@@ -257,51 +268,45 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         return;
       }
 
-      if (isNaN(value) || value < 0) {
-        showToast('Nepareiza vērtība', 'error');
-        return;
-      }
+      const value = parseFloat(readingValue);
+      if (isNaN(value) || value < 0) { showToast('Nepareiza vērtība', 'error'); return; }
+      if (value > 9999.99) { showToast('Patēriņš nevar būt lielāks par 9999.99', 'error'); return; }
 
-      if (value > 9999.99) {
-        showToast('Patēriņš nevar būt lielāks par 9999.99', 'error');
-        return;
-      }
+      // ✅ Svaigie rādījumi no DB, nevis no React state
+      const freshReadings = await fetchFreshReadings(apartmentId, 'hot_water');
+      const lastReading = getLastReading(apartmentId, 'hot_water', normPeriod, freshReadings);
 
-      // ✅ Validācija pret iepriekšējo rādījumu
-      const lastReading = getLastReading(apartmentId, 'hot_water', normPeriod, meterReadings);
       if (lastReading && value < parseFloat(lastReading.reading_value)) {
         showToast(`Kļūda: Jaunais rādījums (${value}) nevar būt mazāks par iepriekšējo (${lastReading.reading_value})`, 'error');
         return;
       }
 
-      const fetchReadings = fetchMeterReadingsOnly || fetchData;
-
-      const today = new Date().toISOString().split('T')[0];
-      const { error } = await supabase
-        .from('meter_readings')
-        .upsert({
-          apartment_id: apartmentId,
-          meter_type: 'hot_water',
-          reading_date: today,
-          reading_value: value,
-          period: normPeriod
-        }, { onConflict: 'apartment_id,period,meter_type' });
+      const todayStr = new Date().toISOString().split('T')[0];
+      const { error } = await supabase.from('meter_readings').upsert({
+        apartment_id: apartmentId,
+        meter_type: 'hot_water',
+        reading_date: todayStr,
+        reading_value: value,
+        period: normPeriod
+      }, { onConflict: 'apartment_id,period,meter_type' });
 
       if (error) throw error;
 
-      // ✅ Sinhronizējam ar water_consumption tabulu
-      const currentVal = parseFloat(value) || 0;
+      // ✅ Patēriņš = starpība no svaigiem datiem
       let consumption = 0;
       if (lastReading && lastReading.reading_value !== null) {
-        consumption = Math.max(0, currentVal - parseFloat(lastReading.reading_value));
+        consumption = Math.max(0, value - parseFloat(lastReading.reading_value));
       }
-      
+
       await supabase.from('water_consumption').upsert({
         apartment_id: String(apartmentId),
         period: normPeriod,
         meter_type: 'hot_water',
         consumption_m3: consumption
       }, { onConflict: 'apartment_id,period,meter_type' });
+
+      // ✅ Atjaunojam arī nākamā perioda patēriņu
+      await updateNextPeriodConsumption(apartmentId, 'hot_water', normPeriod, value, freshReadings);
 
       fetchReadings();
       showToast('✓ Siltā ūdens rādījums saglabāts');
@@ -310,40 +315,33 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     }
   };
 
-
   const editMeterReading = async (meterReadingId, newValue) => {
     try {
       const value = parseFloat(newValue);
       const reading = meterReadings.find(mr => mr.id === meterReadingId);
       if (!reading) return;
-      
-      if (isNaN(value) || value < 0) {
-        showToast('Nepareiza vērtība', 'error');
-        return;
-      }
 
-      if (value > 9999.99) {
-        showToast('Rādījums nevar būt lielāks par 9999.99', 'error');
-        return;
-      }
+      if (isNaN(value) || value < 0) { showToast('Nepareiza vērtība', 'error'); return; }
+      if (value > 9999.99) { showToast('Rādījums nevar būt lielāks par 9999.99', 'error'); return; }
 
-      // ✅ Validācija pret iepriekšējo rādījumu manuālas labošanas laikā
-      const lastReading = getLastReading(reading.apartment_id, reading.meter_type, reading.period, meterReadings);
+      const normPeriod = normalizePeriod(reading.period);
+
+      // ✅ Svaigie rādījumi no DB
+      const freshReadings = await fetchFreshReadings(reading.apartment_id, reading.meter_type);
+      const lastReading = getLastReading(reading.apartment_id, reading.meter_type, normPeriod, freshReadings);
+
       if (lastReading && value < parseFloat(lastReading.reading_value)) {
         showToast(`Kļūda: Rādījums nevar būt mazāks par iepriekšējo (${lastReading.reading_value})`, 'error');
         return;
       }
 
-      const fetchReadings = fetchMeterReadingsOnly || fetchData;
-
       const { error } = await supabase
         .from('meter_readings')
         .update({ reading_value: value })
         .eq('id', meterReadingId);
-      
+
       if (error) throw error;
 
-      // ✅ Atjaunojam arī patēriņa tabulu pēc manuālas labošanas
       let consumption = 0;
       if (lastReading && lastReading.reading_value !== null) {
         consumption = Math.max(0, value - parseFloat(lastReading.reading_value));
@@ -351,12 +349,15 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
       await supabase.from('water_consumption').upsert({
         apartment_id: String(reading.apartment_id),
-        period: normalizePeriod(reading.period),
+        period: normPeriod,
         meter_type: reading.meter_type,
         consumption_m3: consumption
       }, { onConflict: 'apartment_id,period,meter_type' });
 
-      fetchReadings();
+      // ✅ Atjaunojam arī nākamā perioda patēriņu
+      await updateNextPeriodConsumption(reading.apartment_id, reading.meter_type, normPeriod, value, freshReadings);
+
+      (fetchMeterReadingsOnly || fetchData)();
       showToast('✓ Skaitītāja rādījums atjaunināts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
@@ -365,7 +366,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
 
   const deleteMeterReading = async (meterReadingId) => {
     try {
-      // Atrodam rādījumu, lai iegūtu apartment_id, meter_type, period
       const readingToDelete = meterReadings.find(mr => mr.id === meterReadingId);
       if (!readingToDelete) {
         showToast('Rādījums nav atrasts', 'error');
@@ -376,9 +376,9 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         .from('meter_readings')
         .delete()
         .eq('id', meterReadingId);
-      
+
       if (error) throw error;
-      // Dzēšam arī atbilstošo ierakstu no water_consumption
+
       await supabase.from('water_consumption')
         .delete()
         .eq('apartment_id', String(readingToDelete.apartment_id))
@@ -396,15 +396,14 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
     try {
       showToast('⏳ Sinhronizē patēriņa datus...', 'info');
       const consumptionData = [];
-      // Izmantojam datus, kas padoti no UI, vai hook iekšējos datus
       const activeReadings = readingsFromProps || meterReadings || [];
       const normTariffPeriod = normalizePeriod(tariffPeriod);
 
       for (const apt of (apartments || [])) {
         for (const type of ['water', 'hot_water']) {
-          const currentReadingObj = activeReadings.find(mr => 
-            String(mr.apartment_id) === String(apt.id) && 
-            mr.meter_type === type && 
+          const currentReadingObj = activeReadings.find(mr =>
+            String(mr.apartment_id) === String(apt.id) &&
+            mr.meter_type === type &&
             normalizePeriod(mr.period) === normTariffPeriod
           );
 
@@ -412,7 +411,6 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
             const lastReading = getLastReading(apt.id, type, normTariffPeriod, activeReadings);
             const currentVal = parseFloat(currentReadingObj.reading_value);
             let consumption = 0;
-            // Tikai ja ir iepriekšējais rādījums, rēķinām starpību
             if (lastReading && lastReading.reading_value !== null && lastReading.reading_value !== undefined) {
               consumption = Math.max(0, currentVal - parseFloat(lastReading.reading_value));
             }
@@ -437,7 +435,7 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
         .upsert(consumptionData, { onConflict: 'apartment_id,period,meter_type' });
 
       if (error) throw error;
-      
+
       fetchData();
       showToast(`✓ Sinhronizēti ${consumptionData.length} ieraksti`);
     } catch (error) {
