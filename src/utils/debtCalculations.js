@@ -12,14 +12,11 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
     const [invYear, invMonth] = inv.period.split('-').map(Number);
     return (invYear < currentYear) || (invYear === currentYear && invMonth < currentMonth);
   });
-
   if (previousDebts.length === 0) return 0;
 
   // Atrodam pašu pēdējo izrakstīto rēķinu
   const latestInvoice = previousDebts.reduce((prev, current) => {
-    if (prev.period > current.period) return prev;
-    if (current.period > prev.period) return current;
-    return (prev.id > current.id) ? prev : current;
+    return (prev.period > current.period) ? prev : (current.period > prev.period) ? current : (prev.id > current.id) ? prev : current;
   });
 
   // ✅ Aprēķinām REĀLO parādu: summa (ar PVN) - samaksātais
@@ -48,9 +45,7 @@ export const calculateOverpayment = (apartmentId, invoices, currentPeriod, exclu
   if (previousInvoices.length === 0) return 0;
 
   const latestInvoice = previousInvoices.reduce((prev, current) => {
-    if (prev.period > current.period) return prev;
-    if (current.period > prev.period) return current;
-    return (prev.id > current.id) ? prev : current;
+    return (prev.period > current.period) ? prev : (current.period > prev.period) ? current : (prev.id > current.id) ? prev : current;
   });
 
   const invoiceAmount = parseFloat(latestInvoice.amount_with_vat ?? latestInvoice.amount) || 0;
