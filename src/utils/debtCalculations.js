@@ -1,5 +1,6 @@
 /**
  * Aprēķina iepriekšējo parādu balstoties uz neapmaksātiem rēķiniem
+ * Ņem vērā: Reālais parāds = Rēķina summa - Jau samaksāts
  */
 export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excludeInvoiceId = null) => {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -7,7 +8,6 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
   
   const previousDebts = invoices.filter(inv => {
     if (inv.apartment_id !== apartmentId) return false;
-    if (inv.paid) return false;
     if (excludeInvoiceId && inv.id === excludeInvoiceId) return false;
 
     const [invYear, invMonth] = inv.period.split('-').map(Number);
@@ -31,11 +31,17 @@ export const calculatePreviousDebt = (apartmentId, invoices, currentPeriod, excl
     return (prev.id > current.id) ? prev : current;
   });
 
-  return parseFloat(latestInvoice.amount) || 0;
+  // ✅ Aprēķinām REĀLO parādu: rēķina summa (ar PVN) - samaksāts
+  const invoiceAmount = parseFloat(latestInvoice.amount_with_vat || latestInvoice.amount) || 0;
+  const paidAmount = parseFloat(latestInvoice.paid_amount) || 0;
+  const realDebt = Math.max(0, invoiceAmount - paidAmount);
+
+  return Math.round(realDebt * 100) / 100;
 };
 
 /**
- * Aprēķina pārmaksu no iepriekšējā mēneša rēķina (ja summa bija negatīva)
+ * Aprēķina pārmaksu no iepriekšējā mēneša rēķina
+ * Pārmaksa = Samaksāts - Rēķina summa (ja Samaksāts > Rēķina summa)
  */
 export const calculateOverpayment = (apartmentId, invoices, currentPeriod) => {
   const [currentYear, currentMonth] = currentPeriod.split('-').map(Number);
@@ -47,6 +53,14 @@ export const calculateOverpayment = (apartmentId, invoices, currentPeriod) => {
   
   if (!previousInvoice) return 0;
 
-  const finalAmount = parseFloat(previousInvoice.amount_with_vat) || 0;
-  return finalAmount < 0 ? Math.abs(finalAmount) : 0;
+  // ✅ Aprēķinām reālo pārmaksu: samaksāts - rēķina summa (ja > 0)
+  const invoiceAmount = parseFloat(previousInvoice.amount_with_vat || previousInvoice.amount) || 0;
+  const paidAmount = parseFloat(previousInvoice.paid_amount) || 0;
+  
+  // Pārmaksa ir tikai tad, kad samaksāts ir vairāk kā rēķinā
+  if (paidAmount > invoiceAmount) {
+    return Math.round((paidAmount - invoiceAmount) * 100) / 100;
+  }
+
+  return 0;
 };

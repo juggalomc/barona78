@@ -102,7 +102,7 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
   debtRows.forEach(detail => {
     tableRows.push([
       { text: detail.tariff_name, style: 'debt', bold: true },
-      { text: '' },
+      { text: detail.debt_reason ? '(' + detail.debt_reason + ')' : '', style: 'debt', fontSize: 9 },
       { text: '' },
       { text: '€' + (detail.amount_without_vat || 0).toFixed(2), alignment: 'right', style: 'debt', bold: true }
     ]);
@@ -113,9 +113,9 @@ export const buildInvoiceTableRows = (invoiceDetails, apt) => {
   overpaymentRows.forEach(detail => {
     tableRows.push([
       { text: detail.tariff_name, style: 'overpayment', bold: true },
+      { text: detail.overpayment_reason ? '(' + detail.overpayment_reason + ')' : '', style: 'overpayment', fontSize: 9 },
       { text: '' },
-      { text: '' },
-      { text: '€' + (detail.amount_without_vat || 0).toFixed(2), alignment: 'right', style: 'overpayment', bold: true }
+      { text: '€' + Math.abs(detail.amount_without_vat || 0).toFixed(2), alignment: 'right', style: 'overpayment', bold: true }
     ]);
   });
 
@@ -182,11 +182,17 @@ export const generateInvoicePdfHtml = (invoice, apt, settings = {}) => {
   const rows12Html = invoiceDetails.filter(d => isService(d) && Number(d.vat_rate) === 12).map(mapHtmlRow).join('');
 
   const debtRows = invoiceDetails.filter(d => d.type === 'debt').map(d => 
-    `<tr style="background:#fee2e2; font-weight:bold; color:#991b1b;"><td>${d.tariff_name}</td><td></td><td></td><td style="text-align:right;">€${Math.abs(d.amount_without_vat).toFixed(2)}</td></tr>`
+    `<tr style="background:#fee2e2; font-weight:bold; color:#991b1b;">
+      <td colspan="3">${d.tariff_name}${d.debt_reason ? '<br><span style="font-size:11px; font-weight:normal;">' + d.debt_reason + '</span>' : ''}</td>
+      <td style="text-align:right;">€${(parseFloat(d.amount_without_vat) || 0).toFixed(2)}</td>
+    </tr>`
   ).join('');
 
   const overpaymentRows = invoiceDetails.filter(d => d.type === 'overpayment').map(d => 
-    `<tr style="background:#dbeafe; font-weight:bold; color:#1e40af;"><td>${d.tariff_name}</td><td></td><td></td><td style="text-align:right;">€${Math.abs(d.amount_without_vat).toFixed(2)}</td></tr>`
+    `<tr style="background:#dbeafe; font-weight:bold; color:#1e40af;">
+      <td colspan="3">${d.tariff_name}${d.overpayment_reason ? '<br><span style="font-size:11px; font-weight:normal;">' + d.overpayment_reason + '</span>' : ''}</td>
+      <td style="text-align:right;">€${Math.abs(parseFloat(d.amount_without_vat) || 0).toFixed(2)}</td>
+    </tr>`
   ).join('');
 
   return `

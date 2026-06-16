@@ -314,7 +314,7 @@ export function useInvoiceHandlers(supabase, apartments, tariffs, invoices, wate
 
       for (const apt of apartments) {
         const previousDebt = Number(calculatePreviousDebt(apt.id, invoices, normPeriod)) || 0;
-        const overpayment = Number(await calculateOverpayment(apt.id, invoices, normPeriod)) || 0;
+        const overpayment = Number(calculateOverpayment(apt.id, invoices, normPeriod)) || 0;
 
         const apartmentTariffs = periodTariffs.filter(t => {
           const excluded = Array.isArray(t.excluded_apartments) ? t.excluded_apartments : JSON.parse(t.excluded_apartments || '[]');

@@ -167,12 +167,28 @@ export const calculateInvoiceAmounts = ({
   // 4. Parādi un Pārmaksas
   if (previousDebt > 0) {
     totalAmountWithoutVat += previousDebt;
-    invoiceDetails.push({ tariff_id: null, tariff_name: '⚠️ Parāds no iepriekšējiem mēnešiem', amount_without_vat: previousDebt, vat_rate: 0, vat_amount: 0, type: 'debt' });
+    invoiceDetails.push({ 
+      tariff_id: null, 
+      tariff_name: '⚠️ Parāds no iepriekšējiem mēnešiem', 
+      amount_without_vat: previousDebt, 
+      vat_rate: 0, 
+      vat_amount: 0, 
+      type: 'debt',
+      debt_reason: 'Neapmaksāts parāds no iepriekšējiem periodiem'
+    });
   }
 
   if (overpayment > 0) {
     totalAmountWithoutVat -= overpayment;
-    invoiceDetails.push({ tariff_id: null, tariff_name: '💰 Pārmaksa no iepriekšējā mēneša', amount_without_vat: -overpayment, vat_rate: 0, vat_amount: 0, type: 'overpayment' });
+    invoiceDetails.push({ 
+      tariff_id: null, 
+      tariff_name: '💰 Pārmaksa no iepriekšējā mēneša', 
+      amount_without_vat: -overpayment, 
+      vat_rate: 0, 
+      vat_amount: 0, 
+      type: 'overpayment',
+      overpayment_reason: 'Pārmaksa, ko var attiecināt uz šo mēnesi'
+    });
   }
 
   const totalAmountWithVat = Math.round((totalAmountWithoutVat + totalVatAmount) * 100) / 100;
