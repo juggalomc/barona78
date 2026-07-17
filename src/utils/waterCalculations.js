@@ -54,9 +54,10 @@ export const calculateWaterDetails = ({
   const getConsumption = (type) => {
     // 1. Prioritāte: Sinhronizētais patēriņš (starpība) no water_consumption tabulas
     const safeWC = waterConsumption || [];
-    
+    const safeMR = meterReadings || [];
+
     // ✅ Meklējam ierakstu ar stingru tipu un perioda pārbaudi
-    const entry = safeWC.find(wc => {
+    const wcEntry = safeWC.find(wc => {
       const aptMatch = String(wc.apartment_id) === String(apt.id);
       const typeMatch = String(wc.meter_type) === String(type);
       const periodMatch = normalizePeriod(wc.period) === normPeriod;
@@ -65,8 +66,34 @@ export const calculateWaterDetails = ({
 
     // ✅ Ja ieraksts eksistē water_consumption tabulā — VIENMĒR izmantojam to,
     // pat ja consumption_m3 === 0 (0 ir derīga vērtība, nevis kļūda)
-    if (entry !== undefined && entry.consumption_m3 !== null && entry.consumption_m3 !== undefined) {
-      return parseFloat(entry.consumption_m3);
+    if (wcEntry !== undefined && wcEntry.consumption_m3 !== null && wcEntry.consumption_m3 !== undefined) {
+      return parseFloat(wcEntry.consumption_m3);
+    }
+
+    const currentReadingEntry = safeMR.find(mr => {
+      const aptMatch = String(mr.apartment_id) === String(apt.id);
+      const typeMatch = String(mr.meter_type) === String(type);
+      const periodMatch = normalizePeriod(mr.period) === normPeriod;
+      return aptMatch && typeMatch && periodMatch && mr.reading_value !== null && mr.reading_value !== undefined;
+    });
+
+    if (currentReadingEntry) {
+      const currentValue = parseFloat(currentReadingEntry.reading_value);
+      if (!Number.isNaN(currentValue)) {
+        const previousReadingEntry = [...safeMR]
+          .filter(mr => {
+            const aptMatch = String(mr.apartment_id) === String(apt.id);
+            const typeMatch = String(mr.meter_type) === String(type);
+            const periodMatch = normalizePeriod(mr.period) < normPeriod;
+            return aptMatch && typeMatch && periodMatch && mr.reading_value !== null && mr.reading_value !== undefined;
+          })
+          .sort((a, b) => normalizePeriod(b.period).localeCompare(normalizePeriod(a.period)))[0];
+
+        const previousValue = previousReadingEntry ? parseFloat(previousReadingEntry.reading_value) : null;
+        if (previousValue !== null && !Number.isNaN(previousValue) && currentValue >= previousValue) {
+          return Math.max(0, currentValue - previousValue);
+        }
+      }
     }
 
     // Ja nav ieraksta water_consumption tabulā, atgriežam null,

@@ -161,17 +161,45 @@ export const calculateInvoiceAmounts = ({
   // Helper funkcija patēriņa noteikšanai (pārvietota no waterCalculations.js)
   const getConsumption = (type) => {
     const safeWC = waterConsumption || [];
-    
-    const entry = safeWC.find(wc => {
+    const safeMR = meterReadings || [];
+
+    const wcEntry = safeWC.find(wc => {
       const aptMatch = String(wc.apartment_id) === String(apt.id);
       const typeMatch = String(wc.meter_type) === String(type);
       const periodMatch = normalizePeriod(wc.period) === normPeriod;
       return aptMatch && typeMatch && periodMatch;
     });
 
-    if (entry !== undefined && entry.consumption_m3 !== null && entry.consumption_m3 !== undefined) {
-      return parseFloat(entry.consumption_m3);
+    if (wcEntry !== undefined && wcEntry.consumption_m3 !== null && wcEntry.consumption_m3 !== undefined) {
+      return parseFloat(wcEntry.consumption_m3);
     }
+
+    const currentReadingEntry = safeMR.find(mr => {
+      const aptMatch = String(mr.apartment_id) === String(apt.id);
+      const typeMatch = String(mr.meter_type) === String(type);
+      const periodMatch = normalizePeriod(mr.period) === normPeriod;
+      return aptMatch && typeMatch && periodMatch && mr.reading_value !== null && mr.reading_value !== undefined;
+    });
+
+    if (currentReadingEntry) {
+      const currentValue = parseFloat(currentReadingEntry.reading_value);
+      if (!Number.isNaN(currentValue)) {
+        const previousReadingEntry = [...safeMR]
+          .filter(mr => {
+            const aptMatch = String(mr.apartment_id) === String(apt.id);
+            const typeMatch = String(mr.meter_type) === String(type);
+            const periodMatch = normalizePeriod(mr.period) < normPeriod;
+            return aptMatch && typeMatch && periodMatch && mr.reading_value !== null && mr.reading_value !== undefined;
+          })
+          .sort((a, b) => normalizePeriod(b.period).localeCompare(normalizePeriod(a.period)))[0];
+
+        const previousValue = previousReadingEntry ? parseFloat(previousReadingEntry.reading_value) : null;
+        if (previousValue !== null && !Number.isNaN(previousValue) && currentValue >= previousValue) {
+          return Math.max(0, currentValue - previousValue);
+        }
+      }
+    }
+
     return null;
   };
 
