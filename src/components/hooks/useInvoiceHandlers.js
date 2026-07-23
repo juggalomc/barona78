@@ -4,6 +4,7 @@ import { getEmailRecipients, formatEmailForDisplay } from '../../utils/emailHelp
 import { calculatePreviousDebt, calculateOverpayment } from '../../utils/debtCalculations';
 import { buildInvoicePdfDefinition } from '../../utils/invoicePdfDocDefinition';
 import { buildInvoiceTableRows, loadPdfScripts, generateInvoicePdfHtml } from '../../utils/pdfHelpers';
+import { buildBulkInvoiceStatusUpdatePayload } from '../../utils/invoiceStatusHelpers';
 
 const normalizePeriod = (p) => {
   if (!p || typeof p !== 'string') return p;
@@ -578,6 +579,34 @@ export function useInvoiceHandlers(
     }
   };
 
+  const updateInvoiceStatusesInBulk = async (invoiceIds, nextPaidState) => {
+    const payload = buildBulkInvoiceStatusUpdatePayload(invoiceIds, nextPaidState);
+    if (!payload) {
+      showToast('Atlasiet vismaz vienu rēķinu', 'error');
+      return;
+    }
+
+    const confirmationMessage = nextPaidState
+      ? `Vai tiešām vēlaties atzīmēt ${payload.invoiceIds.length} atlasītos rēķinus kā apmaksātus?`
+      : `Vai tiešām vēlaties atzīmēt ${payload.invoiceIds.length} atlasītos rēķinus kā neapmaksātus?`;
+
+    if (!window.confirm(confirmationMessage)) return;
+
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ paid: nextPaidState })
+        .in('id', payload.invoiceIds);
+
+      if (error) throw error;
+
+      fetchData();
+      showToast(nextPaidState ? `✓ Atzīmēti ${payload.invoiceIds.length} rēķini kā apmaksāti` : `✓ Atzīmēti ${payload.invoiceIds.length} rēķini kā neapmaksāti`);
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
   const deleteInvoice = async (id) => {
     if (!window.confirm('Izdzēst rēķinu?')) return;
     try {
@@ -967,6 +996,7 @@ export function useInvoiceHandlers(
     regenerateInvoice,
     regenerateInvoices,
     toggleInvoicePaid,
+    updateInvoiceStatusesInBulk,
     deleteInvoice,
     deleteInvoices,
     downloadPDF,

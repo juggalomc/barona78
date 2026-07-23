@@ -95,6 +95,7 @@ export function InvoicesTab({
   sendInvoicesByEmail,
   deleteInvoices,
   regenerateInvoices,
+  updateInvoiceStatusesInBulk,
   updateOverpayment,
   updatePaidAmount,
   deleteOverpayment,
@@ -246,6 +247,8 @@ export function InvoicesTab({
                 >
                   📦 Lejuplādēt ZIP
                 </button>
+                <button onClick={() => updateInvoiceStatusesInBulk(Array.from(selectedInvoices), true)} style={{...styles.btn, flex: 1, background: '#10b981', fontSize: '11px'}}>✓ Apmaksāt atlasītos</button>
+                <button onClick={() => updateInvoiceStatusesInBulk(Array.from(selectedInvoices), false)} style={{...styles.btn, flex: 1, background: '#f59e0b', fontSize: '11px'}}>○ Atzīmēt kā neapmaksātus</button>
                 <button onClick={() => regenerateInvoices(Array.from(selectedInvoices))} style={{...styles.btn, flex: 1, fontSize: '11px'}}>🔄 Reģenerēt</button>
                 <button onClick={() => deleteInvoices(Array.from(selectedInvoices))} style={{...styles.btn, background: '#ef4444', flex: 1, fontSize: '11px'}}>🗑️ Dzēst</button>
               </div>
