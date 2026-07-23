@@ -23,9 +23,6 @@ const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoi
     // neietekmētu "iepriekšējā parāda" aprēķinu.
     if (excludeInvoiceId && String(inv.id) === String(excludeInvoiceId)) return false;
     
-    // ✅ JAUNS: Izslēdzam pilnībā apmaksātus rēķinus no parāda aprēķina
-    if (inv.paid === true) return false;
-    
     return getPeriodValue(inv.period) < currentVal;
   });
 
@@ -47,9 +44,9 @@ const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoi
   const totalDue = Number(latestInvoice.amount_with_vat ?? latestInvoice.amount ?? 0);
   const totalPaid = Number(latestInvoice.paid_amount ?? 0);
 
-  // Atgriežam starpību. 
-  // Ja rezultāts > 0, tas ir parāds (klients palika parādā par pēdējo mēnesi).
-  // Ja rezultāts < 0, tā ir pārmaksa (klients samaksāja vairāk nekā prasīts).
+  if (latestInvoice.paid) {
+    return totalPaid > totalDue ? (totalDue - totalPaid) : 0;
+  }
   return totalDue - totalPaid;
 };
 
