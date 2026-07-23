@@ -21,7 +21,7 @@ export function useInvoiceHandlers(
   const [invoiceFromDate, setInvoiceFromDate] = useState('');
   const [invoiceToDate, setInvoiceToDate] = useState('');
   const [expandedInvoiceMonth, setExpandedInvoiceMonth] = useState(null);
-  const [debtNoteForm, setDebtNoteForm] = useState({ invoiceId: null, note: '' });
+  const [debtNoteForm, setDebtNoteForm] = useState({ invoiceId: null, note: '', amount: '' });
   const [overpaymentForm, setOverpaymentForm] = useState({ invoiceId: '', amount: '' });
   const [reminderModal, setReminderModal] = useState({
     open: false,
@@ -556,13 +556,29 @@ export function useInvoiceHandlers(
     return result;
   };
 
-  const saveDebtNote = async (invoiceId, note) => {
+  const saveDebtNote = async (invoiceId, note, amount = null) => {
     try {
-      const { error } = await supabase.from('invoices').update({ previous_debt_note: note }).eq('id', invoiceId);
+      const updatePayload = { previous_debt_note: note };
+      if (amount !== null && amount !== '') {
+        updatePayload.previous_debt_amount = parseFloat(amount) || 0;
+      }
+      const { error } = await supabase.from('invoices').update(updatePayload).eq('id', invoiceId);
       if (error) throw error;
-      setDebtNoteForm({ invoiceId: null, note: '' });
+      setDebtNoteForm({ invoiceId: null, note: '', amount: '' });
       fetchData();
-      showToast('✓ Paskaidrojums saglabāts');
+      showToast('✓ Paskaidrojums un parāds saglabāts');
+    } catch (error) {
+      showToast('Kļūda: ' + error.message, 'error');
+    }
+  };
+
+  const deleteDebt = async (invoiceId) => {
+    if (!window.confirm('Dzēst parādu?')) return;
+    try {
+      const { error } = await supabase.from('invoices').update({ previous_debt_amount: 0, previous_debt_note: '' }).eq('id', invoiceId);
+      if (error) throw error;
+      fetchData();
+      showToast('✓ Parāds dzēsts');
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
     }
@@ -1012,6 +1028,7 @@ export function useInvoiceHandlers(
     sendingProgress,
     updatePaidAmount,
     updateOverpayment,
-    deleteOverpayment
+    deleteOverpayment,
+    deleteDebt
   };
 }
