@@ -81,9 +81,6 @@ export function InvoicesTab({
   invoiceFromDate, setInvoiceFromDate,
   invoiceToDate, setInvoiceToDate,
   expandedInvoiceMonth, setExpandedInvoiceMonth,
-  debtNoteForm, setDebtNoteForm,
-  saveDebtNote,
-  deleteDebt,
   generateInvoices,
   toggleInvoicePaid,
   deleteInvoice,
@@ -508,42 +505,6 @@ export function InvoicesTab({
       </div>
 
       <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '30px'}}>
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>📝 Parāda Paskaidrojums</h2>
-          {invoices.filter(inv => inv.previous_debt_amount > 0 && new Date(inv.due_date) < new Date()).length === 0 ? (
-            <div style={{color: '#999', padding: '20px', textAlign: 'center'}}>Nav kavētu parādu</div>
-          ) : (
-            <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-              {invoices.filter(inv => inv.previous_debt_amount > 0 && new Date(inv.due_date) < new Date()).slice(0, 5).map(invoice => {
-                const apt = apartments.find(a => a.id === invoice.apartment_id);
-                return (
-                  <div key={invoice.id} style={{padding: '10px', background: '#fee2e2', borderRadius: '6px', border: '1px solid #fca5a5'}}>
-                    <div style={{fontSize: '12px', fontWeight: '600', color: '#991b1b', marginBottom: '6px'}}>
-                      Dzīv. {apt?.number} - €{invoice.previous_debt_amount.toFixed(2)} (termiņš {new Date(invoice.due_date).toLocaleDateString('lv-LV')})
-                    </div>
-                    {debtNoteForm.invoiceId === invoice.id ? (
-                      <div style={{display: 'grid', gap: '8px', gridTemplateColumns: '1fr auto auto'}}>
-                        <input type="text" placeholder="Paskaidrojums..." value={debtNoteForm.note} onChange={(e) => setDebtNoteForm({...debtNoteForm, note: e.target.value})} style={{...styles.input, fontSize: '12px'}} />
-                        <input type="number" step="0.01" placeholder="€" value={debtNoteForm.amount} onChange={(e) => setDebtNoteForm({...debtNoteForm, amount: e.target.value})} style={{width: '80px', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '12px'}} />
-                        <button onClick={() => saveDebtNote(invoice.id, debtNoteForm.note, debtNoteForm.amount)} style={{...styles.btn, padding: '4px 8px', fontSize: '11px', background: '#10b981'}}>✓ Saglabāt</button>
-                      </div>
-                    ) : (
-                      <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
-                        <button onClick={() => setDebtNoteForm({invoiceId: invoice.id, note: invoice.previous_debt_note || '', amount: invoice.previous_debt_amount})} style={{flex: 1, padding: '6px', fontSize: '12px', background: '#fed7aa', border: '1px solid #fdba74', borderRadius: '4px', cursor: 'pointer', color: '#92400e', fontWeight: '600'}}>
-                          ✎ Labot
-                        </button>
-                        <button onClick={() => deleteDebt(invoice.id)} style={{flex: 1, padding: '6px', fontSize: '12px', background: '#ef4444', border: '1px solid #dc2626', borderRadius: '4px', cursor: 'pointer', color: 'white', fontWeight: '600'}}>
-                          🗑️ Dzēst parādu
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>💰 Pārmaksa (Kopsavilkums)</h2>
           {invoices.filter(inv => inv.overpayment_amount > 0).length === 0 ? (
