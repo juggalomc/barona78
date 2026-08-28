@@ -10,6 +10,19 @@ const normalizePeriod = (p) => {
   return `${parts[0]}-${parts[1].padStart(2, '0')}`;
 };
 
+const parseInvoiceDetails = (details) => {
+  if (!details) return [];
+  if (typeof details === 'string') {
+    try {
+      return JSON.parse(details);
+    } catch (e) {
+      console.error("Kļūda parsing invoice_details string", e);
+      return [];
+    }
+  }
+  return Array.isArray(details) ? details : [];
+};
+
 export const calculateMonthlySummary = (period, invoices, apartments, tariffs, wasteTariffs, waterTariffs = [], hotWaterTariffs = [], waterConsumption = []) => {
   const normPeriod = normalizePeriod(period);
   const periodInvoices = invoices.filter(inv => normalizePeriod(inv.period) === normPeriod);
@@ -92,7 +105,7 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
   // 4. Saskaitām faktiski izrakstītos datus no rēķiniem
   periodInvoices.forEach(inv => {
     try {
-      const details = JSON.parse(inv.invoice_details || '[]');
+      const details = parseInvoiceDetails(inv.invoice_details);
       details.forEach(item => {
         const amount = parseFloat(item.amount_without_vat || item.amount || 0);
 
@@ -147,7 +160,7 @@ export const calculatePositionPayments = (period, invoices) => {
     const charges = [];
     aptInvoices.forEach(inv => {
       try {
-        const details = JSON.parse(inv.invoice_details || '[]');
+        const details = parseInvoiceDetails(inv.invoice_details);
         details.forEach(item => {
           if (item.type === 'debt' || item.type === 'overpayment') return;
 
@@ -223,7 +236,7 @@ export const calculateApartmentFinancials = (apartmentId, invoices) => {
   const charges = [];
   aptInvoices.forEach(inv => {
     try {
-      const details = JSON.parse(inv.invoice_details || '[]');
+      const details = parseInvoiceDetails(inv.invoice_details);
       details.forEach(item => {
         if (item.type === 'debt' || item.type === 'overpayment') return;
 
