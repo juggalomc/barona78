@@ -1,6 +1,6 @@
 import { calculateApartmentFinancials, calculatePositionPayments } from './summaryCalculations';
 
-describe('summaryCalculations partial payments', () => {
+describe('summaryCalculations partial payments (FIFO)', () => {
   const invoices = [
     {
       id: 'inv-1',
@@ -28,43 +28,43 @@ describe('summaryCalculations partial payments', () => {
   ];
 
   describe('calculateApartmentFinancials', () => {
-    it('applies paid_amount proportionally to positions when invoice is partially paid', () => {
+    it('applies payments in FIFO order to positions', () => {
       const result = calculateApartmentFinancials('apt-1', invoices);
       
-      // Apsaimniekošana totalCharged = 50 (from inv-1) + 80 (from inv-2) = 130
-      // Apsaimniekošana totalPaid:
-      // - inv-1 (40% paid): 50 * 0.4 = 20
-      // - inv-2 (100% paid): 80 * 1.0 = 80
-      // totalPaid = 100
-      // currentDebt = 130 - 100 = 30
+      // Total payments: 40 (inv-1) + 80 (inv-2) = 120
+      // Charges chronologically:
+      // 1. 2026-07 Apsaimniekošana: total = 80 (fully paid, remains 40)
+      // 2. 2026-08 Apsaimniekošana: total = 50 (partially paid, gets 40, remains 0)
+      // 3. 2026-08 Waste: total = 50 (unpaid, gets 0)
+      
+      // Apsaimniekošana: totalCharged = 130, totalPaid = 120, currentDebt = 10
       const aps = result.find(r => r.name === 'Apsaimniekošana');
       expect(aps.totalCharged).toBe(130);
-      expect(aps.totalPaid).toBe(100);
-      expect(aps.currentDebt).toBe(30);
+      expect(aps.totalPaid).toBe(120);
+      expect(aps.currentDebt).toBe(10);
 
-      // Waste totalCharged = 50 (from inv-1)
-      // Waste totalPaid = 50 * 0.4 = 20
-      // currentDebt = 50 - 20 = 30
+      // Waste: totalCharged = 50, totalPaid = 0, currentDebt = 50
       const waste = result.find(r => r.name === '♻️ Atkritumu izvešana');
       expect(waste.totalCharged).toBe(50);
-      expect(waste.totalPaid).toBe(20);
-      expect(waste.currentDebt).toBe(30);
+      expect(waste.totalPaid).toBe(0);
+      expect(waste.currentDebt).toBe(50);
     });
   });
 
   describe('calculatePositionPayments', () => {
-    it('calculates position payments taking partial paid_amount into account', () => {
+    it('calculates position payments based on FIFO allocation for the period', () => {
       const result = calculatePositionPayments('2026-08', invoices);
       
-      // For period 2026-08, only inv-1 matches.
-      // invoiced: 50 each. paid: 20 each.
+      // For period 2026-08, charges:
+      // - Apsaimniekošana: total 50, paid 40
+      // - Waste: total 50, paid 0
       const aps = result.find(r => r.name === 'Apsaimniekošana');
       expect(aps.invoiced).toBe(50);
-      expect(aps.paid).toBe(20);
+      expect(aps.paid).toBe(40);
 
       const waste = result.find(r => r.name === '♻️ Atkritumu izvešana');
       expect(waste.invoiced).toBe(50);
-      expect(waste.paid).toBe(20);
+      expect(waste.paid).toBe(0);
     });
   });
 });

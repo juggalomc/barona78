@@ -130,42 +130,84 @@ export const calculateMonthlySummary = (period, invoices, apartments, tariffs, w
  */
 export const calculatePositionPayments = (period, invoices) => {
   const normPeriod = normalizePeriod(period);
-  const periodInvoices = invoices.filter(inv => normalizePeriod(inv.period) === normPeriod);
-  const items = {};
 
-  periodInvoices.forEach(inv => {
-    try {
-      const details = JSON.parse(inv.invoice_details || '[]');
-      details.forEach(item => {
-        if (item.type === 'debt' || item.type === 'overpayment') return;
-
-        let name = item.tariff_name || 'Cits';
-        if (item.type === 'waste') {
-          name = '♻️ Atkritumu izvešana';
-        } else if (item.type?.includes('water')) {
-          name = '💧 Ūdens pakalpojumi';
-        }
-
-        const amount = parseFloat(item.amount_without_vat || 0);
-        const vat = parseFloat(item.vat_amount || 0);
-        const total = amount + vat;
-
-        if (!items[name]) {
-          items[name] = { name, invoiced: 0, paid: 0 };
-        }
-
-        items[name].invoiced += total;
-        let paidFraction = 0;
-        if (inv.paid || (inv.amount || 0) <= 0) {
-          paidFraction = 1;
-        } else if (inv.paid_amount > 0) {
-          paidFraction = Math.min(1, inv.paid_amount / inv.amount);
-        }
-        items[name].paid += total * paidFraction;
-      });
-    } catch (e) {
-      console.error("Kļūda apstrādājot rēķinu kopsavilkumam", e);
+  // Sagrupējam rēķinus pa dzīvokļiem
+  const invoicesByApt = {};
+  invoices.forEach(inv => {
+    if (!invoicesByApt[inv.apartment_id]) {
+      invoicesByApt[inv.apartment_id] = [];
     }
+    invoicesByApt[inv.apartment_id].push(inv);
+  });
+
+  const periodCharges = [];
+
+  // Katram dzīvoklim veicam FIFO maksājumu sadali pa tā vēsturiskajām pozīcijām
+  Object.entries(invoicesByApt).forEach(([aptId, aptInvoices]) => {
+    const charges = [];
+    aptInvoices.forEach(inv => {
+      try {
+        const details = JSON.parse(inv.invoice_details || '[]');
+        details.forEach(item => {
+          if (item.type === 'debt' || item.type === 'overpayment') return;
+
+          let name = item.tariff_name || 'Cits';
+          if (item.type === 'waste') {
+            name = '♻️ Atkritumu izvešana';
+          } else if (item.type?.includes('water')) {
+            name = '💧 Ūdens pakalpojumi';
+          }
+
+          const amount = parseFloat(item.amount_without_vat || 0);
+          const vat = parseFloat(item.vat_amount || 0);
+          const total = amount + vat;
+
+          charges.push({
+            name,
+            total,
+            period: inv.period,
+            invoiceId: inv.id,
+            paid: 0
+          });
+        });
+      } catch (e) {
+        console.error("Kļūda rēķina apstrādē", e);
+      }
+    });
+
+    // Kārtojam hronoloģiski (vecākie pakalpojumi vispirms)
+    charges.sort((a, b) => a.period.localeCompare(b.period) || String(a.invoiceId).localeCompare(String(b.invoiceId)));
+
+    // Aprēķinām kopējo dzīvokļa iemaksāto naudas fondu
+    let paymentPool = aptInvoices.reduce((sum, inv) => {
+      const payment = inv.paid ? (inv.amount || 0) : (inv.paid_amount || 0);
+      return sum + Number(payment);
+    }, 0);
+
+    // Sadalām iemaksāto naudu (FIFO)
+    for (const charge of charges) {
+      if (paymentPool <= 0) break;
+      const allocation = Math.min(charge.total, paymentPool);
+      charge.paid = allocation;
+      paymentPool -= allocation;
+    }
+
+    // Saglabājam tikai pieprasītā perioda pozīcijas kopējam sarakstam
+    charges.forEach(charge => {
+      if (normalizePeriod(charge.period) === normPeriod) {
+        periodCharges.push(charge);
+      }
+    });
+  });
+
+  // Sagrupējam pa pozīciju nosaukumiem
+  const items = {};
+  periodCharges.forEach(charge => {
+    if (!items[charge.name]) {
+      items[charge.name] = { name: charge.name, invoiced: 0, paid: 0 };
+    }
+    items[charge.name].invoiced += charge.total;
+    items[charge.name].paid += charge.paid;
   });
 
   return Object.values(items).sort((a, b) => b.invoiced - a.invoiced);
@@ -176,8 +218,9 @@ export const calculatePositionPayments = (period, invoices) => {
  */
 export const calculateApartmentFinancials = (apartmentId, invoices) => {
   const aptInvoices = invoices.filter(inv => inv.apartment_id === apartmentId);
-  const items = {};
 
+  // 1. Apkopojam visas vēsturiskās pakalpojumu pozīcijas
+  const charges = [];
   aptInvoices.forEach(inv => {
     try {
       const details = JSON.parse(inv.invoice_details || '[]');
@@ -195,22 +238,44 @@ export const calculateApartmentFinancials = (apartmentId, invoices) => {
         const vat = parseFloat(item.vat_amount || 0);
         const total = amount + vat;
 
-        if (!items[name]) {
-          items[name] = { name, totalCharged: 0, totalPaid: 0 };
-        }
-
-        items[name].totalCharged += total;
-        let paidFraction = 0;
-        if (inv.paid || (inv.amount || 0) <= 0) {
-          paidFraction = 1;
-        } else if (inv.paid_amount > 0) {
-          paidFraction = Math.min(1, inv.paid_amount / inv.amount);
-        }
-        items[name].totalPaid += total * paidFraction;
+        charges.push({
+          name,
+          total,
+          period: inv.period,
+          invoiceId: inv.id,
+          paid: 0
+        });
       });
     } catch (e) {
       console.error("Kļūda rēķina apstrādē", e);
     }
+  });
+
+  // Kārtojam hronoloģiski (vecākie pakalpojumi vispirms)
+  charges.sort((a, b) => a.period.localeCompare(b.period) || String(a.invoiceId).localeCompare(String(b.invoiceId)));
+
+  // 2. Aprēķinām dzīvokļa kopējo iemaksāto naudu
+  let paymentPool = aptInvoices.reduce((sum, inv) => {
+    const payment = inv.paid ? (inv.amount || 0) : (inv.paid_amount || 0);
+    return sum + Number(payment);
+  }, 0);
+
+  // 3. Sadalām iemaksāto naudu hronoloģiskā secībā (FIFO)
+  for (const charge of charges) {
+    if (paymentPool <= 0) break;
+    const allocation = Math.min(charge.total, paymentPool);
+    charge.paid = allocation;
+    paymentPool -= allocation;
+  }
+
+  // 4. Sagrupējam pa pozīcijām gala rezultātam
+  const items = {};
+  charges.forEach(charge => {
+    if (!items[charge.name]) {
+      items[charge.name] = { name: charge.name, totalCharged: 0, totalPaid: 0 };
+    }
+    items[charge.name].totalCharged += charge.total;
+    items[charge.name].totalPaid += charge.paid;
   });
 
   return Object.values(items).map(i => ({
