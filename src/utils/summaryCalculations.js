@@ -155,9 +155,13 @@ export const calculatePositionPayments = (period, invoices) => {
         }
 
         items[name].invoiced += total;
-        if (inv.paid) {
-          items[name].paid += total;
+        let paidFraction = 0;
+        if (inv.paid || (inv.amount || 0) <= 0) {
+          paidFraction = 1;
+        } else if (inv.paid_amount > 0) {
+          paidFraction = Math.min(1, inv.paid_amount / inv.amount);
         }
+        items[name].paid += total * paidFraction;
       });
     } catch (e) {
       console.error("Kļūda apstrādājot rēķinu kopsavilkumam", e);
@@ -196,7 +200,13 @@ export const calculateApartmentFinancials = (apartmentId, invoices) => {
         }
 
         items[name].totalCharged += total;
-        if (inv.paid) items[name].totalPaid += total;
+        let paidFraction = 0;
+        if (inv.paid || (inv.amount || 0) <= 0) {
+          paidFraction = 1;
+        } else if (inv.paid_amount > 0) {
+          paidFraction = Math.min(1, inv.paid_amount / inv.amount);
+        }
+        items[name].totalPaid += total * paidFraction;
       });
     } catch (e) {
       console.error("Kļūda rēķina apstrādē", e);

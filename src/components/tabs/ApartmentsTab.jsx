@@ -157,11 +157,14 @@ export function ApartmentsTab({
                       const aptInvoices = invoices.filter(inv => inv.apartment_id === apt.id && !inv.paid);
                       if (aptInvoices.length > 0) {
                         const latest = aptInvoices.reduce((prev, curr) => prev.period > curr.period ? prev : curr);
-                        return (
-                          <div style={{fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: '500'}}>
-                            ⚠️ Parāds: €{latest.amount.toFixed(2)}
-                          </div>
-                        );
+                        const remainingDebt = latest.amount - (latest.paid_amount || 0);
+                        if (remainingDebt > 0.01) {
+                          return (
+                            <div style={{fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: '500'}}>
+                              ⚠️ Parāds: €{remainingDebt.toFixed(2)}
+                            </div>
+                          );
+                        }
                       }
                       return null;
                     })()}
