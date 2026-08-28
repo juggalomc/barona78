@@ -136,8 +136,16 @@ export const calculatePositionPayments = (period, invoices) => {
   periodInvoices.forEach(inv => {
     try {
       const details = JSON.parse(inv.invoice_details || '[]');
+
+      // Build a list of invoice items (exclude debt/overpayment) so we can
+      // compute the invoice's items total and allocate any partial `paid_amount`
+      const invoiceItems = [];
       details.forEach(item => {
         if (item.type === 'debt' || item.type === 'overpayment') return;
+
+        const amount = parseFloat(item.amount_without_vat || 0);
+        const vat = parseFloat(item.vat_amount || 0);
+        const total = amount + vat;
 
         let name = item.tariff_name || 'Cits';
         if (item.type === 'waste') {
@@ -146,18 +154,19 @@ export const calculatePositionPayments = (period, invoices) => {
           name = '💧 Ūdens pakalpojumi';
         }
 
-        const amount = parseFloat(item.amount_without_vat || 0);
-        const vat = parseFloat(item.vat_amount || 0);
-        const total = amount + vat;
+        invoiceItems.push({ name, total });
+      });
 
-        if (!items[name]) {
-          items[name] = { name, invoiced: 0, paid: 0 };
-        }
+      const invoiceItemsTotal = invoiceItems.reduce((s, it) => s + it.total, 0);
+      const amountPaid = Number(inv.paid_amount ?? (inv.paid ? invoiceItemsTotal : 0));
 
-        items[name].invoiced += total;
-        if (inv.paid) {
-          items[name].paid += total;
-        }
+      // Allocate invoiced and paid amounts to position-level totals
+      invoiceItems.forEach(it => {
+        if (!items[it.name]) items[it.name] = { name: it.name, invoiced: 0, paid: 0 };
+        items[it.name].invoiced += it.total;
+
+        const proportionalPaid = invoiceItemsTotal > 0 ? (it.total * amountPaid / invoiceItemsTotal) : 0;
+        items[it.name].paid += proportionalPaid;
       });
     } catch (e) {
       console.error("Kļūda apstrādājot rēķinu kopsavilkumam", e);
@@ -177,8 +186,15 @@ export const calculateApartmentFinancials = (apartmentId, invoices) => {
   aptInvoices.forEach(inv => {
     try {
       const details = JSON.parse(inv.invoice_details || '[]');
+
+      // Gather invoice items to compute proportional allocation of paid_amount
+      const invoiceItems = [];
       details.forEach(item => {
         if (item.type === 'debt' || item.type === 'overpayment') return;
+
+        const amount = parseFloat(item.amount_without_vat || 0);
+        const vat = parseFloat(item.vat_amount || 0);
+        const total = amount + vat;
 
         let name = item.tariff_name || 'Cits';
         if (item.type === 'waste') {
@@ -187,16 +203,18 @@ export const calculateApartmentFinancials = (apartmentId, invoices) => {
           name = '💧 Ūdens pakalpojumi';
         }
 
-        const amount = parseFloat(item.amount_without_vat || 0);
-        const vat = parseFloat(item.vat_amount || 0);
-        const total = amount + vat;
+        invoiceItems.push({ name, total });
+      });
 
-        if (!items[name]) {
-          items[name] = { name, totalCharged: 0, totalPaid: 0 };
-        }
+      const invoiceItemsTotal = invoiceItems.reduce((s, it) => s + it.total, 0);
+      const amountPaid = Number(inv.paid_amount ?? (inv.paid ? invoiceItemsTotal : 0));
 
-        items[name].totalCharged += total;
-        if (inv.paid) items[name].totalPaid += total;
+      invoiceItems.forEach(it => {
+        if (!items[it.name]) items[it.name] = { name: it.name, totalCharged: 0, totalPaid: 0 };
+        items[it.name].totalCharged += it.total;
+
+        const proportionalPaid = invoiceItemsTotal > 0 ? (it.total * amountPaid / invoiceItemsTotal) : 0;
+        items[it.name].totalPaid += proportionalPaid;
       });
     } catch (e) {
       console.error("Kļūda rēķina apstrādē", e);
