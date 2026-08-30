@@ -42,7 +42,14 @@ const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoi
   const latestInvoice = previousInvoices[previousInvoices.length - 1];
   
   const totalDue = Number(latestInvoice.amount_with_vat ?? latestInvoice.amount ?? 0);
-  const totalPaid = Number(latestInvoice.paid_amount ?? 0);
+  let totalPaid = Number(latestInvoice.paid_amount ?? 0);
+
+  // Ja rēķins ir atzīmēts kā apmaksāts, uzskatām to par pilnībā nokārtotu.
+  // Tas novērš parāda rašanos gadījumos, kad rēķins ir apmaksāts, bet
+  // "paid_amount" nav atsevišķi ievadīts (piem., manuāli pārslēdzot statusu).
+  if (latestInvoice.paid === true && totalPaid < totalDue) {
+    totalPaid = totalDue;
+  }
 
   if (latestInvoice.paid) {
     return totalPaid > totalDue ? (totalDue - totalPaid) : 0;
