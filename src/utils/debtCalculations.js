@@ -40,7 +40,11 @@ const getHistoricalBalance = (apartmentId, invoices, currentPeriod, excludeInvoi
   // Tā kā katrā jaunā rēķinā jau hronoloģiski ir iestrādāts iepriekšējais parāds/pārmaksa,
   // pašreizējā bilance ir vienkārši pēdējā rēķina izpildes stāvoklis.
   const latestInvoice = previousInvoices[previousInvoices.length - 1];
-  
+
+  // Ja pēdējais rēķins ir atzīmēts kā apmaksāts, konts ir nokārtots līdz nullei —
+  // parāds nerodas neatkarīgi no tā, vai paid_amount ir aizpildīts.
+  if (latestInvoice.paid === true) return 0;
+
   const totalDue = Number(latestInvoice.amount_with_vat ?? latestInvoice.amount ?? 0);
   const totalPaid = Number(latestInvoice.paid_amount ?? 0);
 
