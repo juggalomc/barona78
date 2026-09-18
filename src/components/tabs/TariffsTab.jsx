@@ -89,6 +89,7 @@ export function TariffsTab({
   const currentForm = editingTariff ? editForm : tariffForm;
 
   const getCalcType = (form) => {
+    if (form.is_discount) return 'discount';
     if (form.is_per_m2) return 'per_m2';
     if (form.is_fixed_amount) return 'fixed_amount';
     return 'area';
@@ -99,6 +100,7 @@ export function TariffsTab({
     const setForm = editingTariff ? setEditForm : setTariffForm;
     setForm({
       ...form,
+      is_discount: value === 'discount',
       is_per_m2: value === 'per_m2',
       is_fixed_amount: value === 'fixed_amount'
     });
@@ -106,23 +108,29 @@ export function TariffsTab({
 
   const calcType = getCalcType(currentForm);
 
-  const amountLabel = calcType === 'per_m2'
-    ? 'Cena par m²'
-    : calcType === 'fixed_amount'
-      ? 'Summa katram dzīvoklim'
-      : 'Kopējā summa';
+  const amountLabel = calcType === 'discount'
+    ? 'Atlaides summa'
+    : calcType === 'per_m2'
+      ? 'Cena par m²'
+      : calcType === 'fixed_amount'
+        ? 'Summa katram dzīvoklim'
+        : 'Kopējā summa';
 
-  const amountValue = calcType === 'per_m2'
-    ? currentForm.price_per_m2
-    : calcType === 'fixed_amount'
-      ? currentForm.price_per_unit
-      : currentForm.total_amount;
+  const amountValue = calcType === 'discount'
+    ? currentForm.total_amount
+    : calcType === 'per_m2'
+      ? currentForm.price_per_m2
+      : calcType === 'fixed_amount'
+        ? currentForm.price_per_unit
+        : currentForm.total_amount;
 
-  const amountField = calcType === 'per_m2'
-    ? 'price_per_m2'
-    : calcType === 'fixed_amount'
-      ? 'price_per_unit'
-      : 'total_amount';
+  const amountField = calcType === 'discount'
+    ? 'total_amount'
+    : calcType === 'per_m2'
+      ? 'price_per_m2'
+      : calcType === 'fixed_amount'
+        ? 'price_per_unit'
+        : 'total_amount';
 
   const handleAmountChange = (value) => {
     if (editingTariff) {
@@ -164,6 +172,7 @@ export function TariffsTab({
                 <option value="area">Kopējā summa (sadalīta pēc platības)</option>
                 <option value="per_m2">Cena par m²</option>
                 <option value="fixed_amount">Fiksēta summa katram dzīvoklim</option>
+                <option value="discount">Atlaide</option>
               </select>
             </div>
             <div>
@@ -181,7 +190,9 @@ export function TariffsTab({
 
           <div>
             <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>
-              🚫 Izslēgtie dzīvokļi (šī pozīcija viņiem netiks rēķināta)
+              {calcType === 'discount'
+                ? '🎯 Dzīvokļi, kuriem piemērot atlaidi'
+                : '🚫 Izslēgtie dzīvokļi (šī pozīcija viņiem netiks rēķināta)'}
             </label>
             <div style={styles.grid}>
               {apartments.sort((a, b) => parseInt(a.number) - parseInt(b.number)).map(apt => (

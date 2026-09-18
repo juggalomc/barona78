@@ -9,6 +9,7 @@ ALTER TABLE tariffs
 ADD COLUMN IF NOT EXISTS is_per_m2 BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS is_equal_split BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS is_fixed_amount BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS is_discount BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS price_per_m2 NUMERIC,
 ADD COLUMN IF NOT EXISTS price_per_unit NUMERIC;
 ```
@@ -18,6 +19,7 @@ ADD COLUMN IF NOT EXISTS price_per_unit NUMERIC;
 - **is_per_m2** (BOOLEAN): Tariff is a fixed price per m² (`price_per_m2`).
 - **is_equal_split** (BOOLEAN): Total amount split equally between participating apartments.
 - **is_fixed_amount** (BOOLEAN): A fixed amount billed to each apartment (`price_per_unit`).
+- **is_discount** (BOOLEAN): A negative adjustment applied to selected apartments; the discount is subtracted from the monthly management fee.
 - **price_per_m2** (NUMERIC): Price per m² when `is_per_m2` is true.
 - **price_per_unit** (NUMERIC): Fixed amount per apartment when `is_fixed_amount` is true.
 

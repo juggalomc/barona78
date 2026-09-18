@@ -59,15 +59,40 @@ export const calculateInvoiceAmounts = ({
 
   // 1. Vispārīgie tarifi (pēc platības)
   for (const tariff of periodTariffs) {
-    // Apstrādājam izslēgtos dzīvokļus
     const excludedIds = Array.isArray(tariff.excluded_apartments) 
       ? tariff.excluded_apartments 
       : JSON.parse(tariff.excluded_apartments || '[]');
+    const isResidential = apt.is_residential !== false;
+
+    if (tariff.is_discount) {
+      const matchesTarget = !tariff.target_type || tariff.target_type === 'all' ||
+        (tariff.target_type === 'residential' && isResidential) ||
+        (tariff.target_type === 'non_residential' && !isResidential);
+
+      if (!matchesTarget || !excludedIds.includes(apt.id)) continue;
+
+      const discountAmount = Math.abs(parseFloat(tariff.total_amount) || 0);
+      const discountedValue = Math.round(discountAmount * 100) / 100;
+      const vatRate = parseFloat(tariff.vat_rate) || 0;
+      const vatAmount = Math.round(discountedValue * vatRate / 100 * 100) / 100;
+
+      totalAmountWithoutVat -= discountedValue;
+      totalVatAmount -= vatAmount;
+      invoiceDetails.push({
+        tariff_id: tariff.id,
+        tariff_name: tariff.name,
+        amount_without_vat: -discountedValue,
+        vat_rate: vatRate,
+        vat_amount: -vatAmount,
+        type: 'tariff',
+        is_discount: true
+      });
+      continue;
+    }
     
     // Ja šis konkrētais dzīvoklis ir izslēgto sarakstā, izlaižam šo tarifu
     if (excludedIds.includes(apt.id)) continue;
 
-    const isResidential = apt.is_residential !== false;
     if (tariff.target_type === 'residential' && !isResidential) continue;
     if (tariff.target_type === 'non_residential' && isResidential) continue;
     

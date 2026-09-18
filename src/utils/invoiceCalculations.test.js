@@ -41,6 +41,49 @@ describe('calculateInvoiceAmounts water consumption', () => {
   });
 });
 
+describe('calculateInvoiceAmounts discount logic', () => {
+  it('subtracts a discount tariff from the management fee for the selected apartment', () => {
+    const apt = { id: 1, area: 50, is_residential: true, declared_persons: 1 };
+    const managementTariff = {
+      id: 10,
+      name: 'Apsaimniekošana',
+      total_amount: 100,
+      vat_rate: 21,
+      include_in_invoice: true,
+      is_discount: false,
+      excluded_apartments: []
+    };
+    const discountTariff = {
+      id: 11,
+      name: 'Atlaide',
+      total_amount: 80,
+      vat_rate: 0,
+      include_in_invoice: true,
+      is_discount: true,
+      excluded_apartments: [1]
+    };
+
+    const result = calculateInvoiceAmounts({
+      apt,
+      period: '2024-03',
+      periodTariffs: [managementTariff, discountTariff],
+      waterTariffs: [],
+      hotWaterTariffs: [],
+      wasteTariffs: [],
+      meterReadings: [],
+      waterConsumption: [],
+      apartments: [apt],
+      previousDebt: 0,
+      overpayment: 0
+    });
+
+    const discountLine = result.invoiceDetails.find(detail => detail.tariff_name === 'Atlaide');
+    expect(discountLine).toBeDefined();
+    expect(discountLine.amount_without_vat).toBe(-80);
+    expect(result.totalAmountWithoutVat).toBe(20);
+  });
+});
+
 describe('calculatePreviousDebt', () => {
   it('returns zero when the latest previous invoice is marked as paid', () => {
     const invoices = [
