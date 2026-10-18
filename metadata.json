@@ -1,0 +1,6 @@
+{
+  "name": "Barona 78 - Mājas Apsaimniekošana",
+  "description": "Inteliģenta mājas apsaimniekošanas un rēķinu vadības sistēma",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

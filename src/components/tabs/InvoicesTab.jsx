@@ -4,17 +4,17 @@ import { calculateBaseAmount } from '../../utils/invoiceCalculations';
 // Lokāli definēti stili, lai novērstu importa kļūdas
 const styles = {
   card: {
-    background: '#fff',
-    borderRadius: '8px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    background: '#ffffff',
+    borderRadius: '12px',
+    padding: '24px',
+    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
     marginBottom: '20px',
     border: '1px solid #e2e8f0'
   },
   cardTitle: {
-    fontSize: '18px',
+    fontSize: '16px',
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#0f172a',
     marginBottom: '15px',
     display: 'flex',
     alignItems: 'center',
@@ -22,29 +22,33 @@ const styles = {
   },
   input: {
     width: '100%',
-    padding: '10px',
+    padding: '9px 12px',
     border: '1px solid #cbd5e1',
-    borderRadius: '4px',
-    fontSize: '14px',
-    boxSizing: 'border-box'
+    borderRadius: '8px',
+    fontSize: '13.5px',
+    boxSizing: 'border-box',
+    color: '#0f172a',
+    background: '#ffffff'
   },
   btn: {
-    padding: '10px 16px',
+    padding: '9px 16px',
     background: '#2563eb',
-    color: '#fff',
+    color: '#ffffff',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontWeight: '600',
-    fontSize: '14px',
-    textAlign: 'center'
+    fontSize: '13.5px',
+    textAlign: 'center',
+    transition: 'background 0.15s'
   },
   btnSmall: {
-    padding: '4px 8px',
+    padding: '5px 10px',
     fontSize: '12px',
     border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer'
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500'
   },
   modalOverlay: {
     position: 'fixed',
@@ -52,23 +56,25 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'rgba(0,0,0,0.5)',
+    background: 'rgba(15, 23, 42, 0.6)',
+    backdropFilter: 'blur(2px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000
   },
   modalContent: {
-    background: 'white',
-    padding: '20px',
-    borderRadius: '8px',
+    background: '#ffffff',
+    padding: '24px',
+    borderRadius: '16px',
     width: '600px',
-    maxWidth: '90%',
+    maxWidth: '92%',
     maxHeight: '90vh',
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px'
+    gap: '12px',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
   }
 };
 
@@ -169,7 +175,7 @@ export function InvoicesTab({
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* ===== SŪTĪŠANAS PROGRESS ===== */}
       {sendingProgress?.active && (
         <div style={{ ...styles.card, background: '#f0f9ff', border: '1px solid #0ea5e9', marginBottom: '30px' }}>
