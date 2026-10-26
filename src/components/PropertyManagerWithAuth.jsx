@@ -331,6 +331,7 @@ export default function PropertyManager() {
         onChangePassword={handleChangePassword}
         settings={settings}
         showToast={showToast}
+        fetchMeterReadingsOnly={fetchMeterReadingsOnly}
       />
     );
   }

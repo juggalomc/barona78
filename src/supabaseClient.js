@@ -142,8 +142,40 @@ const INITIAL_DEMO_DATA = {
       total_amount: 27.00
     }
   ],
-  water_consumption: [],
-  meter_readings: [],
+  water_consumption: [
+    {
+      id: 'wc-prev-1',
+      apartment_id: 'apt-1',
+      period: `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}`,
+      meter_type: 'water',
+      consumption_m3: 3.4
+    },
+    {
+      id: 'wc-prev-2',
+      apartment_id: 'apt-1',
+      period: `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}`,
+      meter_type: 'hot_water',
+      consumption_m3: 1.8
+    }
+  ],
+  meter_readings: [
+    {
+      id: 'mr-prev-1',
+      apartment_id: 'apt-1',
+      meter_type: 'water',
+      reading_date: `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}-26`,
+      reading_value: 124.60,
+      period: `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}`
+    },
+    {
+      id: 'mr-prev-2',
+      apartment_id: 'apt-1',
+      meter_type: 'hot_water',
+      reading_date: `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}-26`,
+      reading_value: 48.20,
+      period: `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}`
+    }
+  ],
   invoices: []
 };
 
@@ -151,7 +183,18 @@ function getStorageData() {
   try {
     const raw = localStorage.getItem('barona78_mock_db');
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      // Pārliecināmies, ka visas tabulas eksistē
+      Object.keys(INITIAL_DEMO_DATA).forEach((key) => {
+        if (!parsed[key]) {
+          parsed[key] = INITIAL_DEMO_DATA[key];
+        }
+      });
+      // Ja apt-1 nav iepriekšējo rādījumu, pievienojam tos
+      if (Array.isArray(parsed.meter_readings) && parsed.meter_readings.length === 0) {
+        parsed.meter_readings = [...INITIAL_DEMO_DATA.meter_readings];
+      }
+      return parsed;
     }
   } catch (e) {
     // ignore
@@ -172,21 +215,24 @@ function createMockSupabaseClient() {
 
   return {
     from: (tableName) => {
-      let filters = [];
-      let sortConfig = [];
+      const filters = [];
+      const sortConfig = [];
       let isSingle = false;
       let limitCount = null;
+      let isDelete = false;
+      let isUpdate = false;
+      let updatePayload = null;
 
       const builder = {
         select: (columns = '*') => {
           return builder;
         },
         eq: (field, val) => {
-          filters.push((row) => row[field] === val);
+          filters.push((row) => String(row[field] ?? '') === String(val ?? ''));
           return builder;
         },
         neq: (field, val) => {
-          filters.push((row) => row[field] !== val);
+          filters.push((row) => String(row[field] ?? '') !== String(val ?? ''));
           return builder;
         },
         order: (field, { ascending = true } = {}) => {
@@ -201,10 +247,50 @@ function createMockSupabaseClient() {
           isSingle = true;
           return builder;
         },
+        delete: () => {
+          isDelete = true;
+          return builder;
+        },
+        update: (updates) => {
+          isUpdate = true;
+          updatePayload = updates;
+          return builder;
+        },
         then: (resolve, reject) => {
           try {
             const db = getStorageData();
-            let rows = db[tableName] ? [...db[tableName]] : [];
+            if (!db[tableName]) db[tableName] = [];
+
+            // Apstrādājam DELETE vaicājumus ar filtriem
+            if (isDelete) {
+              const beforeCount = db[tableName].length;
+              db[tableName] = db[tableName].filter((row) => {
+                const matches = filters.every((filterFn) => filterFn(row));
+                return !matches;
+              });
+              saveStorageData(db);
+              resolve({ data: null, error: null, count: beforeCount - db[tableName].length });
+              return;
+            }
+
+            // Apstrādājam UPDATE vaicājumus ar filtriem
+            if (isUpdate) {
+              let updatedCount = 0;
+              db[tableName] = db[tableName].map((row) => {
+                const matches = filters.every((filterFn) => filterFn(row));
+                if (matches) {
+                  updatedCount++;
+                  return { ...row, ...updatePayload };
+                }
+                return row;
+              });
+              saveStorageData(db);
+              resolve({ data: updatePayload, error: null, count: updatedCount });
+              return;
+            }
+
+            // Standarta SELECT vaicājumi
+            let rows = [...db[tableName]];
 
             for (const filterFn of filters) {
               rows = rows.filter(filterFn);
@@ -249,43 +335,16 @@ function createMockSupabaseClient() {
           saveStorageData(db);
           return { data: inserted, error: null };
         },
-        update: (updates) => {
-          return {
-            eq: async (field, val) => {
-              const db = getStorageData();
-              if (!db[tableName]) db[tableName] = [];
-              let updatedCount = 0;
-              db[tableName] = db[tableName].map((row) => {
-                if (row[field] === val) {
-                  updatedCount++;
-                  return { ...row, ...updates };
-                }
-                return row;
-              });
-              saveStorageData(db);
-              return { data: updates, error: null, count: updatedCount };
-            }
-          };
-        },
-        delete: () => {
-          return {
-            eq: async (field, val) => {
-              const db = getStorageData();
-              if (!db[tableName]) db[tableName] = [];
-              db[tableName] = db[tableName].filter((row) => row[field] !== val);
-              saveStorageData(db);
-              return { data: null, error: null };
-            }
-          };
-        },
         upsert: async (itemOrItems, options = {}) => {
           const db = getStorageData();
           if (!db[tableName]) db[tableName] = [];
           const items = Array.isArray(itemOrItems) ? itemOrItems : [itemOrItems];
-          const conflictField = options?.onConflict || 'id';
+          const conflictKeys = (options?.onConflict || 'id').split(',').map((s) => s.trim());
 
           for (const item of items) {
-            const idx = db[tableName].findIndex((row) => row[conflictField] === item[conflictField]);
+            const idx = db[tableName].findIndex((row) =>
+              conflictKeys.every((key) => String(row[key] ?? '') === String(item[key] ?? ''))
+            );
             if (idx >= 0) {
               db[tableName][idx] = { ...db[tableName][idx], ...item };
             } else {

@@ -227,10 +227,12 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       // ✅ Atjaunojam arī nākamā perioda patēriņu
       await updateNextPeriodConsumption(apartmentId, 'water', normPeriod, value, freshReadings);
 
-      fetchReadings();
+      await fetchReadings(apartmentId);
       showToast('✓ Aukstā ūdens rādījums saglabāts');
+      return true;
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
+      return false;
     }
   };
 
@@ -303,10 +305,12 @@ export function useWaterHandlers(supabase, apartments, waterTariffs, hotWaterTar
       // ✅ Atjaunojam arī nākamā perioda patēriņu
       await updateNextPeriodConsumption(apartmentId, 'hot_water', normPeriod, value, freshReadings);
 
-      fetchReadings();
+      await fetchReadings(apartmentId);
       showToast('✓ Siltā ūdens rādījums saglabāts');
+      return true;
     } catch (error) {
       showToast('Kļūda: ' + error.message, 'error');
+      return false;
     }
   };
 

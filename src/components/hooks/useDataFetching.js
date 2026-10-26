@@ -58,12 +58,15 @@ export function useDataFetching(supabase) {
   };
 
   // ✅ OPTIMIZĀCIJA: Selektīvi fetch tikai skaitītāju rādījumiem
-  const fetchMeterReadingsOnly = async () => {
+  const fetchMeterReadingsOnly = async (apartmentId = null) => {
     try {
-      const [mrRes, wcRes] = await Promise.all([
-        supabase.from('meter_readings').select('*').order('reading_date', { ascending: false }),
-        supabase.from('water_consumption').select('*').order('period', { ascending: false })
-      ]);
+      let mrQuery = supabase.from('meter_readings').select('*').order('reading_date', { ascending: false });
+      let wcQuery = supabase.from('water_consumption').select('*').order('period', { ascending: false });
+      if (apartmentId) {
+        mrQuery = mrQuery.eq('apartment_id', apartmentId);
+        wcQuery = wcQuery.eq('apartment_id', apartmentId);
+      }
+      const [mrRes, wcRes] = await Promise.all([mrQuery, wcQuery]);
       
       setMeterReadings(mrRes.data || []);
       setWaterConsumption(wcRes.data || []);
@@ -141,15 +144,33 @@ export function useDataFetching(supabase) {
   const fetchUserData = async (apartmentId) => {
     try {
       setLoading(true);
-      const [aptRes, invRes] = await Promise.all([
+      const [aptRes, invRes, mrRes, wcRes, wtRes, hwRes] = await Promise.all([
         supabase.from('apartments').select('*').eq('id', apartmentId).single(),
-        supabase.from('invoices').select('*').eq('apartment_id', apartmentId).order('period', { ascending: false })
+        supabase.from('invoices').select('*').eq('apartment_id', apartmentId).order('period', { ascending: false }),
+        supabase.from('meter_readings').select('*').eq('apartment_id', apartmentId).order('reading_date', { ascending: false }),
+        supabase.from('water_consumption').select('*').eq('apartment_id', apartmentId).order('period', { ascending: false }),
+        supabase.from('water_tariffs').select('*').order('period', { ascending: false }),
+        supabase.from('hot_water_tariffs').select('*').order('period', { ascending: false })
       ]);
 
-      return { apartment: aptRes.data, invoices: invRes.data || [] };
+      if (aptRes.data) {
+        setApartments([aptRes.data]);
+      }
+      setInvoices(invRes.data || []);
+      setMeterReadings(mrRes.data || []);
+      setWaterConsumption(wcRes.data || []);
+      setWaterTariffs(wtRes.data || []);
+      setHotWaterTariffs(hwRes.data || []);
+
+      return { 
+        apartment: aptRes.data, 
+        invoices: invRes.data || [],
+        meterReadings: mrRes.data || [],
+        waterConsumption: wcRes.data || []
+      };
     } catch (error) {
       console.error('Kļūda ielādējot lietotāja datus:', error);
-      return { apartment: null, invoices: [] };
+      return { apartment: null, invoices: [], meterReadings: [], waterConsumption: [] };
     } finally {
       setLoading(false);
     }
